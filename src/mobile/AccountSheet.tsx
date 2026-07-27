@@ -7,13 +7,14 @@ import { useEffect, useState } from "react";
 import { LogOut, Copy, Moon, Sun } from "lucide-react";
 import { CurrentUser, fetchCurrentUser, SessionExpiredError } from "../lib/authApi";
 import { Language } from "../types";
+import type { TFn } from "../lib/i18n";
 import { BottomSheet, ListGroup, ListItem, Pressable, useToast } from "./ui";
 
 interface AccountSheetProps {
   open: boolean;
   user: { id: string; username: string; email: string } | null;
   language: Language;
-  t: (key: string) => string;
+  t: TFn;
   isDark: boolean;
   onToggleTheme: () => void;
   onClose: () => void;

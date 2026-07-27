@@ -14,7 +14,9 @@ import { useTheme } from "./hooks/useTheme";
 import { useAuditLog } from "./hooks/useAuditLog";
 import { useBets } from "./hooks/useBets";
 import { useAccounts } from "./hooks/useAccounts";
-import { translate } from "./lib/i18n";
+import { useLanguageSync } from "./hooks/useLanguageSync";
+import { I18nProvider, translate, type TFn } from "./lib/i18n";
+import { updateLanguage } from "./lib/settingsApi";
 import { useMobileUI } from "./lib/platform";
 import type { InitialAppData } from "./initialData";
 
@@ -111,8 +113,13 @@ export default function App({ initialData }: AppProps) {
   );
   const { auditLogs, addLog } = useAuditLog();
 
-  // Tradução do shell (i18n). O resto da app usa <I18nProvider> + useI18n().
-  const t = (key: string) => translate(preferences.language, key);
+  // Tradução do shell. O <I18nProvider> na raiz cobre toda a árvore (incluindo
+  // o AuthPage), por isso o resto da app usa useI18n() em vez desta prop.
+  const t: TFn = (key, vars) => translate(preferences.language, key, vars);
+
+  // O idioma guardado no servidor manda assim que a sessão abre, para o
+  // utilizador o reencontrar noutro dispositivo/instalação.
+  useLanguageSync(authed, preferences, updatePreferences);
 
   // Aplica o tema ao <html> e devolve o tema efetivo (resolve "system")
   const isDark = useTheme(preferences.theme);
@@ -278,7 +285,13 @@ export default function App({ initialData }: AppProps) {
   // ----------------------------------------------------
 
   const handleUpdatePreferences = (updatedPrefs: Preferences) => {
+    const languageChanged = updatedPrefs.language !== preferences.language;
     updatePreferences(updatedPrefs);
+    // A UI muda já (localStorage); o servidor é atualizado em segundo plano
+    // para o idioma seguir o utilizador. Falhar aqui não desfaz a escolha.
+    if (languageChanged) {
+      void updateLanguage(updatedPrefs.language).catch(() => undefined);
+    }
     addLog("PREFERENCIAS", "Preferências gerais da aplicação atualizadas.");
   };
 
@@ -343,15 +356,18 @@ export default function App({ initialData }: AppProps) {
     setAuthed(false);
   };
 
-  // Gate de autenticação: enquanto não houver sessão válida, mostra só o AuthPage
+  // Gate de autenticação: enquanto não houver sessão válida, mostra só o
+  // AuthPage — dentro do I18nProvider, para o ecrã de login também traduzir.
   if (!authed) {
     return (
-      <AuthPage
-        onAuthenticated={(user) => {
-          setCurrentUser(user);
-          setAuthed(true);
-        }}
-      />
+      <I18nProvider lang={preferences.language}>
+        <AuthPage
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setAuthed(true);
+          }}
+        />
+      </I18nProvider>
     );
   }
 
@@ -402,9 +418,11 @@ export default function App({ initialData }: AppProps) {
   };
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-zinc-100 dark:bg-zinc-950" />}>
-      {isMobileUI ? <MobileApp {...shellProps} /> : <DesktopApp {...shellProps} />}
-    </Suspense>
+    <I18nProvider lang={preferences.language}>
+      <Suspense fallback={<div className="min-h-screen bg-zinc-100 dark:bg-zinc-950" />}>
+        {isMobileUI ? <MobileApp {...shellProps} /> : <DesktopApp {...shellProps} />}
+      </Suspense>
+    </I18nProvider>
   );
 }
 

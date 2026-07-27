@@ -1,6 +1,7 @@
 import React from "react";
 import { Building2, Check, RefreshCw } from "lucide-react";
 import { bookmakerLabel } from "../lib/bookmakers";
+import { useI18n } from "../lib/i18n";
 
 interface EnabledBookmakersCardProps {
   // Casas suportadas pela app (chaves minúsculas, ordem canónica).
@@ -23,25 +24,25 @@ export default function EnabledBookmakersCard({
   error,
   onToggle,
 }: EnabledBookmakersCardProps) {
+  const { t } = useI18n();
   const enabledSet = new Set(enabled);
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display flex items-center gap-2">
-          <Building2 size={18} className="text-emerald-600 dark:text-emerald-400" /> Casas de apostas
+          <Building2 size={18} className="text-emerald-600 dark:text-emerald-400" /> {t("settings.bookmakers.title")}
         </h4>
         {saving && <RefreshCw size={14} className="animate-spin text-zinc-400" />}
       </div>
 
       <p className="text-xs text-zinc-400 dark:text-zinc-500">
-        Escolhe as casas que usas. Só as casas selecionadas aparecem — e são importadas — no site e
-        na extensão de browser.
+        {t("settings.bookmakers.desc")}
       </p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-          <RefreshCw size={14} className="animate-spin" /> A carregar…
+          <RefreshCw size={14} className="animate-spin" /> {t("common.loading")}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -83,7 +84,7 @@ export default function EnabledBookmakersCard({
 
       {enabled.length === 0 && !loading && (
         <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-          Nenhuma casa selecionada — não vais conseguir importar apostas até escolheres pelo menos uma.
+          {t("settings.bookmakers.none")}
         </p>
       )}
 

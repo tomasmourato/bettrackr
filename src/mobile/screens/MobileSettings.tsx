@@ -27,6 +27,7 @@ import { getBundleVersion, initLiveUpdate } from "../../lib/liveUpdate";
 import { isNativeApp } from "../../lib/apiBase";
 import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "../../lib/settingsApi";
 import { bookmakerLabel } from "../../lib/bookmakers";
+import { useI18n } from "../../lib/i18n";
 import {
   SectionHeader,
   ListGroup,
@@ -74,6 +75,7 @@ export default function MobileSettings({
   onRenameAccount,
   onDeleteAccount,
 }: MobileSettingsProps) {
+  const { t } = useI18n();
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,7 +123,7 @@ export default function MobileSettings({
         setEnabledBookmakers(s.enabledBookmakers);
       })
       .catch((err) => {
-        if (alive) toast.show(err?.message || "Erro ao obter as casas ativas.", "error");
+        if (alive) toast.show(err?.message || t("settings.bookmakers.loadError"), "error");
       })
       .finally(() => {
         if (alive) setBookmakersLoading(false);
@@ -142,7 +144,7 @@ export default function MobileSettings({
       setEnabledBookmakers(saved.enabledBookmakers);
     } catch (err) {
       setEnabledBookmakers(previous); // reverte
-      toast.show((err as Error)?.message || "Erro ao guardar as casas ativas.", "error");
+      toast.show((err as Error)?.message || t("settings.bookmakers.saveError"), "error");
     } finally {
       setBookmakersSaving(false);
     }
@@ -159,7 +161,7 @@ export default function MobileSettings({
   const savePreferences = () => {
     const stakeNum = parseFloat(localStake);
     if (isNaN(stakeNum) || stakeNum < 0) {
-      toast.show("Stake padrão inválida.", "error");
+      toast.show(t("settings.errors.invalidStake"), "error");
       return;
     }
     onUpdatePreferences({
@@ -168,7 +170,7 @@ export default function MobileSettings({
       defaultBookmaker: localBookmaker,
       defaultStake: stakeNum,
     });
-    toast.show("Preferências guardadas", "success");
+    toast.show(t("settings.saved"), "success");
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,14 +185,14 @@ export default function MobileSettings({
   const handleAddAccount = async () => {
     const label = newAccountLabel.trim();
     if (!label) {
-      toast.show("Dá um nome à conta.", "error");
+      toast.show(t("settings.accounts.nameRequired"), "error");
       return;
     }
     const created = await onAddAccount(newAccountBookmaker, label, newAccountUsername.trim() || null);
     if (created) {
       setNewAccountLabel("");
       setNewAccountUsername("");
-      toast.show("Conta adicionada", "success");
+      toast.show(t("settings.accounts.added"), "success");
     }
   };
 
@@ -201,7 +203,7 @@ export default function MobileSettings({
     const updated = await onRenameAccount(renamingAccount.id, label, renameUsername.trim() || null);
     if (updated) {
       setRenamingAccount(null);
-      toast.show("Conta atualizada", "success");
+      toast.show(t("settings.accounts.updated"), "success");
     }
   };
 
@@ -209,7 +211,7 @@ export default function MobileSettings({
     setCheckingUpdate(true);
     try {
       await initLiveUpdate();
-      toast.show("Verificação concluída — aplica no próximo arranque se houver novidade.", "info");
+      toast.show(t("settings.about.checkDone"), "info");
     } finally {
       setCheckingUpdate(false);
     }
@@ -218,22 +220,22 @@ export default function MobileSettings({
   return (
     <div className="space-y-1 pb-4">
       {/* Preferências gerais */}
-      <SectionHeader>Preferências gerais</SectionHeader>
+      <SectionHeader>{t("settings.general.title")}</SectionHeader>
       <MobileCard className="space-y-4">
         <ChipGroup
-          label="Moeda"
+          label={t("settings.currency.label")}
           options={[
-            { value: "€", label: "Euro (€)" },
-            { value: "$", label: "Dólar ($)" },
-            { value: "£", label: "Libra (£)" },
-            { value: "R$", label: "Real (R$)" },
+            { value: "€", label: t("settings.currency.eur") },
+            { value: "$", label: t("settings.currency.usd") },
+            { value: "£", label: t("settings.currency.gbp") },
+            { value: "R$", label: t("settings.currency.brl") },
           ]}
           value={localCurrency}
           onChange={setLocalCurrency}
         />
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-            Casa de apostas padrão
+            {t("settings.defaultBookmaker.label")}
           </span>
           <input
             type="text"
@@ -244,7 +246,7 @@ export default function MobileSettings({
         </label>
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-            Stake padrão ({currency})
+            {t("settings.defaultStake.label", { currency })}
           </span>
           <input
             type="number"
@@ -261,28 +263,28 @@ export default function MobileSettings({
           onClick={savePreferences}
           className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center"
         >
-          Guardar preferências
+          {t("settings.save")}
         </Pressable>
       </MobileCard>
 
       {/* Aparência (aplica de imediato, como no desktop) */}
-      <SectionHeader>Aparência</SectionHeader>
+      <SectionHeader>{t("settings.appearance.title")}</SectionHeader>
       <MobileCard className="space-y-4">
         <ChipGroup
-          label="Tema"
+          label={t("settings.theme.label")}
           options={[
-            { value: "light", label: "Claro" },
-            { value: "dark", label: "Escuro" },
-            { value: "system", label: "Sistema" },
+            { value: "light", label: t("theme.light") },
+            { value: "dark", label: t("theme.dark") },
+            { value: "system", label: t("theme.system") },
           ]}
           value={preferences.theme}
           onChange={(v) => onUpdatePreferences({ ...preferences, theme: v as ThemeMode })}
         />
         <ChipGroup
-          label="Idioma"
+          label={t("settings.language.title")}
           options={[
-            { value: "pt", label: "Português" },
-            { value: "en", label: "English" },
+            { value: "pt", label: t("lang.pt") },
+            { value: "en", label: t("lang.en") },
           ]}
           value={preferences.language}
           onChange={(v) => onUpdatePreferences({ ...preferences, language: v as Language })}
@@ -290,17 +292,17 @@ export default function MobileSettings({
       </MobileCard>
 
       {/* Casas de apostas ativas (partilhadas com a extensão) */}
-      <SectionHeader>Casas de apostas</SectionHeader>
+      <SectionHeader>{t("settings.bookmakers.title")}</SectionHeader>
       <MobileCard className="space-y-3">
         <div className="flex items-start gap-2">
           <Building2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Escolhe as casas que usas. Só as selecionadas aparecem — e são importadas — no site e na extensão de browser.
+            {t("settings.bookmakers.desc")}
           </p>
         </div>
         {bookmakersLoading ? (
           <div className="flex items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500 py-2">
-            <RefreshCw size={14} className="animate-spin" /> A carregar…
+            <RefreshCw size={14} className="animate-spin" /> {t("common.loading")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -334,82 +336,82 @@ export default function MobileSettings({
         )}
         {!bookmakersLoading && enabledBookmakers.length === 0 && (
           <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-            Nenhuma casa selecionada — não vais conseguir importar apostas até escolheres pelo menos uma.
+            {t("settings.bookmakers.none")}
           </p>
         )}
       </MobileCard>
 
       {/* Contas + auditoria */}
-      <SectionHeader>Gestão</SectionHeader>
+      <SectionHeader>{t("settings.management.title")}</SectionHeader>
       <ListGroup>
         <ListItem
           icon={Wallet}
-          title="Contas por casa de apostas"
-          subtitle={`${accounts.length} ${accounts.length === 1 ? "conta" : "contas"}`}
+          title={t("settings.accounts.title")}
+          subtitle={t("settings.accounts.count", { n: accounts.length })}
           chevron
           onClick={() => setAccountsOpen(true)}
         />
         <ListItem
           icon={History}
-          title="Registo de alterações"
-          subtitle={`${auditLogs.length} ${auditLogs.length === 1 ? "registo" : "registos"} nesta sessão`}
+          title={t("settings.audit.title")}
+          subtitle={t("settings.audit.count", { n: auditLogs.length })}
           chevron
           onClick={() => setLogsOpen(true)}
         />
       </ListGroup>
 
       {/* Dados */}
-      <SectionHeader>Dados</SectionHeader>
+      <SectionHeader>{t("settings.data.title")}</SectionHeader>
       <ListGroup>
         <ListItem
           icon={FileSpreadsheet}
-          title="Exportar CSV"
-          subtitle={bets.length === 0 ? "Sem apostas para exportar" : "Todas as apostas em formato CSV"}
+          title={t("settings.export.csv.title")}
+          subtitle={bets.length === 0 ? t("settings.export.empty") : t("settings.export.csv.desc")}
           onClick={() => {
-            if (bets.length === 0) return toast.show("Não há apostas para exportar.", "info");
+            if (bets.length === 0) return toast.show(t("settings.export.emptyToast"), "info");
             void exportBetsCSV(bets, accounts);
           }}
         />
         <ListItem
           icon={Download}
-          title="Backup completo (JSON)"
-          subtitle="Apostas + preferências"
+          title={t("settings.export.backup.title")}
+          subtitle={t("settings.export.backup.desc")}
           onClick={() => {
-            if (bets.length === 0) return toast.show("Não há apostas para exportar.", "info");
+            if (bets.length === 0) return toast.show(t("settings.export.emptyToast"), "info");
             void exportBackupJSON(bets, preferences);
           }}
         />
-        <ListItem icon={Upload} title="Importar ficheiro" subtitle="Backup JSON ou CSV" onClick={() => fileInputRef.current?.click()} />
+        <ListItem icon={Upload} title={t("settings.import.title")} subtitle={t("settings.import.desc")} onClick={() => fileInputRef.current?.click()} />
       </ListGroup>
       <input ref={fileInputRef} type="file" accept=".csv,.json,text/csv,application/json" onChange={handleImportFile} className="hidden" />
 
       {/* Zona perigosa */}
-      <SectionHeader>Zona perigosa</SectionHeader>
+      <SectionHeader>{t("settings.danger.title")}</SectionHeader>
       <ListGroup>
-        <ListItem icon={RefreshCw} title="Repor dados de demonstração" subtitle="Substitui tudo pelos dados de exemplo" onClick={() => setConfirmReset(true)} />
-        <ListItem icon={Trash2} title="Apagar todos os dados" subtitle="Remove todas as apostas da base de dados" destructive onClick={() => setConfirmClear(true)} />
+        <ListItem icon={RefreshCw} title={t("settings.demo.title")} subtitle={t("settings.demo.desc")} onClick={() => setConfirmReset(true)} />
+        <ListItem icon={Trash2} title={t("settings.clear.title")} subtitle={t("settings.clear.desc")} destructive onClick={() => setConfirmClear(true)} />
       </ListGroup>
 
       {/* Sobre */}
-      <SectionHeader>Sobre</SectionHeader>
+      <SectionHeader>{t("settings.about.title")}</SectionHeader>
       <ListGroup>
         <ListItem
           icon={Info}
-          title="Versão do frontend"
+          title={t("settings.about.version")}
           trailing={bundleVersion ?? (isNativeApp() ? "…" : "web")}
         />
         {isNativeApp() && (
           <ListItem
             icon={RefreshCw}
-            title={checkingUpdate ? "A verificar…" : "Verificar atualização"}
-            subtitle="Procura um bundle novo no servidor"
+            title={checkingUpdate ? t("settings.about.checking") : t("settings.about.checkUpdate")}
+            subtitle={t("settings.about.checkUpdateDesc")}
             onClick={checkingUpdate ? undefined : () => void checkUpdate()}
           />
         )}
       </ListGroup>
 
       {/* Sheet: contas por casa */}
-      <BottomSheet open={accountsOpen} onClose={() => setAccountsOpen(false)} title="Contas por casa de apostas">
+      <BottomSheet open={accountsOpen} onClose={() => setAccountsOpen(false)} title={t("settings.accounts.title")}>
         <div className="space-y-4 pb-2">
           {accounts.length > 0 ? (
             <ListGroup>
@@ -427,7 +429,7 @@ export default function MobileSettings({
                           setRenameLabel(a.label);
                           setRenameUsername(a.username ?? "");
                         }}
-                        aria-label={`Renomear ${a.label}`}
+                        aria-label={t("settings.accounts.renameAria", { label: a.label })}
                         className="p-2 text-zinc-400"
                       >
                         <Pencil size={14} />
@@ -436,9 +438,9 @@ export default function MobileSettings({
                         as="button"
                         onClick={async () => {
                           const ok = await onDeleteAccount(a.id);
-                          if (ok) toast.show("Conta apagada", "success");
+                          if (ok) toast.show(t("settings.accounts.deleted"), "success");
                         }}
-                        aria-label={`Apagar ${a.label}`}
+                        aria-label={t("settings.accounts.deleteAria", { label: a.label })}
                         className="p-2 text-rose-500"
                       >
                         <Trash2 size={14} />
@@ -450,7 +452,7 @@ export default function MobileSettings({
             </ListGroup>
           ) : (
             <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-4">
-              Ainda não tens contas registadas.
+              {t("settings.accounts.empty")}
             </p>
           )}
 
@@ -458,9 +460,9 @@ export default function MobileSettings({
             <MobileCard className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                  Renomear “{renamingAccount.label}”
+                  {t("settings.accounts.renameTitle", { label: renamingAccount.label })}
                 </p>
-                <Pressable as="button" onClick={() => setRenamingAccount(null)} aria-label="Cancelar" className="p-1 text-zinc-400">
+                <Pressable as="button" onClick={() => setRenamingAccount(null)} aria-label={t("common.cancel")} className="p-1 text-zinc-400">
                   <X size={14} />
                 </Pressable>
               </div>
@@ -468,29 +470,29 @@ export default function MobileSettings({
                 type="text"
                 value={renameLabel}
                 onChange={(e) => setRenameLabel(e.target.value)}
-                placeholder="Nome da conta"
+                placeholder={t("settings.accounts.namePlaceholder")}
                 className={inputClasses}
               />
               <input
                 type="text"
                 value={renameUsername}
                 onChange={(e) => setRenameUsername(e.target.value)}
-                placeholder="Username na casa (opcional)"
+                placeholder={t("settings.accounts.usernamePlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
                 className={inputClasses}
               />
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                O username com que inicias sessão na casa. A extensão usa-o para encaminhar as apostas importadas.
+                {t("settings.accounts.usernameHint")}
               </p>
               <Pressable as="button" onClick={handleRename} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center">
-                Guardar
+                {t("common.save")}
               </Pressable>
             </MobileCard>
           ) : (
             <MobileCard className="space-y-2">
-              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Nova conta</p>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{t("settings.accounts.new")}</p>
               <select
                 value={newAccountBookmaker}
                 onChange={(e) => setNewAccountBookmaker(e.target.value)}
@@ -506,28 +508,28 @@ export default function MobileSettings({
                 type="text"
                 value={newAccountLabel}
                 onChange={(e) => setNewAccountLabel(e.target.value)}
-                placeholder="Etiqueta (ex.: Conta principal)"
+                placeholder={t("settings.accounts.labelPlaceholder")}
                 className={inputClasses}
               />
               <input
                 type="text"
                 value={newAccountUsername}
                 onChange={(e) => setNewAccountUsername(e.target.value)}
-                placeholder="Username na casa (opcional)"
+                placeholder={t("settings.accounts.usernamePlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
                 className={inputClasses}
               />
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                O username com que inicias sessão na casa. A extensão usa-o para encaminhar as apostas importadas.
+                {t("settings.accounts.usernameHint")}
               </p>
               <Pressable
                 as="button"
                 onClick={() => void handleAddAccount()}
                 className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold"
               >
-                <Plus size={14} /> Adicionar conta
+                <Plus size={14} /> {t("settings.accounts.add")}
               </Pressable>
             </MobileCard>
           )}
@@ -535,11 +537,11 @@ export default function MobileSettings({
       </BottomSheet>
 
       {/* Sheet: registo de alterações */}
-      <BottomSheet open={logsOpen} onClose={() => setLogsOpen(false)} title="Registo de alterações">
+      <BottomSheet open={logsOpen} onClose={() => setLogsOpen(false)} title={t("settings.audit.title")}>
         <div className="pb-2">
           {auditLogs.length === 0 ? (
             <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-6">
-              Sem alterações nesta sessão.
+              {t("settings.audit.empty")}
             </p>
           ) : (
             <div className="space-y-2">
@@ -558,49 +560,49 @@ export default function MobileSettings({
       </BottomSheet>
 
       {/* Confirmações destrutivas */}
-      <BottomSheet open={confirmReset} onClose={() => setConfirmReset(false)} title="Repor dados de demonstração?">
+      <BottomSheet open={confirmReset} onClose={() => setConfirmReset(false)} title={t("settings.demo.confirmTitle")}>
         <div className="space-y-3 pb-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            As tuas apostas atuais serão substituídas pelos dados de exemplo. Esta ação não pode ser desfeita.
+            {t("settings.demo.confirmDesc")}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Pressable as="button" onClick={() => setConfirmReset(false)} className="py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 text-center">
-              Cancelar
+              {t("common.cancel")}
             </Pressable>
             <Pressable
               as="button"
               onClick={async () => {
                 setConfirmReset(false);
                 await onResetDemoData();
-                toast.show("Dados de demonstração repostos", "success");
+                toast.show(t("settings.demo.done"), "success");
               }}
               className="py-3 rounded-xl bg-amber-600 text-white text-sm font-semibold text-center"
             >
-              Repor
+              {t("settings.demo.confirm")}
             </Pressable>
           </div>
         </div>
       </BottomSheet>
 
-      <BottomSheet open={confirmClear} onClose={() => setConfirmClear(false)} title="Apagar todos os dados?">
+      <BottomSheet open={confirmClear} onClose={() => setConfirmClear(false)} title={t("settings.clear.confirmTitle")}>
         <div className="space-y-3 pb-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            Todas as apostas serão removidas permanentemente da base de dados. Considera exportar um backup primeiro.
+            {t("settings.clear.confirmDesc")}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Pressable as="button" onClick={() => setConfirmClear(false)} className="py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 text-center">
-              Cancelar
+              {t("common.cancel")}
             </Pressable>
             <Pressable
               as="button"
               onClick={async () => {
                 setConfirmClear(false);
                 await onClearData();
-                toast.show("Dados apagados", "success");
+                toast.show(t("settings.clear.done"), "success");
               }}
               className="py-3 rounded-xl bg-rose-600 text-white text-sm font-semibold text-center"
             >
-              Apagar tudo
+              {t("settings.clear.confirm")}
             </Pressable>
           </div>
         </div>

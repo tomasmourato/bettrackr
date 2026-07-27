@@ -17,6 +17,7 @@ import {
 import type { Bet, Preferences, BookieAccount, AuditLog } from "./types";
 import type { DashboardBetsFilters } from "./components/Dashboard";
 import type { getStoredUser } from "./lib/authApi";
+import type { TFn, TKey } from "./lib/i18n";
 
 export type AppTab =
   | "DASHBOARD"
@@ -46,8 +47,10 @@ export const tabFromPath = (pathname: string): AppTab => {
 export interface NavItem {
   tab: AppTab;
   icon: React.ComponentType<{ size?: number | string; className?: string }>;
-  navKey: string;
-  footerKey: string;
+  // Chaves de tradução (tipadas): um separador novo sem entrada no dicionário
+  // não compila.
+  navKey: TKey;
+  footerKey: TKey;
 }
 
 // Navegação única para a sidebar (desktop) e a tab bar (mobile), para os
@@ -90,7 +93,9 @@ export interface ShellProps {
   onUpdatePreferences: (prefs: Preferences) => void;
   isDark: boolean;
   onToggleTheme: () => void;
-  t: (key: string) => string;
+  // Mesma função que o useI18n() devolve — os shells já a recebem por props,
+  // o resto da árvore usa o hook.
+  t: TFn;
 
   // Estado de rede
   isOnline: boolean;

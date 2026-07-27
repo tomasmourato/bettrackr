@@ -6,6 +6,7 @@ import React, { useMemo, useState } from "react";
 import { Wallet, Plus, Pencil, Trash2, Check, X, AlertCircle } from "lucide-react";
 import { Bet, BookieAccount } from "../types";
 import { AVAILABLE_BOOKMAKERS } from "../utils";
+import { useI18n } from "../lib/i18n";
 
 interface BookieAccountsCardProps {
   accounts: BookieAccount[];
@@ -26,6 +27,7 @@ export default function BookieAccountsCard({
   onRename,
   onDelete,
 }: BookieAccountsCardProps) {
+  const { t } = useI18n();
   const [newBookmaker, setNewBookmaker] = useState(AVAILABLE_BOOKMAKERS[0] ?? "Betclic");
   const [newLabel, setNewLabel] = useState("");
   const [newUsername, setNewUsername] = useState("");
@@ -93,11 +95,10 @@ export default function BookieAccountsCard({
     <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800 space-y-4">
       <div>
         <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display flex items-center gap-2">
-          <Wallet size={18} className="text-emerald-600 dark:text-emerald-400" /> Contas por casa
+          <Wallet size={18} className="text-emerald-600 dark:text-emerald-400" /> {t("settings.accounts.title")}
         </h4>
         <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-          Regista as tuas contas em cada casa (podes ter várias na mesma casa). Depois associa
-          apostas a cada conta e filtra o painel e a lista por conta.
+          {t("settings.accounts.desc")}
         </p>
       </div>
 
@@ -112,7 +113,7 @@ export default function BookieAccountsCard({
         <select
           value={newBookmaker}
           onChange={(e) => setNewBookmaker(e.target.value)}
-          aria-label="Casa de apostas"
+          aria-label={t("settings.accounts.bookmakerAria")}
           className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-sm px-2.5 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-600"
         >
           {AVAILABLE_BOOKMAKERS.map((bookie) => (
@@ -123,7 +124,7 @@ export default function BookieAccountsCard({
           type="text"
           value={newLabel}
           onChange={(e) => setNewLabel(e.target.value)}
-          placeholder="Nome da conta (ex.: Conta principal)"
+          placeholder={t("settings.accounts.labelPlaceholderLong")}
           maxLength={60}
           className="flex-1 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-sm px-2.5 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
         />
@@ -131,12 +132,12 @@ export default function BookieAccountsCard({
           type="text"
           value={newUsername}
           onChange={(e) => setNewUsername(e.target.value)}
-          placeholder="Username na casa (opcional)"
+          placeholder={t("settings.accounts.usernamePlaceholder")}
           maxLength={120}
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          title="O username com que inicias sessão na casa. A extensão usa-o para encaminhar as apostas importadas para esta conta."
+          title={t("settings.accounts.usernameHintLong")}
           className="flex-1 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-sm px-2.5 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
         />
         <button
@@ -144,14 +145,14 @@ export default function BookieAccountsCard({
           disabled={!newLabel.trim() || saving}
           className="px-3.5 py-2 rounded-sm bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
         >
-          <Plus size={13} /> Adicionar
+          <Plus size={13} /> {t("settings.accounts.addShort")}
         </button>
       </form>
 
       {/* Lista de contas agrupada por casa */}
       {grouped.length === 0 ? (
         <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">
-          Ainda não tens contas registadas. As apostas sem conta continuam a funcionar normalmente.
+          {t("settings.accounts.emptyLong")}
         </p>
       ) : (
         <div className="space-y-3">
@@ -180,7 +181,7 @@ export default function BookieAccountsCard({
                             }}
                             maxLength={60}
                             autoFocus
-                            aria-label="Nome da conta"
+                            aria-label={t("settings.accounts.namePlaceholder")}
                             className="flex-1 border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-800 rounded-sm px-2 py-1 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-600"
                           />
                           <input
@@ -195,20 +196,20 @@ export default function BookieAccountsCard({
                             autoCapitalize="none"
                             autoCorrect="off"
                             spellCheck={false}
-                            placeholder="Username (opcional)"
-                            aria-label="Username na casa"
+                            placeholder={t("settings.accounts.usernamePlaceholderShort")}
+                            aria-label={t("settings.accounts.usernameAria")}
                             className="flex-1 border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-800 rounded-sm px-2 py-1 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
                           />
                           <button
                             onClick={submitRename}
-                            title="Guardar"
+                            title={t("common.save")}
                             className="p-1.5 rounded-sm text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors cursor-pointer"
                           >
                             <Check size={13} />
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            title="Cancelar"
+                            title={t("common.cancel")}
                             className="p-1.5 rounded-sm text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           >
                             <X size={13} />
@@ -224,39 +225,41 @@ export default function BookieAccountsCard({
                               )}
                             </p>
                             <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                              {betCount === 1 ? "1 aposta associada" : `${betCount} apostas associadas`}
+                              {t("settings.accounts.betCount", { n: betCount })}
                             </p>
                           </div>
                           {confirmDeleteId === account.id ? (
                             <div className="flex items-center gap-1.5">
                               <span className="text-[10px] text-rose-600 dark:text-rose-300 font-semibold">
-                                {betCount > 0 ? `As ${betCount} apostas ficam sem conta. Apagar?` : "Apagar?"}
+                                {betCount > 0
+                                  ? t("settings.accounts.deleteConfirmWithBets", { n: betCount })
+                                  : t("settings.accounts.deleteConfirm")}
                               </span>
                               <button
                                 onClick={() => handleDelete(account.id)}
                                 className="px-2 py-1 rounded-sm bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold transition-colors cursor-pointer"
                               >
-                                Sim
+                                {t("common.yes")}
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
                                 className="px-2 py-1 rounded-sm bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold transition-colors cursor-pointer"
                               >
-                                Não
+                                {t("common.no")}
                               </button>
                             </div>
                           ) : (
                             <>
                               <button
                                 onClick={() => startRename(account)}
-                                title="Renomear conta"
+                                title={t("settings.accounts.rename")}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-white dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                               >
                                 <Pencil size={13} />
                               </button>
                               <button
                                 onClick={() => { clearError(); setEditingId(null); setConfirmDeleteId(account.id); }}
-                                title="Apagar conta"
+                                title={t("settings.accounts.deleteTitle")}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                               >
                                 <Trash2 size={13} />
@@ -275,7 +278,7 @@ export default function BookieAccountsCard({
       )}
 
       <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-        Apagar uma conta não apaga as apostas — ficam apenas "sem conta", associadas à casa.
+        {t("settings.accounts.deleteHint")}
       </p>
     </div>
   );

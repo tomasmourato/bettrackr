@@ -3,10 +3,12 @@
 // continua a ser guardado em localStorage (chave "g_prefs").
 
 import { useEffect, useState } from "react";
-import { Preferences } from "../types";
+import { Language, Preferences } from "../types";
 
 const PREFS_KEY = "g_prefs";
 
+// Mantém-se determinístico: é isto que o SSR usa, por isso não pode depender
+// do browser. A deteção de idioma acontece só no loadPreferences (cliente).
 export const DEFAULT_PREFERENCES: Preferences = {
   currency: "€",
   defaultBookmaker: "Betano",
@@ -14,6 +16,19 @@ export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
   language: "pt",
 };
+
+// Primeiro arranque: segue o idioma do browser em vez de assumir português.
+// Só é chamada quando não há preferências guardadas — quem já usa a app nunca
+// vê o idioma mudar sozinho.
+function detectLanguage(): Language {
+  if (typeof navigator === "undefined") return DEFAULT_PREFERENCES.language;
+  const candidates = [...(navigator.languages ?? []), navigator.language];
+  for (const tag of candidates) {
+    const base = tag?.toLowerCase().split("-")[0];
+    if (base === "pt" || base === "en") return base;
+  }
+  return DEFAULT_PREFERENCES.language;
+}
 
 function loadPreferences(): Preferences {
   try {
@@ -24,7 +39,7 @@ function loadPreferences(): Preferences {
   } catch {
     // Ignora JSON inválido e usa os valores por omissão.
   }
-  return DEFAULT_PREFERENCES;
+  return { ...DEFAULT_PREFERENCES, language: detectLanguage() };
 }
 
 export function usePreferences(initialPreferences?: Preferences) {

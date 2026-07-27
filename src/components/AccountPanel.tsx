@@ -7,13 +7,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { X, LogOut, Copy, Check, Mail, Fingerprint, CalendarDays, AtSign, AlertCircle } from "lucide-react";
 import { CurrentUser, fetchCurrentUser, SessionExpiredError } from "../lib/authApi";
 import { Language } from "../types";
+import type { TFn } from "../lib/i18n";
 
 interface AccountPanelProps {
   open: boolean;
   /** Utilizador em cache (localStorage) — mostrado de imediato enquanto o /me carrega. */
   user: { id: string; username: string; email: string } | null;
   language: Language;
-  t: (key: string) => string;
+  t: TFn;
   onClose: () => void;
   onLogout: () => void;
   onSessionExpired: () => void;

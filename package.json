@@ -11,7 +11,8 @@
     "start": "node dist-server/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-server dist-ssr",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && node scripts/check-i18n.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "test:unit": "bun test extension/test",
     "android:sync": "vite build && cap sync android",
     "android:open": "cap open android"

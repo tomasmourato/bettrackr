@@ -5,7 +5,6 @@ import { Moon, Sun, X } from "lucide-react";
 import { BrandMark } from "./components/BrandMark";
 import { NAV_ITEMS, type ShellProps } from "./navigation";
 import AccountPanel from "./components/AccountPanel";
-import { I18nProvider } from "./lib/i18n";
 
 // Os separadores carregam sob demanda (React.lazy): o shell pinta sem
 // descarregar/parsear o Recharts (~390KB) nem o resto.
@@ -232,24 +231,22 @@ export default function DesktopApp({
                   <Social currency={preferences.currency} isDark={isDark} />
                 )}
                 {activeTab === "SETTINGS" && (
-                  <I18nProvider lang={preferences.language}>
-                    <Settings
-                      preferences={preferences}
-                      auditLogs={auditLogs}
-                      bets={bets}
-                      currency={preferences.currency}
-                      onUpdatePreferences={onUpdatePreferences}
-                      onClearData={onClearData}
-                      onResetDemoData={onResetDemoData}
-                      onImportCSV={onImportCSV}
-                      accounts={accounts}
-                      accountsError={accountsError}
-                      clearAccountsError={clearAccountsError}
-                      onAddAccount={onAddAccount}
-                      onRenameAccount={onRenameAccount}
-                      onDeleteAccount={onDeleteAccount}
-                    />
-                  </I18nProvider>
+                  <Settings
+                    preferences={preferences}
+                    auditLogs={auditLogs}
+                    bets={bets}
+                    currency={preferences.currency}
+                    onUpdatePreferences={onUpdatePreferences}
+                    onClearData={onClearData}
+                    onResetDemoData={onResetDemoData}
+                    onImportCSV={onImportCSV}
+                    accounts={accounts}
+                    accountsError={accountsError}
+                    clearAccountsError={clearAccountsError}
+                    onAddAccount={onAddAccount}
+                    onRenameAccount={onRenameAccount}
+                    onDeleteAccount={onDeleteAccount}
+                  />
                 )}
                 </Suspense>
               </motion.div>
