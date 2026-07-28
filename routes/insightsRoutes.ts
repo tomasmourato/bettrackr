@@ -47,6 +47,33 @@ const LANG_INSTRUCTION: Record<Lang, string> = {
   en: "writing in English",
 };
 
+// Bloco que força o idioma de TODOS os campos de texto do JSON. Só a frase de
+// papel ("a escrever em X") não chegava: os exemplos do esquema estão em
+// português e o modelo copiava-os, devolvendo "Futebol"/"Resultado Final" a um
+// utilizador inglês. Aqui nomeiam-se os campos, um a um.
+function outputLanguageBlock(lang: Lang, fields: string[]): string {
+  const list = fields.map((f) => `"${f}"`).join(", ");
+  return lang === "en"
+    ? `\n\nOUTPUT LANGUAGE — CRITICAL: every piece of text inside the JSON MUST be written in English, including ${list}. The examples in the schema below are written in Portuguese only to illustrate the FORMAT — translate those values into English. Do not output Portuguese words such as "Futebol", "Resultado Final" or "Handicap Asiático"; use "Football", "Full Time Result", "Asian Handicap" and so on. Proper nouns (team and competition names) keep their official name.`
+    : `\n\nIDIOMA DA RESPOSTA: todo o texto dentro do JSON tem de estar em português de Portugal, incluindo ${list}. Nomes próprios (equipas e competições) mantêm o nome oficial.`;
+}
+
+// Etiqueta do veredito: é o SERVIDOR que a escreve (não o modelo), por isso
+// tem de existir nos dois idiomas — senão um utilizador inglês recebia
+// "Valor esperado positivo".
+const VERDICT_LABELS: Record<Lang, Record<"VALOR" | "JUSTA" | "SEM_VALOR", string>> = {
+  pt: {
+    VALOR: "Valor esperado positivo",
+    JUSTA: "Perto do valor justo",
+    SEM_VALOR: "Valor esperado negativo",
+  },
+  en: {
+    VALOR: "Positive expected value",
+    JUSTA: "Close to fair value",
+    SEM_VALOR: "Negative expected value",
+  },
+};
+
 function todayInLisbon(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date());
 }
@@ -123,7 +150,7 @@ Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
     }
   ]
 }
-"confidence" é um inteiro de 1 (arriscado) a 5 (forte). "kickoffLisbon" é a hora em Lisboa.${insist}`;
+"confidence" é um inteiro de 1 (arriscado) a 5 (forte). "kickoffLisbon" é a hora em Lisboa.${outputLanguageBlock(lang, ["summary", "sport", "competition", "market", "selection", "rationale"])}${insist}`;
 }
 
 /** Uma chamada ao modelo. Devolve o texto bruto. */
@@ -193,6 +220,7 @@ interface EvaluatedLeg {
 }
 
 function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean, insistOnJson: boolean, lang: Lang): string {
+  const langBlock = outputLanguageBlock(lang, ["sport", "competition", "market", "selection", "justification", "keyFactors", "risks"]);
   const insist = insistOnJson
     ? `\n\nATENÇÃO: a resposta anterior não continha JSON válido. Responde SÓ com o objeto JSON, a começar em { e a terminar em }. Sem texto antes ou depois, sem blocos de código.`
     : "";
@@ -280,7 +308,7 @@ const clampProb = (p: number) => Math.min(0.98, Math.max(0.02, p));
  * (offeredOdd, estimatedProbability): EV por unidade, prob. implícita, edge,
  * odd justa, Kelly e um veredito. Nada de aritmética confiada ao modelo.
  */
-function sanitizeEvaluation(raw: any): { summary: string; bets: any[] } {
+function sanitizeEvaluation(raw: any, lang: Lang): { summary: string; bets: any[] } {
   const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
   const clipArr = (v: unknown, maxItems: number, maxLen: number) =>
     (Array.isArray(v) ? v : [])
@@ -302,16 +330,13 @@ function sanitizeEvaluation(raw: any): { summary: string; bets: any[] } {
       const kelly = offeredOdd > 1 ? (prob * offeredOdd - 1) / (offeredOdd - 1) : 0;
 
       let verdict: "VALOR" | "JUSTA" | "SEM_VALOR";
-      let verdictLabel: string;
       if (expectedValue >= 0.05) {
         verdict = "VALOR";
-        verdictLabel = "Valor esperado positivo";
       } else if (expectedValue >= -0.02) {
         verdict = "JUSTA";
-        verdictLabel = "Perto do valor justo";
+
       } else {
         verdict = "SEM_VALOR";
-        verdictLabel = "Valor esperado negativo";
       }
 
       const legs: EvaluatedLeg[] = (Array.isArray(b?.legs) ? b.legs : [])
@@ -340,7 +365,7 @@ function sanitizeEvaluation(raw: any): { summary: string; bets: any[] } {
         edgePct: Number((edge * 100).toFixed(1)),
         kellyFraction: Number(Math.max(0, kelly).toFixed(3)),
         verdict,
-        verdictLabel,
+        verdictLabel: VERDICT_LABELS[lang][verdict],
         confidence: Math.min(5, Math.max(1, Math.round(Number(b?.confidence) || 3))),
         justification: clip(b?.justification, 700),
         keyFactors: clipArr(b?.keyFactors, 5, 200),
@@ -355,25 +380,29 @@ function sanitizeEvaluation(raw: any): { summary: string; bets: any[] } {
   // O resumo é DERIVADO dos números calculados, nunca copiado do modelo: a
   // prosa do modelo já afirmou "valor positivo" numa aposta que o cálculo dava
   // como -EV, contradizendo o cartão. Assim o veredito tem uma única fonte.
-  return { summary: buildEvalSummary(bets), bets };
+  return { summary: buildEvalSummary(bets, lang), bets };
 }
 
 /** Resumo determinístico, coerente por construção com os vereditos calculados. */
-function buildEvalSummary(bets: any[]): string {
+function buildEvalSummary(bets: any[], lang: Lang): string {
   const evStr = (pct: number) => `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 
   if (bets.length === 1) {
     const b = bets[0];
+    const above = b.offeredOdd >= b.fairOdd;
+    if (lang === "en") {
+      const polarity =
+        b.verdict === "VALOR" ? "positive" : b.verdict === "SEM_VALOR" ? "negative" : "practically neutral";
+      const comparison = above
+        ? `The offered odds (${b.offeredOdd.toFixed(2)}) are above the estimated fair odds (${b.fairOdd.toFixed(2)}).`
+        : `The offered odds (${b.offeredOdd.toFixed(2)}) are below the estimated fair odds (${b.fairOdd.toFixed(2)}).`;
+      return `${polarity.charAt(0).toUpperCase()}${polarity.slice(1)} expected value: ${evStr(b.expectedValuePct)} per unit staked. ${comparison}`;
+    }
     const polarity =
-      b.verdict === "VALOR"
-        ? "positivo"
-        : b.verdict === "SEM_VALOR"
-          ? "negativo"
-          : "praticamente neutro";
-    const comparison =
-      b.offeredOdd >= b.fairOdd
-        ? `A odd oferecida (${b.offeredOdd.toFixed(2)}) está acima da odd justa estimada (${b.fairOdd.toFixed(2)}).`
-        : `A odd oferecida (${b.offeredOdd.toFixed(2)}) está abaixo da odd justa estimada (${b.fairOdd.toFixed(2)}).`;
+      b.verdict === "VALOR" ? "positivo" : b.verdict === "SEM_VALOR" ? "negativo" : "praticamente neutro";
+    const comparison = above
+      ? `A odd oferecida (${b.offeredOdd.toFixed(2)}) está acima da odd justa estimada (${b.fairOdd.toFixed(2)}).`
+      : `A odd oferecida (${b.offeredOdd.toFixed(2)}) está abaixo da odd justa estimada (${b.fairOdd.toFixed(2)}).`;
     return `Valor esperado ${polarity}: ${evStr(b.expectedValuePct)} por unidade apostada. ${comparison}`;
   }
 
@@ -381,6 +410,12 @@ function buildEvalSummary(bets: any[]): string {
   const neg = bets.filter((b) => b.verdict === "SEM_VALOR").length;
   const neutral = bets.length - pos - neg;
   const parts: string[] = [];
+  if (lang === "en") {
+    if (pos) parts.push(`${pos} with positive expected value`);
+    if (neutral) parts.push(`${neutral} close to fair value`);
+    if (neg) parts.push(`${neg} with negative expected value`);
+    return `${bets.length} bets evaluated: ${parts.join(", ")}.`;
+  }
   if (pos) parts.push(`${pos} com valor esperado positivo`);
   if (neutral) parts.push(`${neutral} perto do valor justo`);
   if (neg) parts.push(`${neg} com valor esperado negativo`);
@@ -396,7 +431,7 @@ async function evaluateBet(input: { imageBase64?: string; text: string; lang: La
     try {
       const prompt = buildEvalPrompt(todayInLisbon(), input.text, Boolean(input.imageBase64), attempt > 1, input.lang);
       const text = await callEvalModel(prompt, input.imageBase64);
-      return sanitizeEvaluation(extractJson(text));
+      return sanitizeEvaluation(extractJson(text), input.lang);
     } catch (err) {
       lastError = err;
       console.warn(`[insights] avaliação tentativa ${attempt}/${EVAL_MAX_ATTEMPTS} falhou:`, (err as Error)?.message);
