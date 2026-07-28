@@ -31,6 +31,7 @@ import TimeframeFilter, {
   type TimeframeFilterValue,
 } from "./TimeframeFilter";
 import { readFilters, serializeFilters } from "../lib/filterParams";
+import { useI18n, type TKey } from "../lib/i18n";
 import { useUrlFilterSync } from "../hooks/useUrlFilterSync";
 
 interface BetsManagerProps {
@@ -54,21 +55,22 @@ type SortDirection = "asc" | "desc";
 const KEEP = "__KEEP__";
 const NO_ACCOUNT = "__NONE__";
 
-const BULK_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: KEEP, label: "Manter estado" },
-  { value: "POR_LIQUIDAR", label: "Por liquidar" },
-  { value: "GANHA", label: "Ganha" },
-  { value: "PERDIDA", label: "Perdida" },
-  { value: "MEIO_GANHA", label: "Meio ganha" },
-  { value: "MEIO_PERDIDA", label: "Meio perdida" },
-  { value: "ANULADA", label: "Anulada" },
+// Guardam CHAVES; o texto e resolvido dentro do componente (useI18n).
+const BULK_STATUS_OPTIONS: { value: string; key: TKey }[] = [
+  { value: KEEP, key: "bets.bulkEdit.keepStatus" },
+  { value: "POR_LIQUIDAR", key: "status.unsettled" },
+  { value: "GANHA", key: "status.won" },
+  { value: "PERDIDA", key: "status.lost" },
+  { value: "MEIO_GANHA", key: "status.halfWon" },
+  { value: "MEIO_PERDIDA", key: "status.halfLost" },
+  { value: "ANULADA", key: "status.void" },
 ];
 
-const BULK_MONEY_OPTIONS: { value: string; label: string }[] = [
-  { value: KEEP, label: "Manter tipo" },
-  { value: "NORMAL", label: "Dinheiro real" },
-  { value: "FREEBET", label: "Freebet" },
-  { value: "RISK_FREE", label: "Sem risco" },
+const BULK_MONEY_OPTIONS: { value: string; key: TKey }[] = [
+  { value: KEEP, key: "bets.bulkEdit.keepMoney" },
+  { value: "NORMAL", key: "filters.money.real" },
+  { value: "FREEBET", key: "filters.money.freebet" },
+  { value: "RISK_FREE", key: "filters.money.riskFree" },
 ];
 
 export default function BetsManager({ 
@@ -82,6 +84,7 @@ export default function BetsManager({
   initialSearch,
   accounts = []
 }: BetsManagerProps) {
+  const { t, locale, formatMoney, formatSignedMoney } = useI18n();
   const initialFilters = useMemo(
     () => readFilters(new URLSearchParams(initialSearch ?? "")),
     [initialSearch]
@@ -237,13 +240,13 @@ export default function BetsManager({
   const sportOptions = useMemo(
     () => Array.from(new Set(
       bets.flatMap(bet => bet.selections.map(selection => selection.sport?.trim()).filter((sport): sport is string => Boolean(sport)))
-    )).sort((a, b) => a.localeCompare(b, "pt")),
-    [bets]
+    )).sort((a, b) => a.localeCompare(b, locale)),
+    [bets, locale]
   );
   const bookmakerOptions = useMemo(
     () => Array.from(new Set([...AVAILABLE_BOOKMAKERS, ...bets.map(bet => bet.bookmaker).filter(Boolean)]))
-      .sort((a, b) => a.localeCompare(b, "pt")),
-    [bets]
+      .sort((a, b) => a.localeCompare(b, locale)),
+    [bets, locale]
   );
   const timeframeRange = useMemo(() => resolveTimeframeRange(timeframeFilter), [timeframeFilter]);
   const accountLabelById = useMemo(
@@ -498,7 +501,7 @@ export default function BetsManager({
           id: `${duplicateId}-sel-${selectionIndex}`
         })),
         dateTime: duplicatedAt,
-        notes: bet.notes ? `[Duplicado] ${bet.notes}` : "Aposta duplicada.",
+        notes: bet.notes ? t("bets.duplicatedPrefix", { notes: bet.notes }) : t("bets.duplicatedNote"),
         origin: "MANUAL",
         // Sem metadata: o duplicado não pode herdar o importKey, senão a
         // extensão confunde-o com a aposta importada original.
@@ -539,9 +542,10 @@ export default function BetsManager({
     await onIgnoreBet(bet.id, false);
   };
 
-  const sortButton = (label: string, field: SortField, extraClasses = "") => {
+  const sortButton = (labelKey: TKey, field: SortField, extraClasses = "") => {
     const isActive = sortField === field;
     const DirectionIcon = sortDirection === "asc" ? ArrowUp : ArrowDown;
+    const label = t(labelKey);
 
     return (
       <button
@@ -555,8 +559,15 @@ export default function BetsManager({
             ? "text-emerald-600 dark:text-emerald-300"
             : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
         } ${extraClasses}`}
-        aria-label={`Ordenar por ${label}${isActive ? `, direção ${sortDirection === "asc" ? "ascendente" : "descendente"}` : ""}`}
-        title={`Ordenar por ${label}`}
+        aria-label={
+          isActive
+            ? t("bets.sort.ariaActive", {
+                label,
+                direction: t(sortDirection === "asc" ? "bets.sort.asc" : "bets.sort.desc"),
+              })
+            : t("bets.sort.aria", { label })
+        }
+        title={t("bets.sort.aria", { label })}
       >
         {label}
         {isActive && <DirectionIcon size={9} strokeWidth={2.5} />}
@@ -634,7 +645,7 @@ export default function BetsManager({
       ...bet,
       id: "bet-" + Date.now(),
       dateTime: new Date().toISOString().replace("T", " ").slice(0, 16),
-      notes: bet.notes ? `[Duplicado] ${bet.notes}` : "Aposta duplicada.",
+      notes: bet.notes ? t("bets.duplicatedPrefix", { notes: bet.notes }) : t("bets.duplicatedNote"),
       origin: "MANUAL",
       // Sem metadata: o duplicado não pode herdar o importKey da original.
       metadata: undefined
@@ -668,13 +679,13 @@ export default function BetsManager({
     // Validations
     const stakeNum = parseFloat(formStake);
     if (isNaN(stakeNum) || stakeNum <= 0) {
-      setFormError("Por favor insere uma Stake válida.");
+      setFormError(t("bets.error.stake"));
       return;
     }
 
     const finalBookmaker = formBookmaker === "Outra" ? formCustomBookmaker.trim() : formBookmaker;
     if (!finalBookmaker) {
-      setFormError("Por favor define a Casa de Apostas.");
+      setFormError(t("bets.error.bookmaker"));
       return;
     }
 
@@ -698,7 +709,7 @@ export default function BetsManager({
     });
 
     if (!isValid) {
-      setFormError("Por favor preenche todos os campos das seleções com valores válidos (odds devem ser maiores que 1.0).");
+      setFormError(t("bets.error.selections"));
       return;
     }
 
@@ -766,19 +777,19 @@ export default function BetsManager({
     const base = "px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 w-max border";
     switch (status) {
       case "POR_LIQUIDAR":
-        return <span className={`${base} bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900`}><Clock size={10} /> Por Liquidar</span>;
+        return <span className={`${base} bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900`}><Clock size={10} /> {t("status.unsettled")}</span>;
       case "GANHA":
-        return <span className={`${base} bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900`}><Check size={10} /> Ganha</span>;
+        return <span className={`${base} bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900`}><Check size={10} /> {t("status.won")}</span>;
       case "PERDIDA":
-        return <span className={`${base} bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-900`}><X size={10} /> Perdida</span>;
+        return <span className={`${base} bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-900`}><X size={10} /> {t("status.lost")}</span>;
       case "ANULADA":
-        return <span className={`${base} bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700`}><MinusCircle size={10} /> Anulada</span>;
+        return <span className={`${base} bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700`}><MinusCircle size={10} /> {t("status.void")}</span>;
       case "MEIO_GANHA":
-        return <span className={`${base} bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900`}><Check size={10} /> Meio Ganha</span>;
+        return <span className={`${base} bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900`}><Check size={10} /> {t("status.halfWon")}</span>;
       case "MEIO_PERDIDA":
-        return <span className={`${base} bg-rose-50/50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 border-rose-200 dark:border-rose-900`}><X size={10} /> Meio Perdida</span>;
+        return <span className={`${base} bg-rose-50/50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 border-rose-200 dark:border-rose-900`}><X size={10} /> {t("status.halfLost")}</span>;
       case "CASHOUT":
-        return <span className={`${base} bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-300 border-violet-200 dark:border-violet-900`}><MinusCircle size={10} /> Cashout</span>;
+        return <span className={`${base} bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-300 border-violet-200 dark:border-violet-900`}><MinusCircle size={10} /> {t("status.cashout")}</span>;
     }
   };
 
@@ -786,17 +797,17 @@ export default function BetsManager({
     const base = "inline-flex w-max items-center gap-1 rounded-sm border px-2 py-1 text-[9px] font-bold uppercase tracking-wider";
     switch (result) {
       case "GANHA":
-        return <span className={`${base} border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300`}><Check size={10} /> Ganha</span>;
+        return <span className={`${base} border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300`}><Check size={10} /> {t("status.won")}</span>;
       case "PERDIDA":
-        return <span className={`${base} border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200`}><X size={10} /> Perdida</span>;
+        return <span className={`${base} border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200`}><X size={10} /> {t("status.lost")}</span>;
       case "ANULADA":
-        return <span className={`${base} border-zinc-200 bg-zinc-100 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`}><MinusCircle size={10} /> Anulada</span>;
+        return <span className={`${base} border-zinc-200 bg-zinc-100 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`}><MinusCircle size={10} /> {t("status.void")}</span>;
       case "POR_LIQUIDAR":
-        return <span className={`${base} border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300`}><Clock size={10} /> Pendente</span>;
+        return <span className={`${base} border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300`}><Clock size={10} /> {t("status.pending")}</span>;
       case "MEIO_GANHA":
-        return <span className={`${base} border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300`}><Check size={10} /> Meio ganha</span>;
+        return <span className={`${base} border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300`}><Check size={10} /> {t("status.halfWon")}</span>;
       case "MEIO_PERDIDA":
-        return <span className={`${base} border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300`}><X size={10} /> Meio perdida</span>;
+        return <span className={`${base} border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300`}><X size={10} /> {t("status.halfLost")}</span>;
       default:
         return null;
     }
@@ -842,7 +853,7 @@ export default function BetsManager({
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input
               type="search"
-              placeholder="Pesquisar equipa, mercado ou notas..."
+              placeholder={t("bets.searchPlaceholder")}
               className="h-10 w-full rounded-sm border border-zinc-200 bg-zinc-50 pl-9 pr-4 text-xs text-zinc-800 outline-none transition-all placeholder:text-zinc-400 hover:border-zinc-300 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:hover:border-zinc-600 dark:focus:border-emerald-500 dark:focus:bg-zinc-800"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -850,7 +861,7 @@ export default function BetsManager({
           </div>
 
           <span className="hidden text-[11px] font-medium text-zinc-400 lg:block dark:text-zinc-500">
-            {filteredBets.length} de {bets.length} apostas
+            {t("bets.countOf", { shown: filteredBets.length, total: bets.length })}
           </span>
 
           {/* New Bet Button */}
@@ -859,7 +870,7 @@ export default function BetsManager({
             className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm shadow-emerald-950/15 transition-all hover:bg-emerald-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 cursor-pointer"
             id="btn-new-bet"
           >
-            <Plus size={15} strokeWidth={2.5} /> Registar Aposta
+            <Plus size={15} strokeWidth={2.5} /> {t("bets.new")}
           </button>
         </div>
 
@@ -881,7 +892,7 @@ export default function BetsManager({
                 }`}
               >
                 <CheckSquare size={14} />
-                {isSelecting ? "Cancelar seleção" : "Selecionar várias"}
+                {isSelecting ? t("bets.cancelSelection") : t("bets.selectMultiple")}
               </button>
 
               {isSelecting && (
@@ -891,7 +902,9 @@ export default function BetsManager({
                   disabled={filteredBets.length === 0}
                   className="h-9 rounded-sm border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-600 transition-colors hover:border-emerald-300 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:border-emerald-700 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
                 >
-                  {allFilteredBetsSelected ? "Desmarcar filtradas" : `Selecionar filtradas (${filteredBets.length})`}
+                  {allFilteredBetsSelected
+                    ? t("bets.deselectFiltered")
+                    : t("bets.selectFiltered", { n: filteredBets.length })}
                 </button>
               )}
             </div>
@@ -901,26 +914,26 @@ export default function BetsManager({
             className="flex-1 min-w-40"
             value={statusFilter}
             options={[
-              { value: "ALL", label: "Todos os Estados" },
-              { value: "RESOLVED", label: "Resolvidas" },
-              { value: "POR_LIQUIDAR", label: "Por Liquidar" },
-              { value: "GANHA", label: "Ganha" },
-              { value: "PERDIDA", label: "Perdida" },
-              { value: "ANULADA", label: "Anulada" },
-              { value: "MEIO_GANHA", label: "Meio Ganha" },
-              { value: "MEIO_PERDIDA", label: "Meio Perdida" },
-              { value: "CASHOUT", label: "Cashout" }
+              { value: "ALL", label: t("filters.allStatuses") },
+              { value: "RESOLVED", label: t("status.resolved") },
+              { value: "POR_LIQUIDAR", label: t("status.unsettled") },
+              { value: "GANHA", label: t("status.won") },
+              { value: "PERDIDA", label: t("status.lost") },
+              { value: "ANULADA", label: t("status.void") },
+              { value: "MEIO_GANHA", label: t("status.halfWon") },
+              { value: "MEIO_PERDIDA", label: t("status.halfLost") },
+              { value: "CASHOUT", label: t("status.cashout") }
             ]}
             onChange={setStatusFilter}
-            ariaLabel="Filtrar por estado"
+            ariaLabel={t("filters.statusAria")}
           />
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={bookmakerFilter}
-            options={[{ value: "ALL", label: "Todas as Casas" }, ...bookmakerOptions.map(bookmaker => ({ value: bookmaker, label: bookmaker }))]}
+            options={[{ value: "ALL", label: t("filters.allBookmakers") }, ...bookmakerOptions.map(bookmaker => ({ value: bookmaker, label: bookmaker }))]}
             onChange={setBookmakerFilter}
-            ariaLabel="Filtrar por casa de apostas"
+            ariaLabel={t("filters.bookmakerAria")}
           />
 
           {accounts.length > 0 && (
@@ -928,46 +941,46 @@ export default function BetsManager({
               className="flex-1 min-w-40"
               value={accountFilter}
               options={[
-                { value: "ALL", label: "Todas as Contas" },
+                { value: "ALL", label: t("filters.allAccounts") },
                 ...accounts.map(account => ({ value: account.id, label: `${account.bookmaker} · ${account.label}` })),
-                { value: "NONE", label: "Sem conta" }
+                { value: "NONE", label: t("filters.noAccount") }
               ]}
               onChange={setAccountFilter}
-              ariaLabel="Filtrar por conta"
+              ariaLabel={t("filters.accountAria")}
             />
           )}
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={sportFilter}
-            options={[{ value: "ALL", label: "Todos os Desportos" }, ...sportOptions.map(sport => ({ value: sport, label: sport }))]}
+            options={[{ value: "ALL", label: t("filters.allSports") }, ...sportOptions.map(sport => ({ value: sport, label: sport }))]}
             onChange={setSportFilter}
-            ariaLabel="Filtrar por desporto"
+            ariaLabel={t("filters.sportAria")}
           />
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={typeFilter}
             options={[
-              { value: "ALL", label: "Qualquer Tipo" },
-              { value: "SIMPLES", label: "Simples" },
-              { value: "MULTIPLA", label: "Múltipla" }
+              { value: "ALL", label: t("filters.anyType") },
+              { value: "SIMPLES", label: t("filters.type.single") },
+              { value: "MULTIPLA", label: t("filters.type.multiple") }
             ]}
             onChange={setTypeFilter}
-            ariaLabel="Filtrar por tipo de aposta"
+            ariaLabel={t("filters.typeAria")}
           />
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={freebetFilter}
             options={[
-              { value: "ALL", label: "Dinheiro e Freebet" },
-              { value: "NORMAL", label: "Dinheiro Real" },
-              { value: "FREEBET", label: "Freebet" },
-              { value: "RISK_FREE", label: "Sem risco" }
+              { value: "ALL", label: t("filters.money.all") },
+              { value: "NORMAL", label: t("filters.money.real") },
+              { value: "FREEBET", label: t("filters.money.freebet") },
+              { value: "RISK_FREE", label: t("filters.money.riskFree") }
             ]}
             onChange={setFreebetFilter}
-            ariaLabel="Filtrar por tipo de dinheiro"
+            ariaLabel={t("filters.moneyAria")}
           />
 
           <TimeframeFilter
@@ -982,14 +995,14 @@ export default function BetsManager({
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm px-3 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <span>
             <strong className="text-emerald-600 dark:text-emerald-300">{selectedBetIds.size}</strong>{" "}
-            {selectedBetIds.size === 1 ? "aposta selecionada" : "apostas selecionadas"}
+            {t("bets.selectedSuffix", { n: selectedBetIds.size })}
           </span>
 
           <div className="flex flex-wrap items-center gap-2">
             {isConfirmingBulkDelete ? (
               <div className="inline-flex items-center gap-2 rounded-sm border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/50 px-2 py-1">
                 <span className="font-semibold text-rose-700 dark:text-rose-300">
-                  Apagar {selectedBetIds.size} {selectedBetIds.size === 1 ? "aposta" : "apostas"}?
+                  {t("bets.deleteConfirm", { n: selectedBetIds.size })}
                 </span>
                 <button
                   type="button"
@@ -997,14 +1010,14 @@ export default function BetsManager({
                   disabled={isBulkActionRunning}
                   className="px-2.5 py-1 rounded-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
-                  Confirmar
+                  {t("common.confirm")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsConfirmingBulkDelete(false)}
                   disabled={isBulkActionRunning}
                   className="p-1 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  aria-label="Cancelar eliminação"
+                  aria-label={t("bets.cancelDeleteAria")}
                 >
                   <X size={14} />
                 </button>
@@ -1021,7 +1034,7 @@ export default function BetsManager({
                       : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-600 dark:hover:text-emerald-300"
                   }`}
                 >
-                  <Edit size={13} /> Editar
+                  <Edit size={13} /> {t("common.edit")}
                 </button>
                 <button
                   type="button"
@@ -1029,7 +1042,7 @@ export default function BetsManager({
                   disabled={isBulkActionRunning}
                   className="px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-600 dark:hover:text-emerald-300 disabled:opacity-50 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {allSelectedIgnored ? <><Eye size={13} /> Repor</> : <><EyeOff size={13} /> Ignorar</>}
+                  {allSelectedIgnored ? <><Eye size={13} /> {t("bets.restore")}</> : <><EyeOff size={13} /> {t("bets.ignore")}</>}
                 </button>
                 <button
                   type="button"
@@ -1037,7 +1050,7 @@ export default function BetsManager({
                   disabled={isBulkActionRunning}
                   className="px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-600 dark:hover:text-emerald-300 disabled:opacity-50 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <Copy size={13} /> Duplicar
+                  <Copy size={13} /> {t("bets.duplicate")}
                 </button>
                 <button
                   type="button"
@@ -1045,7 +1058,7 @@ export default function BetsManager({
                   disabled={isBulkActionRunning}
                   className="px-3 py-1.5 rounded-sm border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950 disabled:opacity-50 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <Trash2 size={13} /> Apagar
+                  <Trash2 size={13} /> {t("common.delete")}
                 </button>
               </>
             )}
@@ -1058,72 +1071,72 @@ export default function BetsManager({
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm px-3 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-              Editar {selectedBetIds.size} {selectedBetIds.size === 1 ? "aposta" : "apostas"} — só campos comuns
+              {t("bets.bulkEdit.title", { n: selectedBetIds.size })}
             </span>
             <button
               type="button"
               onClick={() => setIsBulkEditOpen(false)}
               className="p-1 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-              aria-label="Fechar edição em massa"
+              aria-label={t("bets.bulkEdit.close")}
             >
               <X size={14} />
             </button>
           </div>
           <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-            Só os campos que alterares são aplicados. O montante, a odd e as seleções de cada aposta ficam intactos.
+            {t("bets.bulkEdit.hint")}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             <div>
-              <label className={bulkLabelClass}>Estado</label>
+              <label className={bulkLabelClass}>{t("filters.status")}</label>
               <select className={`${bulkFieldClass} cursor-pointer`} value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}>
-                {BULK_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {BULK_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
               </select>
             </div>
             <div>
-              <label className={bulkLabelClass}>Desporto (vazio = manter)</label>
+              <label className={bulkLabelClass}>{t("bets.bulkEdit.sport")}</label>
               <input
                 type="text"
                 list="bulk-sports-desktop"
                 className={bulkFieldClass}
                 value={bulkSport}
                 onChange={e => setBulkSport(e.target.value)}
-                placeholder="Manter"
+placeholder={t("bets.bulkEdit.keep")}
               />
               <datalist id="bulk-sports-desktop">
                 {sportOptions.map(s => <option key={s} value={s} />)}
               </datalist>
             </div>
             <div>
-              <label className={bulkLabelClass}>Casa de apostas</label>
+              <label className={bulkLabelClass}>{t("filters.bookmaker")}</label>
               <select className={`${bulkFieldClass} cursor-pointer`} value={bulkBookmaker} onChange={e => setBulkBookmaker(e.target.value)}>
-                <option value={KEEP}>Manter casa</option>
+                <option value={KEEP}>{t("bets.bulkEdit.keepBookmaker")}</option>
                 {bookmakerOptions.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
             {accounts.length > 0 && (
               <div>
-                <label className={bulkLabelClass}>Conta</label>
+                <label className={bulkLabelClass}>{t("filters.account")}</label>
                 <select className={`${bulkFieldClass} cursor-pointer`} value={bulkAccount} onChange={e => setBulkAccount(e.target.value)}>
-                  <option value={KEEP}>Manter conta</option>
-                  <option value={NO_ACCOUNT}>Sem conta</option>
+                  <option value={KEEP}>{t("bets.bulkEdit.keepAccount")}</option>
+                  <option value={NO_ACCOUNT}>{t("filters.noAccount")}</option>
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.bookmaker} · {a.label}</option>)}
                 </select>
               </div>
             )}
             <div>
-              <label className={bulkLabelClass}>Tipo de dinheiro</label>
+              <label className={bulkLabelClass}>{t("bets.field.moneyType")}</label>
               <select className={`${bulkFieldClass} cursor-pointer`} value={bulkMoney} onChange={e => setBulkMoney(e.target.value)}>
-                {BULK_MONEY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {BULK_MONEY_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
               </select>
             </div>
             <div className="col-span-2 md:col-span-3">
-              <label className={bulkLabelClass}>Acrescentar nota (opcional)</label>
+              <label className={bulkLabelClass}>{t("bets.bulkEdit.note")}</label>
               <textarea
                 className={`${bulkFieldClass} h-auto py-2`}
                 rows={2}
                 value={bulkNote}
                 onChange={e => setBulkNote(e.target.value)}
-                placeholder="Fica anexada às notas de cada aposta selecionada"
+placeholder={t("bets.bulkEdit.notePlaceholder")}
               />
             </div>
           </div>
@@ -1134,7 +1147,7 @@ export default function BetsManager({
               disabled={isBulkActionRunning}
               className="px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
-              Cancelar
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -1142,7 +1155,7 @@ export default function BetsManager({
               disabled={isBulkActionRunning}
               className="px-3 py-1.5 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
-              Aplicar a {selectedBetIds.size}
+              {t("bets.bulkEdit.apply", { n: selectedBetIds.size })}
             </button>
           </div>
         </div>
@@ -1153,25 +1166,25 @@ export default function BetsManager({
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm px-3 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-              Ignorar {selectedBetIds.size} {selectedBetIds.size === 1 ? "aposta" : "apostas"} — fora das estatísticas
+              {t("bets.bulkIgnore.title", { n: selectedBetIds.size })}
             </span>
             <button
               type="button"
               onClick={() => setIsBulkIgnoreOpen(false)}
               className="p-1 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-              aria-label="Fechar ignorar em massa"
+              aria-label={t("bets.bulkIgnore.close")}
             >
               <X size={14} />
             </button>
           </div>
           <div>
-            <label className={bulkLabelClass}>Motivo (opcional, aplicado a todas)</label>
+            <label className={bulkLabelClass}>{t("bets.bulkIgnore.reason")}</label>
             <textarea
               className={`${bulkFieldClass} h-auto py-2`}
               rows={2}
               value={bulkIgnoreComment}
               onChange={e => setBulkIgnoreComment(e.target.value)}
-              placeholder="Ex.: apostas de teste, erro de registo…"
+placeholder={t("bets.bulkIgnore.reasonPlaceholder")}
             />
           </div>
           <div className="flex items-center justify-end gap-2">
@@ -1181,7 +1194,7 @@ export default function BetsManager({
               disabled={isBulkActionRunning}
               className="px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
-              Cancelar
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -1189,7 +1202,7 @@ export default function BetsManager({
               disabled={isBulkActionRunning}
               className="px-3 py-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-900 dark:bg-zinc-200 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
-              Ignorar {selectedBetIds.size}
+              {t("bets.bulkIgnore.confirm", { n: selectedBetIds.size })}
             </button>
           </div>
         </div>
@@ -1204,7 +1217,7 @@ export default function BetsManager({
               key={bet.id}
               role="button"
               tabIndex={0}
-              aria-label={`${isSelecting ? "Selecionar" : "Ver detalhes da"} aposta de ${bet.dateTime}`}
+              aria-label={t(isSelecting ? "bets.cardAriaSelect" : "bets.cardAriaView", { date: bet.dateTime })}
               onClick={() => {
                 if (isSelecting) toggleBetSelection(bet.id);
                 else setDetailBet(bet);
@@ -1226,7 +1239,7 @@ export default function BetsManager({
               {isSelecting && (
                 <label
                   className="flex items-center self-start md:self-center cursor-pointer"
-                  title="Selecionar aposta"
+title={t("bets.selectBet")}
                   onClick={(event) => event.stopPropagation()}
                   onKeyDown={(event) => event.stopPropagation()}
                 >
@@ -1235,7 +1248,7 @@ export default function BetsManager({
                     checked={selectedBetIds.has(bet.id)}
                     onChange={() => toggleBetSelection(bet.id)}
                     className="h-4 w-4 rounded-sm border-zinc-300 dark:border-zinc-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                    aria-label={`Selecionar aposta de ${bet.dateTime}`}
+                    aria-label={t("bets.cardAriaSelect", { date: bet.dateTime })}
                   />
                 </label>
               )}
@@ -1247,7 +1260,7 @@ export default function BetsManager({
                     {bet.type}
                   </span>
                   <span className="inline-flex items-center gap-1 font-mono">
-                    {sortButton("Data", "date")}
+                    {sortButton("bets.sort.date", "date")}
                     <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{bet.dateTime}</span>
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-sm">
@@ -1260,20 +1273,20 @@ export default function BetsManager({
                   )}
                   {bet.isFreebet && (
                     <span className="text-[9px] font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-sm uppercase border border-purple-200 dark:border-purple-900">
-                      Freebet
+                      {t("filters.money.freebet")}
                     </span>
                   )}
                   {bet.isRiskFree && (
                     <span className="text-[9px] font-bold bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded-sm uppercase border border-cyan-200 dark:border-cyan-900">
-                      Sem risco
+                      {t("filters.money.riskFree")}
                     </span>
                   )}
                   {bet.isIgnored && (
                     <span
                       className="inline-flex items-center gap-1 text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-sm uppercase border border-zinc-200 dark:border-zinc-700"
-                      title="Excluída das estatísticas"
+title={t("bets.ignoredTitle")}
                     >
-                      <EyeOff size={10} /> Ignorada
+                      <EyeOff size={10} /> {t("bets.ignored")}
                     </span>
                   )}
                   {getStatusBadge(bet.status)}
@@ -1306,22 +1319,22 @@ export default function BetsManager({
                 {/* Financial Summary */}
                 <div className="flex gap-4 text-right pr-2">
                   <div className="flex flex-col">
-                    {sortButton("Stake", "stake", "self-end")}
+                    {sortButton("bets.sort.stake", "stake", "self-end")}
                     <span
                       className="text-xs font-bold text-zinc-800 dark:text-zinc-100 font-mono mt-0.5"
                       style={bet.isFreebet ? { color: "#a855f7" } : undefined}
                     >
-                      {safeNum(bet.stake).toFixed(2)}{currency}
+                      {formatMoney(safeNum(bet.stake), currency)}
                     </span>
                   </div>
                   <div className="flex flex-col">
-                    {sortButton("Odd", "odd", "self-end")}
+                    {sortButton("bets.sort.odd", "odd", "self-end")}
                     <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900 px-1.5 py-0.5 rounded-sm self-end mt-0.5">
                       {safeNum(bet.odd).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex flex-col min-w-[75px]">
-                    {sortButton(isSettled ? "Lucro" : "Potencial", "profit", "self-end")}
+                    {sortButton(isSettled ? "bets.sort.profit" : "bets.sort.potential", "profit", "self-end")}
                     <span className={`text-xs font-bold font-mono mt-0.5 ${
                       !isSettled
                         ? "text-zinc-500 dark:text-zinc-400"
@@ -1331,9 +1344,9 @@ export default function BetsManager({
                             ? "text-rose-600 dark:text-rose-400"
                             : "text-zinc-600 dark:text-zinc-300"
                     }`}>
-                      {isSettled 
-                        ? `${safeNum(bet.netProfit) >= 0 ? "+" : ""}${safeNum(bet.netProfit).toFixed(2)}${currency}` 
-                        : `${safeNum(bet.potentialReturn).toFixed(2)}${currency}`}
+                      {isSettled
+                        ? formatSignedMoney(safeNum(bet.netProfit), currency)
+                        : formatMoney(safeNum(bet.potentialReturn), currency)}
                     </span>
                   </div>
                 </div>
@@ -1346,21 +1359,21 @@ export default function BetsManager({
                 >
                   {deletingId === bet.id ? (
                     <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 p-1 rounded-sm animate-pulse">
-                      <span className="text-[9px] text-rose-800 dark:text-rose-200 font-bold uppercase tracking-wider mr-1">Apagar?</span>
+                      <span className="text-[9px] text-rose-800 dark:text-rose-200 font-bold uppercase tracking-wider mr-1">{t("bets.deleteQ")}</span>
                       <button
                         onClick={() => {
                           onDeleteBet(bet.id);
                           setDeletingId(null);
                         }}
                         className="p-1 rounded-xs bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
-                        title="Confirmar Apagar"
+title={t("bets.confirmDelete")}
                       >
                         <Check size={10} />
                       </button>
                       <button
                         onClick={() => setDeletingId(null)}
                         className="p-1 rounded-xs bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer"
-                        title="Cancelar"
+title={t("common.cancel")}
                       >
                         <X size={10} />
                       </button>
@@ -1375,23 +1388,23 @@ export default function BetsManager({
                           if (e.key === "Enter") { e.preventDefault(); confirmIgnore(); }
                           if (e.key === "Escape") { setIgnoringId(null); setIgnoreComment(""); }
                         }}
-                        placeholder="Motivo (opcional)"
+placeholder={t("bets.ignoreReasonPlaceholder")}
                         maxLength={200}
                         autoFocus
-                        aria-label="Motivo para ignorar a aposta"
+aria-label={t("bets.ignoreReasonAria")}
                         className="w-40 border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-xs px-1.5 py-1 text-[11px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
                       />
                       <button
                         onClick={confirmIgnore}
                         className="p-1 rounded-xs bg-zinc-600 hover:bg-zinc-700 text-white transition-colors cursor-pointer"
-                        title="Ignorar aposta (excluir das estatísticas)"
+title={t("bets.ignoreTitle")}
                       >
                         <Check size={10} />
                       </button>
                       <button
                         onClick={() => { setIgnoringId(null); setIgnoreComment(""); }}
                         className="p-1 rounded-xs bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer"
-                        title="Cancelar"
+title={t("common.cancel")}
                       >
                         <X size={10} />
                       </button>
@@ -1400,14 +1413,14 @@ export default function BetsManager({
                     <>
                       <button
                         onClick={() => handleDuplicate(bet)}
-                        title="Duplicar Aposta"
+title={t("bets.duplicateTitle")}
                         className="p-1.5 rounded-sm text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                       >
                         <Copy size={13} />
                       </button>
                       <button
                         onClick={() => openEditModal(bet)}
-                        title="Editar Aposta"
+title={t("bets.editTitle")}
                         className="p-1.5 rounded-sm text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                       >
                         <Edit size={13} />
@@ -1415,7 +1428,7 @@ export default function BetsManager({
                       {bet.isIgnored ? (
                         <button
                           onClick={() => handleUnignore(bet)}
-                          title="Repor aposta nas estatísticas"
+title={t("bets.restoreTitle")}
                           className="p-1.5 rounded-sm text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <Eye size={13} />
@@ -1423,7 +1436,7 @@ export default function BetsManager({
                       ) : (
                         <button
                           onClick={() => startIgnore(bet)}
-                          title="Ignorar aposta (excluir das estatísticas)"
+title={t("bets.ignoreTitle")}
                           className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <EyeOff size={13} />
@@ -1431,7 +1444,7 @@ export default function BetsManager({
                       )}
                       <button
                         onClick={() => setDeletingId(bet.id)}
-                        title="Apagar Aposta"
+title={t("bets.deleteTitle")}
                         className="p-1.5 rounded-sm text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                       >
                         <Trash2 size={13} />
@@ -1449,12 +1462,12 @@ export default function BetsManager({
         {filteredBets.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-sm border border-zinc-100 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500">
             <HelpCircle className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2 stroke-1" size={32} />
-            <p className="text-xs">Nenhuma aposta encontrada com os filtros selecionados.</p>
+            <p className="text-xs">{t("bets.empty")}</p>
             <button
               onClick={openAddModal}
               className="mt-3 px-3.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-sm transition-colors font-semibold"
             >
-              Adicionar Nova Aposta
+              {t("bets.addNew")}
             </button>
           </div>
         )}
@@ -1481,7 +1494,7 @@ export default function BetsManager({
                   </span>
                 </div>
                 <h2 id="bet-details-title" className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
-                  <Eye size={19} className="text-indigo-500" /> Detalhes da aposta
+                  <Eye size={19} className="text-indigo-500" /> {t("bets.details.title")}
                 </h2>
                 <p className="mt-1 truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
                   ID {detailBet.id}
@@ -1493,7 +1506,7 @@ export default function BetsManager({
                 autoFocus
                 onClick={() => setDetailBet(null)}
                 className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 dark:hover:bg-slate-800 dark:hover:text-white cursor-pointer"
-                aria-label="Fechar detalhes da aposta"
+aria-label={t("bets.details.close")}
               >
                 <X size={18} />
               </button>
@@ -1502,11 +1515,11 @@ export default function BetsManager({
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
               <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  ["Casa", detailBet.bookmaker || "—"],
-                  ["Data e hora", detailBet.dateTime || "—"],
-                  ["Origem", detailBet.origin || "—"],
-                  ["Dinheiro", detailBet.isFreebet ? `Freebet ${detailBet.freebetType || ""}`.trim() : "Dinheiro real"],
-                  ...(detailBet.isIgnored ? [["Estatísticas", "Ignorada (excluída)"]] : []),
+                  [t("bets.details.bookmaker"), detailBet.bookmaker || "—"],
+                  [t("bets.details.dateTime"), detailBet.dateTime || "—"],
+                  [t("bets.details.origin"), detailBet.origin || "—"],
+                  [t("bets.details.money"), detailBet.isFreebet ? `${t("filters.money.freebet")} ${detailBet.freebetType || ""}`.trim() : t("filters.money.real")],
+                  ...(detailBet.isIgnored ? [[t("bets.details.stats"), t("bets.details.ignoredValue")]] : []),
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</p>
@@ -1517,29 +1530,29 @@ export default function BetsManager({
 
               <section>
                 <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                  Resumo financeiro
+                  {t("bets.details.financial")}
                 </h3>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                   <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                    <p className="text-[9px] font-bold uppercase text-slate-400">Stake</p>
-                    <p className="mt-1 font-mono text-sm font-bold text-slate-800 dark:text-slate-100" style={detailBet.isFreebet ? { color: "#a855f7" } : undefined}>{safeNum(detailBet.stake).toFixed(2)}{currency}</p>
+                    <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.stake")}</p>
+                    <p className="mt-1 font-mono text-sm font-bold text-slate-800 dark:text-slate-100" style={detailBet.isFreebet ? { color: "#a855f7" } : undefined}>{formatMoney(safeNum(detailBet.stake), currency)}</p>
                   </div>
                   <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                    <p className="text-[9px] font-bold uppercase text-slate-400">Odd total</p>
+                    <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.totalOdd")}</p>
                     <p className="mt-1 font-mono text-sm font-bold text-indigo-600 dark:text-indigo-300">{safeNum(detailBet.odd).toFixed(2)}</p>
                   </div>
                   <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                    <p className="text-[9px] font-bold uppercase text-slate-400">Potencial</p>
-                    <p className="mt-1 font-mono text-sm font-bold text-slate-800 dark:text-slate-100">{safeNum(detailBet.potentialReturn).toFixed(2)}{currency}</p>
+                    <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.potential")}</p>
+                    <p className="mt-1 font-mono text-sm font-bold text-slate-800 dark:text-slate-100">{formatMoney(safeNum(detailBet.potentialReturn), currency)}</p>
                   </div>
                   <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                    <p className="text-[9px] font-bold uppercase text-slate-400">Retorno</p>
-                    <p className="mt-1 font-mono text-sm font-bold text-slate-800 dark:text-slate-100">{safeNum(detailBet.finalReturn).toFixed(2)}{currency}</p>
+                    <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.return")}</p>
+                    <p className="mt-1 font-mono text-sm font-bold text-slate-800 dark:text-slate-100">{formatMoney(safeNum(detailBet.finalReturn), currency)}</p>
                   </div>
                   <div className="col-span-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800 sm:col-span-1">
-                    <p className="text-[9px] font-bold uppercase text-slate-400">Lucro líquido</p>
+                    <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.netProfit")}</p>
                     <p className={`mt-1 font-mono text-sm font-bold ${safeNum(detailBet.netProfit) > 0 ? "text-emerald-600 dark:text-emerald-400" : safeNum(detailBet.netProfit) < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}`}>
-                      {safeNum(detailBet.netProfit) > 0 ? "+" : ""}{safeNum(detailBet.netProfit).toFixed(2)}{currency}
+                      {formatSignedMoney(safeNum(detailBet.netProfit), currency)}
                     </p>
                   </div>
                 </div>
@@ -1548,7 +1561,7 @@ export default function BetsManager({
               <section>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                    Seleções do boletim
+                    {t("bets.details.selections")}
                   </h3>
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                     {detailBet.selections.length}
@@ -1559,30 +1572,30 @@ export default function BetsManager({
                     <article key={selection.id || index} className={`rounded-xl border p-4 ${selectionDetailClass(selection.result)}`}>
                       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div className="min-w-0">
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Seleção {index + 1}</p>
-                          <h4 className={`mt-1 text-sm font-bold ${betTitleClass(detailBet.status)}`}>{selection.event || "Evento indisponível"}</h4>
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("bets.details.selectionN", { n: index + 1 })}</p>
+                          <h4 className={`mt-1 text-sm font-bold ${betTitleClass(detailBet.status)}`}>{selection.event || t("bets.details.noEvent")}</h4>
                           {selection.sport && <p className="mt-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-300">{selection.sport}</p>}
                         </div>
                         {getSelectionResultBadge(selection.result)}
                       </div>
                       <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-200/70 pt-3 dark:border-slate-700 sm:grid-cols-[1fr_1fr_auto]">
                         <div>
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Mercado</p>
+                          <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.market")}</p>
                           <p className="mt-0.5 text-xs font-medium text-slate-700 dark:text-slate-200">{selection.market || "—"}</p>
                         </div>
                         <div>
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Escolha</p>
+                          <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.choice")}</p>
                           <p className="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white">{selection.choice || "—"}</p>
                         </div>
                         <div className="sm:text-right">
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Odd</p>
+                          <p className="text-[9px] font-bold uppercase text-slate-400">{t("bets.field.odd")}</p>
                           <p className="mt-0.5 font-mono text-xs font-bold text-indigo-600 dark:text-indigo-300">@{safeNum(selection.odd).toFixed(2)}</p>
                         </div>
                       </div>
                     </article>
                   )) : (
                     <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                      Esta aposta não tem seleções guardadas.
+                      {t("bets.details.noSelections")}
                     </div>
                   )}
                 </div>
@@ -1592,19 +1605,19 @@ export default function BetsManager({
                 <section className="grid gap-3 sm:grid-cols-2">
                   {detailBet.notes && (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Notas</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{t("bets.details.notes")}</p>
                       <p className="mt-1 whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-200">{detailBet.notes}</p>
                     </div>
                   )}
                   {detailBet.comment && (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Comentário</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{t("bets.details.comment")}</p>
                       <p className="mt-1 whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-200">{detailBet.comment}</p>
                     </div>
                   )}
                   {detailBet.tags && (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Etiquetas</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{t("bets.details.tags")}</p>
                       <p className="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300">{detailBet.tags}</p>
                     </div>
                   )}
@@ -1623,7 +1636,7 @@ export default function BetsManager({
             {/* Modal Header */}
             <div className="flex justify-between items-center p-6 border-b border-zinc-50 dark:border-zinc-800 shrink-0">
               <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-100 font-display">
-                {editingBet ? "Editar Registo de Aposta" : "Registar Nova Aposta"}
+                {editingBet ? t("bets.form.editTitle") : t("bets.form.newTitle")}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -1646,7 +1659,7 @@ export default function BetsManager({
               {/* Type & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Tipo de Aposta</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.type")}</label>
                   <select
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
                     value={formType}
@@ -1659,12 +1672,12 @@ export default function BetsManager({
                       }
                     }}
                   >
-                    <option value="SIMPLES">Simples</option>
-                    <option value="MULTIPLA">Múltipla</option>
+                    <option value="SIMPLES">{t("filters.type.single")}</option>
+                    <option value="MULTIPLA">{t("filters.type.multiple")}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Estado de Liquidação</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.settleStatus")}</label>
                   <select
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
                     value={formStatus}
@@ -1674,13 +1687,13 @@ export default function BetsManager({
                       setFormSettledReturn("");
                     }}
                   >
-                    <option value="POR_LIQUIDAR">Por Liquidar (Pendente)</option>
-                    <option value="GANHA">Ganha</option>
-                    <option value="PERDIDA">Perdida</option>
-                    <option value="ANULADA">Anulada</option>
-                    <option value="MEIO_GANHA">Meio Ganha</option>
-                    <option value="MEIO_PERDIDA">Meio Perdida</option>
-                    <option value="CASHOUT">Cashout</option>
+                    <option value="POR_LIQUIDAR">{t("status.unsettledLong")}</option>
+                    <option value="GANHA">{t("status.won")}</option>
+                    <option value="PERDIDA">{t("status.lost")}</option>
+                    <option value="ANULADA">{t("status.void")}</option>
+                    <option value="MEIO_GANHA">{t("status.halfWon")}</option>
+                    <option value="MEIO_PERDIDA">{t("status.halfLost")}</option>
+                    <option value="CASHOUT">{t("status.cashout")}</option>
                   </select>
                 </div>
               </div>
@@ -1689,7 +1702,7 @@ export default function BetsManager({
               {formStatus === "CASHOUT" && (
                 <div className="p-4 bg-violet-50/60 dark:bg-violet-950/30 rounded-sm border border-violet-100 dark:border-violet-900">
                   <label className="block text-violet-900 dark:text-violet-200 font-semibold mb-1">
-                    Valor do Cashout ({currency})
+                    {t("bets.form.cashoutValue", { currency })}
                   </label>
                   <input
                     type="number"
@@ -1701,7 +1714,7 @@ export default function BetsManager({
                     onChange={(e) => setFormCashoutReturn(e.target.value)}
                   />
                   <p className="text-[11px] text-violet-700/70 dark:text-violet-300/70 mt-1">
-                    Montante efetivamente recebido ao fazer cashout (independente do resultado).
+                    {t("bets.form.cashoutHint")}
                   </p>
                 </div>
               )}
@@ -1709,7 +1722,7 @@ export default function BetsManager({
               {/* Bookmaker Choice */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Casa de Apostas</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("filters.bookmaker")}</label>
                   <select
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
                     value={formBookmaker}
@@ -1723,7 +1736,7 @@ export default function BetsManager({
                     {AVAILABLE_BOOKMAKERS.map((b, idx) => (
                       <option key={idx} value={b}>{b}</option>
                     ))}
-                    <option value="Outra">Outra (Escrever...)</option>
+                    <option value="Outra">{t("bets.form.otherBookmaker")}</option>
                   </select>
                 </div>
                 {(() => {
@@ -1732,13 +1745,13 @@ export default function BetsManager({
                   if (bookieAccounts.length === 0) return null;
                   return (
                     <div>
-                      <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Conta</label>
+                      <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("filters.account")}</label>
                       <select
                         className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
                         value={bookieAccounts.some(a => a.id === formAccountId) ? formAccountId : ""}
                         onChange={(e) => setFormAccountId(e.target.value)}
                       >
-                        <option value="">Sem conta</option>
+                        <option value="">{t("filters.noAccount")}</option>
                         {bookieAccounts.map(account => (
                           <option key={account.id} value={account.id}>{account.label}</option>
                         ))}
@@ -1748,18 +1761,18 @@ export default function BetsManager({
                 })()}
                 {formBookmaker === "Outra" && (
                   <div>
-                    <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Qual?</label>
+                    <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.which")}</label>
                     <input
                       type="text"
                       className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
-                      placeholder="Ex: Betfair, Betclic.fr"
+placeholder={t("bets.form.whichPlaceholder")}
                       value={formCustomBookmaker}
                       onChange={(e) => setFormCustomBookmaker(e.target.value)}
                     />
                   </div>
                 )}
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Data / Hora</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.dateTime")}</label>
                   <input
                     type="text"
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200 font-mono"
@@ -1773,13 +1786,13 @@ export default function BetsManager({
               {/* Tipo de aposta: Normal / Freebet / Sem risco */}
               <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-sm border border-emerald-100/50 dark:border-emerald-900 space-y-3">
                 <label className="block font-semibold text-emerald-900 dark:text-emerald-200">
-                  Tipo de aposta
+                  {t("bets.form.moneyKind")}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
-                    { key: "NORMAL", label: "Normal", hint: "Stake real" },
-                    { key: "FREEBET", label: "Freebet", hint: "Aposta grátis" },
-                    { key: "RISK_FREE", label: "Sem risco", hint: "Stake real, derrota devolvida" },
+                    { key: "NORMAL", label: t("bets.form.normal"), hint: t("bets.form.normalHint") },
+                    { key: "FREEBET", label: t("filters.money.freebet"), hint: t("bets.form.freebetHint") },
+                    { key: "RISK_FREE", label: t("filters.money.riskFree"), hint: t("bets.form.riskFreeHint") },
                   ] as const).map((mode) => {
                     const active =
                       (mode.key === "NORMAL" && !formIsFreebet && !formIsRiskFree) ||
@@ -1812,27 +1825,25 @@ export default function BetsManager({
                 {formIsFreebet && (
                   <div>
                     <label className="block text-emerald-900/80 dark:text-emerald-200/80 font-semibold mb-1">
-                      Tipo de Freebet
+                      {t("bets.form.freebetType")}
                     </label>
                     <select
                       className="w-full px-3 py-2 rounded-sm border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
                       value={formFreebetType}
                       onChange={(e) => setFormFreebetType(e.target.value as FreebetType)}
                     >
-                      <option value="SNR">Stake não devolvida — SNR (ganho = (odd−1)×stake)</option>
-                      <option value="SR">Stake devolvida — SR (ganho = odd×stake)</option>
+                      <option value="SNR">{t("bets.form.snr")}</option>
+                      <option value="SR">{t("bets.form.sr")}</option>
                     </select>
                     <p className="text-[11px] text-emerald-700/70 dark:text-emerald-300/70 mt-1">
-                      Predefinido pela casa ({formBookmaker}). SNR é o padrão; o Betclic usa SR.
+                      {t("bets.form.freebetDefault", { bookmaker: formBookmaker })}
                     </p>
                   </div>
                 )}
 
                 {formIsRiskFree && (
                   <p className="text-[11px] text-emerald-700/70 dark:text-emerald-300/70">
-                    Aposta sem risco: a stake é dinheiro real e conta para o lucro como uma aposta
-                    normal. Se <strong>ganhar</strong>, o lucro é normal; se <strong>perder</strong>,
-                    perde a stake. Regista a freebet devolvida como uma aposta à parte quando a usares.
+                    {t("bets.form.riskFreeInfo")}
                   </p>
                 )}
               </div>
@@ -1840,7 +1851,7 @@ export default function BetsManager({
               {/* Stake & Notes */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Valor da Aposta (Stake)</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.stake")}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1852,11 +1863,11 @@ export default function BetsManager({
                   />
                 </div>
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Notas adicionais (opcional)</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.notes")}</label>
                   <input
                     type="text"
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200"
-                    placeholder="Ex: Segui tipster X, jogo crucial"
+placeholder={t("bets.form.notesPlaceholder")}
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
                   />
@@ -1867,7 +1878,7 @@ export default function BetsManager({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h4 className="font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide text-[10px]">
-                    Seleções do Bilhete ({formSelections.length})
+                    {t("bets.form.selections", { n: formSelections.length })}
                   </h4>
                   {formType === "MULTIPLA" && (
                     <button
@@ -1875,7 +1886,7 @@ export default function BetsManager({
                       onClick={addSelection}
                       className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1 font-semibold"
                     >
-                      <PlusCircle size={14} /> Adicionar Seleção
+                      <PlusCircle size={14} /> {t("bets.form.addSelection")}
                     </button>
                   )}
                 </div>
@@ -1898,23 +1909,23 @@ export default function BetsManager({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">Evento / Jogo</label>
+                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("bets.form.event")}</label>
                           <input
                             type="text"
                             required
                             className="w-full px-2.5 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-[11px]"
-                            placeholder="Ex: Benfica vs Porto"
+placeholder={t("bets.form.eventPlaceholder")}
                             value={sel.event}
                             onChange={(e) => handleSelectionChange(idx, "event", e.target.value)}
                           />
                         </div>
                         <div>
-                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">Mercado</label>
+                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("bets.field.market")}</label>
                           <input
                             type="text"
                             required
                             className="w-full px-2.5 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-[11px]"
-                            placeholder="Ex: Resultado Final, Total de Golos"
+placeholder={t("bets.form.marketPlaceholder")}
                             value={sel.market}
                             onChange={(e) => handleSelectionChange(idx, "market", e.target.value)}
                           />
@@ -1923,18 +1934,18 @@ export default function BetsManager({
 
                       <div className="grid grid-cols-3 gap-3">
                         <div className="col-span-2">
-                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">Escolha / Prognóstico</label>
+                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("bets.form.choiceLabel")}</label>
                           <input
                             type="text"
                             required
                             className="w-full px-2.5 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-[11px]"
-                            placeholder="Ex: Benfica, Mais de 2.5"
+placeholder={t("bets.form.choicePlaceholder")}
                             value={sel.choice}
                             onChange={(e) => handleSelectionChange(idx, "choice", e.target.value)}
                           />
                         </div>
                         <div>
-                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">Odd Individual</label>
+                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("bets.form.oddIndividual")}</label>
                           <input
                             type="number"
                             step="0.01"
@@ -1955,14 +1966,14 @@ export default function BetsManager({
               {/* Live Preview Box */}
               <div className="p-4 bg-zinc-900 dark:bg-zinc-950 dark:border dark:border-zinc-800 text-zinc-100 rounded-sm flex justify-between items-center font-display shadow-inner">
                 <div>
-                  <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">Simulação do Boletim</p>
+                  <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">{t("bets.form.preview")}</p>
                   <p className="text-sm font-bold mt-0.5">
-                    Odd Total: <span className="font-mono text-emerald-300">@{calculatedOdd.toFixed(2)}</span>
+                    {t("bets.form.totalOdd")}<span className="font-mono text-emerald-300">@{calculatedOdd.toFixed(2)}</span>
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">
-                    {formStatus === "POR_LIQUIDAR" ? "Retorno Potencial" : "Retorno Liquidado"}
+                    {formStatus === "POR_LIQUIDAR" ? t("bets.form.potentialReturn") : t("bets.form.settledReturn")}
                   </p>
                   {formStatus === "MEIO_GANHA" || formStatus === "MEIO_PERDIDA" ? (
                     <div className="mt-1 flex items-center justify-end gap-1">
@@ -1974,7 +1985,7 @@ export default function BetsManager({
                         value={formSettledReturn !== "" ? formSettledReturn : potentialWinningsInfo.finalReturn.toFixed(2)}
                         onChange={(e) => setFormSettledReturn(e.target.value)}
                         className="w-24 rounded-sm border border-zinc-700 bg-zinc-800 px-2 py-1 text-right font-mono text-base font-black text-emerald-400 focus:border-emerald-400 focus:outline-none"
-                        aria-label="Retorno liquidado"
+aria-label={t("bets.form.settledReturnAria")}
                       />
                       <span className="text-lg font-black text-emerald-400">{currency}</span>
                     </div>
@@ -1995,13 +2006,13 @@ export default function BetsManager({
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2.5 rounded-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-300 font-semibold"
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2.5 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs transition-colors"
                 >
-                  {editingBet ? "Guardar Alterações" : "Registar Aposta"}
+                  {editingBet ? t("bets.form.save") : t("bets.form.submit")}
                 </button>
               </div>
 

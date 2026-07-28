@@ -26,6 +26,7 @@ import {
 import { Bet, BookieAccount, BetStatus } from "../../types";
 import { AVAILABLE_BOOKMAKERS, safeNum, calculateBetReturnAndProfit } from "../../utils";
 import { useBetForm } from "../../hooks/useBetForm";
+import { useI18n, type TFn, type TKey } from "../../lib/i18n";
 import {
   BottomSheet,
   SheetPage,
@@ -55,35 +56,40 @@ interface MobileBetsProps {
 
 type SortField = "date" | "stake" | "odd" | "profit";
 
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "ALL", label: "Todos" },
-  { value: "POR_LIQUIDAR", label: "Por liquidar" },
-  { value: "GANHA", label: "Ganha" },
-  { value: "PERDIDA", label: "Perdida" },
-  { value: "MEIO_GANHA", label: "Meio ganha" },
-  { value: "MEIO_PERDIDA", label: "Meio perdida" },
-  { value: "CASHOUT", label: "Cashout" },
-  { value: "ANULADA", label: "Anulada" },
+// As listas guardam CHAVES; o texto e resolvido no componente (useI18n).
+type KeyOption = { value: string; key: TKey };
+const withLabels = (options: KeyOption[], t: TFn) =>
+  options.map((o) => ({ value: o.value, label: t(o.key) }));
+
+const STATUS_OPTIONS: KeyOption[] = [
+  { value: "ALL", key: "filters.allMasc" },
+  { value: "POR_LIQUIDAR", key: "status.unsettled" },
+  { value: "GANHA", key: "status.won" },
+  { value: "PERDIDA", key: "status.lost" },
+  { value: "MEIO_GANHA", key: "status.halfWon" },
+  { value: "MEIO_PERDIDA", key: "status.halfLost" },
+  { value: "CASHOUT", key: "status.cashout" },
+  { value: "ANULADA", key: "status.void" },
 ];
 
-const TYPE_OPTIONS = [
-  { value: "ALL", label: "Qualquer tipo" },
-  { value: "SIMPLES", label: "Simples" },
-  { value: "MULTIPLA", label: "Múltipla" },
+const TYPE_OPTIONS: KeyOption[] = [
+  { value: "ALL", key: "filters.anyType" },
+  { value: "SIMPLES", key: "filters.type.single" },
+  { value: "MULTIPLA", key: "filters.type.multiple" },
 ];
 
-const MONEY_OPTIONS = [
-  { value: "ALL", label: "Tudo" },
-  { value: "NORMAL", label: "Dinheiro real" },
-  { value: "FREEBET", label: "Freebet" },
-  { value: "RISK_FREE", label: "Sem risco" },
+const MONEY_OPTIONS: KeyOption[] = [
+  { value: "ALL", key: "filters.allMasc" },
+  { value: "NORMAL", key: "filters.money.real" },
+  { value: "FREEBET", key: "filters.money.freebet" },
+  { value: "RISK_FREE", key: "filters.money.riskFree" },
 ];
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "date", label: "Data" },
-  { value: "stake", label: "Stake" },
-  { value: "odd", label: "Odd" },
-  { value: "profit", label: "Lucro" },
+const SORT_OPTIONS: KeyOption[] = [
+  { value: "date", key: "bets.sort.date" },
+  { value: "stake", key: "bets.sort.stake" },
+  { value: "odd", key: "bets.sort.odd" },
+  { value: "profit", key: "bets.sort.profit" },
 ];
 
 // Edição em massa: só se aplicam os campos que o utilizador altera. "Manter"
@@ -94,53 +100,54 @@ const NO_ACCOUNT = "__NONE__";
 
 // Estados aplicáveis em massa. CASHOUT fica de fora: exige um valor recebido
 // próprio de cada aposta, que não faz sentido definir em bloco.
-const BULK_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: KEEP, label: "Manter" },
-  { value: "POR_LIQUIDAR", label: "Por liquidar" },
-  { value: "GANHA", label: "Ganha" },
-  { value: "PERDIDA", label: "Perdida" },
-  { value: "MEIO_GANHA", label: "Meio ganha" },
-  { value: "MEIO_PERDIDA", label: "Meio perdida" },
-  { value: "ANULADA", label: "Anulada" },
+const BULK_STATUS_OPTIONS: KeyOption[] = [
+  { value: KEEP, key: "bets.bulkEdit.keep" },
+  { value: "POR_LIQUIDAR", key: "status.unsettled" },
+  { value: "GANHA", key: "status.won" },
+  { value: "PERDIDA", key: "status.lost" },
+  { value: "MEIO_GANHA", key: "status.halfWon" },
+  { value: "MEIO_PERDIDA", key: "status.halfLost" },
+  { value: "ANULADA", key: "status.void" },
 ];
 
-const BULK_MONEY_OPTIONS: { value: string; label: string }[] = [
-  { value: KEEP, label: "Manter" },
-  { value: "NORMAL", label: "Dinheiro real" },
-  { value: "FREEBET", label: "Freebet" },
-  { value: "RISK_FREE", label: "Sem risco" },
+const BULK_MONEY_OPTIONS: KeyOption[] = [
+  { value: KEEP, key: "bets.bulkEdit.keep" },
+  { value: "NORMAL", key: "filters.money.real" },
+  { value: "FREEBET", key: "filters.money.freebet" },
+  { value: "RISK_FREE", key: "filters.money.riskFree" },
 ];
 
 // Estilo dos badges de estado (espelha getStatusBadge do desktop).
-const STATUS_META: Record<BetStatus, { label: string; classes: string; icon: typeof Check }> = {
-  POR_LIQUIDAR: { label: "Por liquidar", icon: Clock, classes: "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900" },
-  GANHA: { label: "Ganha", icon: Check, classes: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900" },
-  PERDIDA: { label: "Perdida", icon: X, classes: "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-900" },
-  ANULADA: { label: "Anulada", icon: MinusCircle, classes: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700" },
-  MEIO_GANHA: { label: "Meio ganha", icon: Check, classes: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900" },
-  MEIO_PERDIDA: { label: "Meio perdida", icon: X, classes: "bg-rose-50/50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 border-rose-200 dark:border-rose-900" },
-  CASHOUT: { label: "Cashout", icon: MinusCircle, classes: "bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-300 border-violet-200 dark:border-violet-900" },
+const STATUS_META: Record<BetStatus, { key: TKey; classes: string; icon: typeof Check }> = {
+  POR_LIQUIDAR: { key: "status.unsettled", icon: Clock, classes: "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900" },
+  GANHA: { key: "status.won", icon: Check, classes: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900" },
+  PERDIDA: { key: "status.lost", icon: X, classes: "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-900" },
+  ANULADA: { key: "status.void", icon: MinusCircle, classes: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700" },
+  MEIO_GANHA: { key: "status.halfWon", icon: Check, classes: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900" },
+  MEIO_PERDIDA: { key: "status.halfLost", icon: X, classes: "bg-rose-50/50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 border-rose-200 dark:border-rose-900" },
+  CASHOUT: { key: "status.cashout", icon: MinusCircle, classes: "bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-300 border-violet-200 dark:border-violet-900" },
 };
 
 function StatusBadge({ status }: { status: BetStatus }) {
+  const { t } = useI18n();
   const meta = STATUS_META[status];
   const Icon = meta.icon;
   return (
     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 w-max border ${meta.classes}`}>
-      <Icon size={10} /> {meta.label}
+      <Icon size={10} /> {t(meta.key)}
     </span>
   );
 }
 
-const formatDay = (day: string) => {
-  if (!day) return "Sem data";
+const formatDay = (day: string, t: TFn) => {
+  if (!day) return t("bet.noDate");
   const today = new Date();
   const toKey = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  if (day === toKey(today)) return "Hoje";
+  if (day === toKey(today)) return t("bets.day.today");
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (day === toKey(yesterday)) return "Ontem";
+  if (day === toKey(yesterday)) return t("bets.day.yesterday");
   return day.split("-").reverse().join("/");
 };
 
@@ -154,6 +161,7 @@ export default function MobileBets({
   onIgnoreBet,
   onDeleteBet,
 }: MobileBetsProps) {
+  const { t, locale, formatMoney, formatSignedMoney } = useI18n();
   const toast = useToast();
 
   // Drill-down por URL (vindo do dashboard), como no desktop.
@@ -206,15 +214,15 @@ export default function MobileBets({
         new Set(
           bets.flatMap((bet) => bet.selections.map((s) => s.sport?.trim()).filter((s): s is string => Boolean(s))),
         ),
-      ).sort((a, b) => a.localeCompare(b, "pt")),
-    [bets],
+      ).sort((a, b) => a.localeCompare(b, locale)),
+    [bets, locale],
   );
   const bookmakerOptions = useMemo(
     () =>
       Array.from(new Set([...AVAILABLE_BOOKMAKERS, ...bets.map((b) => b.bookmaker).filter(Boolean)])).sort((a, b) =>
-        a.localeCompare(b, "pt"),
+        a.localeCompare(b, locale),
       ),
-    [bets],
+    [bets, locale],
   );
   const accountLabelById = useMemo(() => new Map(accounts.map((a) => [a.id, a.label])), [accounts]);
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
@@ -293,9 +301,8 @@ export default function MobileBets({
     setDateTo("");
   };
 
-  const money = (n: number) =>
-    `${safeNum(n).toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${currency}`;
-  const signed = (n: number) => `${n >= 0 ? "+" : ""}${money(n)}`;
+  const money = (n: number) => formatMoney(safeNum(n), currency);
+  const signed = (n: number) => formatSignedMoney(safeNum(n), currency);
 
   // ------------------------------------------------------------- ações
 
@@ -315,10 +322,10 @@ export default function MobileBets({
     if (!bet) return;
     if (form.editingBet) {
       await onUpdateBet(bet);
-      toast.show("Aposta atualizada", "success");
+      toast.show(t("bets.toast.updated"), "success");
     } else {
       await onAddBet(bet);
-      toast.show("Aposta registada", "success");
+      toast.show(t("bets.toast.added"), "success");
     }
     setFormOpen(false);
     form.reset();
@@ -330,12 +337,12 @@ export default function MobileBets({
       ...bet,
       id: "bet-" + Date.now(),
       dateTime: new Date().toISOString().replace("T", " ").slice(0, 16),
-      notes: bet.notes ? `[Duplicado] ${bet.notes}` : "Aposta duplicada.",
+      notes: bet.notes ? t("bets.duplicatedPrefix", { notes: bet.notes }) : t("bets.duplicatedNote"),
       origin: "MANUAL",
       metadata: undefined,
     };
     void onAddBet(duplicated);
-    toast.show("Aposta duplicada", "success");
+    toast.show(t("bets.toast.duplicated"), "success");
   };
 
   const startIgnore = (bet: Bet) => {
@@ -349,13 +356,13 @@ export default function MobileBets({
     await onIgnoreBet(ignoringBet.id, true, ignoreComment.trim() || null);
     setIgnoringBet(null);
     setIgnoreComment("");
-    toast.show("Aposta ignorada — fora das estatísticas", "success");
+    toast.show(t("bets.toast.ignored"), "success");
   };
 
   const handleUnignore = async (bet: Bet) => {
     setDetailBet(null);
     await onIgnoreBet(bet.id, false);
-    toast.show("Aposta reposta nas estatísticas", "success");
+    toast.show(t("bets.toast.restored"), "success");
   };
 
   const confirmDelete = async () => {
@@ -363,7 +370,7 @@ export default function MobileBets({
     await onDeleteBet(deletingBet.id);
     setDeletingBet(null);
     setDetailBet(null);
-    toast.show("Aposta apagada", "success");
+    toast.show(t("bets.toast.deleted"), "success");
   };
 
   // Seleção em massa.
@@ -437,7 +444,7 @@ export default function MobileBets({
     const changesNote = noteToAppend !== "";
 
     if (!changesStatus && !changesBookmaker && !changesAccount && !changesSport && !changesMoney && !changesNote) {
-      toast.show("Escolhe pelo menos um campo para alterar", "info");
+      toast.show(t("bets.bulkEdit.pickField"), "info");
       return;
     }
 
@@ -500,7 +507,7 @@ export default function MobileBets({
 
     setBulkEditOpen(false);
     finishBulk();
-    toast.show(`${count} ${count === 1 ? "aposta atualizada" : "apostas atualizadas"}`, "success");
+    toast.show(t("bets.toast.bulkUpdated", { n: count }), "success");
   };
 
   // Ignorar/repor em massa. Se TODAS as selecionadas já estão ignoradas, o
@@ -519,9 +526,7 @@ export default function MobileBets({
     setBulkIgnoreComment("");
     finishBulk();
     toast.show(
-      ignored
-        ? `${targets.length} ${targets.length === 1 ? "aposta ignorada" : "apostas ignoradas"}`
-        : `${targets.length} ${targets.length === 1 ? "aposta reposta" : "apostas repostas"}`,
+      t(ignored ? "bets.toast.bulkIgnored" : "bets.toast.bulkRestored", { n: targets.length }),
       "success",
     );
   };
@@ -550,14 +555,14 @@ export default function MobileBets({
         id: duplicateId,
         selections: bet.selections.map((s, j) => ({ ...s, id: `${duplicateId}-sel-${j}` })),
         dateTime: duplicatedAt,
-        notes: bet.notes ? `[Duplicado] ${bet.notes}` : "Aposta duplicada.",
+        notes: bet.notes ? t("bets.duplicatedPrefix", { notes: bet.notes }) : t("bets.duplicatedNote"),
         origin: "MANUAL",
         metadata: undefined,
       } as Bet;
     });
     await onAddBets(duplicated);
     finishBulk();
-    toast.show(`${duplicated.length} apostas duplicadas`, "success");
+    toast.show(t("bets.toast.bulkDuplicated", { n: duplicated.length }), "success");
   };
 
   const bulkDelete = async () => {
@@ -568,7 +573,7 @@ export default function MobileBets({
       await onDeleteBet(id);
     }
     finishBulk();
-    toast.show(`${ids.length} apostas apagadas`, "success");
+    toast.show(t("bets.toast.bulkDeleted", { n: ids.length }), "success");
   };
 
   // ------------------------------------------------------------- render
@@ -590,7 +595,7 @@ export default function MobileBets({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <input
             type="search"
-            placeholder="Pesquisar…"
+placeholder={t("bets.searchShort")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-11 w-full rounded-full border border-zinc-200 bg-white pl-9 pr-4 text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
@@ -599,7 +604,7 @@ export default function MobileBets({
         <Pressable
           as="button"
           onClick={() => setFiltersOpen(true)}
-          aria-label="Filtros"
+aria-label={t("common.filters")}
           className="relative flex items-center justify-center w-11 h-11 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300"
         >
           <Filter size={17} />
@@ -612,7 +617,7 @@ export default function MobileBets({
         <Pressable
           as="button"
           onClick={toggleSelecting}
-          aria-label="Selecionar apostas"
+aria-label={t("bets.selectAria")}
           className={`flex items-center justify-center w-11 h-11 rounded-full border ${
             isSelecting
               ? "border-emerald-600 bg-emerald-600 text-white"
@@ -625,7 +630,7 @@ export default function MobileBets({
 
       <div className="flex items-center justify-between gap-2 px-1 min-h-6">
         <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">
-          {filteredBets.length} de {bets.length} apostas
+          {t("bets.countOf", { shown: filteredBets.length, total: bets.length })}
         </p>
         {isSelecting && (
           <Pressable
@@ -634,7 +639,9 @@ export default function MobileBets({
             disabled={filteredBets.length === 0}
             className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 disabled:opacity-40 px-2 py-1 rounded-full"
           >
-            {allFilteredSelected ? "Desmarcar filtradas" : `Selecionar filtradas (${filteredBets.length})`}
+            {allFilteredSelected
+              ? t("bets.deselectFiltered")
+              : t("bets.selectFiltered", { n: filteredBets.length })}
           </Pressable>
         )}
       </div>
@@ -642,7 +649,7 @@ export default function MobileBets({
       {/* Lista agrupada por dia */}
       {groups.map(({ day, bets: dayBets }) => (
         <div key={day || "flat"}>
-          {day !== "" && <SectionHeader>{formatDay(day)}</SectionHeader>}
+          {day !== "" && <SectionHeader>{formatDay(day, t)}</SectionHeader>}
           <MobileCard className="!p-0 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
             {dayBets.map((bet) => {
               const isSelected = selectedIds.has(bet.id);
@@ -656,7 +663,7 @@ export default function MobileBets({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                        {bet.selections[0]?.event || "Múltipla"}
+                        {bet.selections[0]?.event || t("bet.multiple")}
                         {bet.selections.length > 1 && (
                           <span className="ml-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                             +{bet.selections.length - 1}
@@ -665,7 +672,7 @@ export default function MobileBets({
                       </p>
                       {bet.isIgnored && (
                         <span className="inline-flex items-center gap-1 mt-1 text-[9px] font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700">
-                          <EyeOff size={9} /> Ignorada
+                          <EyeOff size={9} /> {t("bets.ignored")}
                         </span>
                       )}
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
@@ -677,7 +684,7 @@ export default function MobileBets({
                         {bet.accountId && accountLabelById.has(bet.accountId)
                           ? ` · ${accountLabelById.get(bet.accountId)}`
                           : ""}
-                        {bet.isFreebet ? " · Freebet" : bet.isRiskFree ? " · Sem risco" : ""}
+                        {bet.isFreebet ? ` · ${t("filters.money.freebet")}` : bet.isRiskFree ? ` · ${t("filters.money.riskFree")}` : ""}
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end gap-1.5">
@@ -706,8 +713,8 @@ export default function MobileBets({
                     </div>
                   </div>
                   <div className="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                    <span>Stake {money(safeNum(bet.stake))}</span>
-                    <span>Odd {safeNum(bet.odd).toFixed(2)}</span>
+                    <span>{t("bets.field.stake")} {money(safeNum(bet.stake))}</span>
+                    <span>{t("bets.field.odd")} {safeNum(bet.odd).toFixed(2)}</span>
                     <span className="ml-auto">{bet.dateTime?.slice(11, 16) || ""}</span>
                   </div>
                 </div>
@@ -719,8 +726,8 @@ export default function MobileBets({
                 <SwipeableRow
                   key={bet.id}
                   actions={[
-                    { label: "Editar", icon: Pencil, color: "bg-zinc-500", onClick: () => openEdit(bet) },
-                    { label: "Apagar", icon: Trash2, color: "bg-rose-600", onClick: () => setDeletingBet(bet) },
+                    { label: t("common.edit"), icon: Pencil, color: "bg-zinc-500", onClick: () => openEdit(bet) },
+                    { label: t("common.delete"), icon: Trash2, color: "bg-rose-600", onClick: () => setDeletingBet(bet) },
                   ]}
                 >
                   {card}
@@ -733,7 +740,7 @@ export default function MobileBets({
 
       {filteredBets.length === 0 && (
         <div className="text-center py-16 text-zinc-400 dark:text-zinc-500 text-sm">
-          {bets.length === 0 ? "Ainda não registaste apostas." : "Nenhuma aposta corresponde aos filtros."}
+          {bets.length === 0 ? t("bets.emptyNoBets") : t("bets.emptyFiltered")}
         </div>
       )}
 
@@ -742,24 +749,24 @@ export default function MobileBets({
         <div className="fixed bottom-[calc(4rem+var(--safe-bottom))] inset-x-0 z-40 px-4 pb-2">
           <div className="max-w-lg mx-auto rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 shadow-xl px-3 py-2.5 flex items-center gap-2">
             <span className="text-sm font-bold font-mono pl-1 tabular-nums">{selectedIds.size}</span>
-            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">sel.</span>
+            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{t("bets.selectedShort")}</span>
             <div className="ml-auto flex items-center gap-1.5">
               <BulkAction
                 icon={Pencil}
-                label="Editar selecionadas"
+label={t("bets.bulk.editAria")}
                 disabled={noSelection}
                 onClick={() => setBulkEditOpen(true)}
               />
               <BulkAction
                 icon={allSelectedIgnored ? Eye : EyeOff}
-                label={allSelectedIgnored ? "Repor selecionadas" : "Ignorar selecionadas"}
+label={allSelectedIgnored ? t("bets.bulk.restoreAria") : t("bets.bulk.ignoreAria")}
                 disabled={noSelection}
                 onClick={startBulkIgnore}
               />
-              <BulkAction icon={Copy} label="Duplicar selecionadas" disabled={noSelection} onClick={bulkDuplicate} />
+              <BulkAction icon={Copy} label={t("bets.bulk.duplicateAria")} disabled={noSelection} onClick={bulkDuplicate} />
               <BulkAction
                 icon={Trash2}
-                label="Apagar selecionadas"
+label={t("bets.bulk.deleteAria")}
                 danger
                 disabled={noSelection}
                 onClick={() => setConfirmBulkDelete(true)}
@@ -770,13 +777,13 @@ export default function MobileBets({
       )}
 
       {/* FAB nova aposta (escondido no modo de seleção) */}
-      {!isSelecting && <FAB icon={Plus} label="Registar aposta" onClick={openAdd} />}
+      {!isSelecting && <FAB icon={Plus} label={t("bets.new")} onClick={openAdd} />}
 
       {/* Sheet de detalhe */}
       <BottomSheet
         open={!!detailBet}
         onClose={() => setDetailBet(null)}
-        title={detailBet?.selections[0]?.event || "Aposta"}
+        title={detailBet?.selections[0]?.event || t("bets.detailFallbackTitle")}
       >
         {detailBet && (
           <div className="space-y-3 pb-2">
@@ -801,16 +808,16 @@ export default function MobileBets({
             <MobileCard className="!p-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">Stake</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">{t("bets.field.stake")}</p>
                   <p className="text-sm font-bold font-mono tabular-nums mt-0.5">{money(safeNum(detailBet.stake))}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">Odd</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">{t("bets.field.odd")}</p>
                   <p className="text-sm font-bold font-mono tabular-nums mt-0.5">{safeNum(detailBet.odd).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-                    {detailBet.status === "POR_LIQUIDAR" ? "Retorno pot." : "Lucro"}
+                    {detailBet.status === "POR_LIQUIDAR" ? t("bets.potentialShort") : t("bets.sort.profit")}
                   </p>
                   <p
                     className={`text-sm font-bold font-mono tabular-nums mt-0.5 ${
@@ -833,18 +840,18 @@ export default function MobileBets({
               <p>
                 {detailBet.bookmaker}
                 {detailBet.accountId && accountLabelById.has(detailBet.accountId)
-                  ? ` · Conta ${accountLabelById.get(detailBet.accountId)}`
+                  ? ` · ${t("bets.detailAccount", { label: accountLabelById.get(detailBet.accountId) ?? "" })}`
                   : ""}
                 {" · "}
-                {detailBet.type === "MULTIPLA" ? "Múltipla" : "Simples"}
-                {detailBet.isFreebet ? ` · Freebet (${detailBet.freebetType || "—"})` : ""}
-                {detailBet.isRiskFree ? " · Sem risco" : ""}
+                {detailBet.type === "MULTIPLA" ? t("filters.type.multiple") : t("filters.type.single")}
+                {detailBet.isFreebet ? ` · ${t("filters.money.freebet")} (${detailBet.freebetType || "—"})` : ""}
+                {detailBet.isRiskFree ? ` · ${t("filters.money.riskFree")}` : ""}
               </p>
               {detailBet.notes && <p className="italic">“{detailBet.notes}”</p>}
               {detailBet.isIgnored && (
                 <p className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
                   <EyeOff size={12} className="shrink-0" />
-                  Ignorada — excluída das estatísticas
+                  {t("bets.detailIgnoredLine")}
                   {detailBet.comment ? `: “${detailBet.comment}”` : ""}
                 </p>
               )}
@@ -857,14 +864,14 @@ export default function MobileBets({
                 onClick={() => openEdit(detailBet)}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200"
               >
-                <Pencil size={13} /> Editar
+                <Pencil size={13} /> {t("common.edit")}
               </Pressable>
               <Pressable
                 as="button"
                 onClick={() => handleDuplicate(detailBet)}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200"
               >
-                <Copy size={13} /> Duplicar
+                <Copy size={13} /> {t("bets.duplicate")}
               </Pressable>
               {detailBet.isIgnored ? (
                 <Pressable
@@ -872,7 +879,7 @@ export default function MobileBets({
                   onClick={() => void handleUnignore(detailBet)}
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
                 >
-                  <Eye size={13} /> Repor
+                  <Eye size={13} /> {t("bets.restore")}
                 </Pressable>
               ) : (
                 <Pressable
@@ -880,7 +887,7 @@ export default function MobileBets({
                   onClick={() => startIgnore(detailBet)}
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200"
                 >
-                  <EyeOff size={13} /> Ignorar
+                  <EyeOff size={13} /> {t("bets.ignore")}
                 </Pressable>
               )}
               <Pressable
@@ -888,7 +895,7 @@ export default function MobileBets({
                 onClick={() => setDeletingBet(detailBet)}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-semibold"
               >
-                <Trash2 size={13} /> Apagar
+                <Trash2 size={13} /> {t("common.delete")}
               </Pressable>
             </div>
           </div>
@@ -896,21 +903,20 @@ export default function MobileBets({
       </BottomSheet>
 
       {/* Ignorar: exclui das estatísticas, com motivo opcional */}
-      <BottomSheet open={!!ignoringBet} onClose={() => setIgnoringBet(null)} title="Ignorar aposta?">
+      <BottomSheet open={!!ignoringBet} onClose={() => setIgnoringBet(null)} title={t("bets.ignoreSheet.title")}>
         <div className="space-y-3 pb-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            A aposta em <strong>{ignoringBet?.selections[0]?.event || "Múltipla"}</strong> deixa de
-            contar para as estatísticas e gráficos. Continua na lista e podes repô-la quando quiseres.
+            {t("bets.ignoreSheet.desc", { event: ignoringBet?.selections[0]?.event || t("bet.multiple") })}
           </p>
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-              Motivo (opcional)
+              {t("bets.ignoreReasonPlaceholder")}
             </span>
             <textarea
               value={ignoreComment}
               onChange={(e) => setIgnoreComment(e.target.value)}
               rows={2}
-              placeholder="Ex.: aposta de teste, erro de registo…"
+placeholder={t("bets.ignoreSheet.reasonPlaceholder")}
               className={`mt-1 ${inputClasses} h-auto py-2.5`}
             />
           </label>
@@ -920,25 +926,24 @@ export default function MobileBets({
               onClick={() => setIgnoringBet(null)}
               className="py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 text-center"
             >
-              Cancelar
+              {t("common.cancel")}
             </Pressable>
             <Pressable
               as="button"
               onClick={() => void confirmIgnore()}
               className="py-3 rounded-xl bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-sm font-semibold text-center"
             >
-              Ignorar
+              {t("bets.ignore")}
             </Pressable>
           </div>
         </div>
       </BottomSheet>
 
       {/* Confirmação de apagar */}
-      <BottomSheet open={!!deletingBet} onClose={() => setDeletingBet(null)} title="Apagar aposta?">
+      <BottomSheet open={!!deletingBet} onClose={() => setDeletingBet(null)} title={t("bets.deleteSheet.title")}>
         <div className="space-y-3 pb-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            A aposta em <strong>{deletingBet?.selections[0]?.event || "Múltipla"}</strong> será apagada
-            definitivamente.
+            {t("bets.deleteSheet.desc", { event: deletingBet?.selections[0]?.event || t("bet.multiple") })}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Pressable
@@ -946,24 +951,24 @@ export default function MobileBets({
               onClick={() => setDeletingBet(null)}
               className="py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 text-center"
             >
-              Cancelar
+              {t("common.cancel")}
             </Pressable>
             <Pressable
               as="button"
               onClick={confirmDelete}
               className="py-3 rounded-xl bg-rose-600 text-white text-sm font-semibold text-center"
             >
-              Apagar
+              {t("common.delete")}
             </Pressable>
           </div>
         </div>
       </BottomSheet>
 
       {/* Confirmar apagar em massa */}
-      <BottomSheet open={confirmBulkDelete} onClose={() => setConfirmBulkDelete(false)} title={`Apagar ${selectedIds.size} apostas?`}>
+      <BottomSheet open={confirmBulkDelete} onClose={() => setConfirmBulkDelete(false)} title={t("bets.bulkDelete.title", { n: selectedIds.size })}>
         <div className="space-y-3 pb-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            As <strong>{selectedIds.size}</strong> apostas selecionadas serão apagadas definitivamente.
+            {t("bets.bulkDelete.desc", { n: selectedIds.size })}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Pressable
@@ -971,7 +976,7 @@ export default function MobileBets({
               onClick={() => setConfirmBulkDelete(false)}
               className="py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 text-center"
             >
-              Cancelar
+              {t("common.cancel")}
             </Pressable>
             <Pressable
               as="button"
@@ -979,28 +984,27 @@ export default function MobileBets({
               onClick={() => void bulkDelete()}
               className="py-3 rounded-xl bg-rose-600 text-white text-sm font-semibold text-center disabled:opacity-60"
             >
-              Apagar {selectedIds.size}
+              {t("bets.bulkDelete.confirm", { n: selectedIds.size })}
             </Pressable>
           </div>
         </div>
       </BottomSheet>
 
       {/* Ignorar em massa: exclui as selecionadas das estatísticas */}
-      <BottomSheet open={bulkIgnoreOpen} onClose={() => setBulkIgnoreOpen(false)} title={`Ignorar ${selectedIds.size} apostas?`}>
+      <BottomSheet open={bulkIgnoreOpen} onClose={() => setBulkIgnoreOpen(false)} title={t("bets.bulkIgnore.sheetTitle", { n: selectedIds.size })}>
         <div className="space-y-3 pb-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            As selecionadas deixam de contar para as estatísticas e gráficos. Continuam na lista e podes
-            repô-las quando quiseres.
+            {t("bets.bulkIgnore.desc")}
           </p>
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-              Motivo (opcional, aplicado a todas)
+              {t("bets.bulkIgnore.reason")}
             </span>
             <textarea
               value={bulkIgnoreComment}
               onChange={(e) => setBulkIgnoreComment(e.target.value)}
               rows={2}
-              placeholder="Ex.: apostas de teste, erro de registo…"
+placeholder={t("bets.bulkIgnore.reasonPlaceholder")}
               className={`mt-1 ${inputClasses} h-auto py-2.5`}
             />
           </label>
@@ -1010,7 +1014,7 @@ export default function MobileBets({
               onClick={() => setBulkIgnoreOpen(false)}
               className="py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 text-center"
             >
-              Cancelar
+              {t("common.cancel")}
             </Pressable>
             <Pressable
               as="button"
@@ -1018,7 +1022,7 @@ export default function MobileBets({
               onClick={() => void bulkSetIgnored(true, bulkIgnoreComment.trim() || null)}
               className="py-3 rounded-xl bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-sm font-semibold text-center disabled:opacity-60"
             >
-              Ignorar
+              {t("bets.ignore")}
             </Pressable>
           </div>
         </div>
@@ -1028,7 +1032,7 @@ export default function MobileBets({
       <SheetPage
         open={bulkEditOpen}
         onClose={() => setBulkEditOpen(false)}
-        title={`Editar ${selectedIds.size} apostas`}
+title={t("bets.bulkEdit.sheetTitle", { n: selectedIds.size })}
         footer={
           <Pressable
             as="button"
@@ -1036,25 +1040,24 @@ export default function MobileBets({
             onClick={() => void applyBulkEdit()}
             className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center disabled:opacity-60"
           >
-            Aplicar a {selectedIds.size} {selectedIds.size === 1 ? "aposta" : "apostas"}
+            {t("bets.bulkEdit.applyN", { n: selectedIds.size })}
           </Pressable>
         }
       >
         <div className="space-y-5">
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Só os campos que alterares são aplicados. O montante, a odd e as seleções de cada aposta
-            ficam intactos.
+            {t("bets.bulkEdit.hint")}
           </p>
 
-          <ChipGroup label="Estado" options={BULK_STATUS_OPTIONS} value={beStatus} onChange={setBeStatus} />
+          <ChipGroup label={t("filters.status")} options={withLabels(BULK_STATUS_OPTIONS, t)} value={beStatus} onChange={setBeStatus} />
 
-          <FormField label="Desporto (vazio = manter)">
+          <FormField label={t("bets.bulkEdit.sport")}>
             <input
               type="text"
               list="bulk-sports"
               value={beSport}
               onChange={(e) => setBeSport(e.target.value)}
-              placeholder="Manter"
+placeholder={t("bets.bulkEdit.keep")}
               className={inputClasses}
             />
             <datalist id="bulk-sports">
@@ -1065,18 +1068,18 @@ export default function MobileBets({
           </FormField>
 
           <ChipGroup
-            label="Casa de apostas"
-            options={[{ value: KEEP, label: "Manter" }, ...bookmakerOptions.map((b) => ({ value: b, label: b }))]}
+            label={t("filters.bookmaker")}
+            options={[{ value: KEEP, label: t("bets.bulkEdit.keep") }, ...bookmakerOptions.map((b) => ({ value: b, label: b }))]}
             value={beBookmaker}
             onChange={setBeBookmaker}
           />
 
           {accounts.length > 0 && (
             <ChipGroup
-              label="Conta"
+              label={t("filters.account")}
               options={[
-                { value: KEEP, label: "Manter" },
-                { value: NO_ACCOUNT, label: "Sem conta" },
+                { value: KEEP, label: t("bets.bulkEdit.keep") },
+                { value: NO_ACCOUNT, label: t("filters.noAccount") },
                 ...accounts.map((a) => ({ value: a.id, label: `${a.bookmaker} · ${a.label}` })),
               ]}
               value={beAccount}
@@ -1084,14 +1087,14 @@ export default function MobileBets({
             />
           )}
 
-          <ChipGroup label="Tipo de dinheiro" options={BULK_MONEY_OPTIONS} value={beMoney} onChange={setBeMoney} />
+          <ChipGroup label={t("bets.field.moneyType")} options={withLabels(BULK_MONEY_OPTIONS, t)} value={beMoney} onChange={setBeMoney} />
 
-          <FormField label="Acrescentar nota (opcional)">
+          <FormField label={t("bets.bulkEdit.note")}>
             <textarea
               value={beNote}
               onChange={(e) => setBeNote(e.target.value)}
               rows={2}
-              placeholder="Fica anexada às notas de cada aposta selecionada"
+placeholder={t("bets.bulkEdit.notePlaceholder")}
               className={`${inputClasses} h-auto py-2.5`}
             />
           </FormField>
@@ -1102,30 +1105,30 @@ export default function MobileBets({
       <BottomSheet
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        title="Filtros e ordenação"
+title={t("bets.filtersSheet.title")}
         headerAction={
           activeFilterCount > 0 ? (
             <Pressable as="button" onClick={clearFilters} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 px-2 py-1">
-              Limpar tudo
+              {t("common.clearAll")}
             </Pressable>
           ) : undefined
         }
       >
         <div className="space-y-4 pb-2">
-          <ChipGroup label="Estado" options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+          <ChipGroup label={t("filters.status")} options={withLabels(STATUS_OPTIONS, t)} value={statusFilter} onChange={setStatusFilter} />
           <ChipGroup
-            label="Casa de apostas"
-            options={[{ value: "ALL", label: "Todas" }, ...bookmakerOptions.map((b) => ({ value: b, label: b }))]}
+            label={t("filters.bookmaker")}
+            options={[{ value: "ALL", label: t("filters.allFem") }, ...bookmakerOptions.map((b) => ({ value: b, label: b }))]}
             value={bookmakerFilter}
             onChange={setBookmakerFilter}
           />
           {accounts.length > 0 && (
             <ChipGroup
-              label="Conta"
+              label={t("filters.account")}
               options={[
-                { value: "ALL", label: "Todas" },
+                { value: "ALL", label: t("filters.allFem") },
                 ...accounts.map((a) => ({ value: a.id, label: `${a.bookmaker} · ${a.label}` })),
-                { value: "NONE", label: "Sem conta" },
+                { value: "NONE", label: t("filters.noAccount") },
               ]}
               value={accountFilter}
               onChange={setAccountFilter}
@@ -1133,18 +1136,18 @@ export default function MobileBets({
           )}
           {sportOptions.length > 0 && (
             <ChipGroup
-              label="Desporto"
-              options={[{ value: "ALL", label: "Todos" }, ...sportOptions.map((s) => ({ value: s, label: s }))]}
+              label={t("filters.sport")}
+              options={[{ value: "ALL", label: t("filters.allMasc") }, ...sportOptions.map((s) => ({ value: s, label: s }))]}
               value={sportFilter}
               onChange={setSportFilter}
             />
           )}
-          <ChipGroup label="Tipo" options={TYPE_OPTIONS} value={typeFilter} onChange={setTypeFilter} />
-          <ChipGroup label="Dinheiro" options={MONEY_OPTIONS} value={moneyFilter} onChange={setMoneyFilter} />
+          <ChipGroup label={t("filters.type")} options={withLabels(TYPE_OPTIONS, t)} value={typeFilter} onChange={setTypeFilter} />
+          <ChipGroup label={t("filters.money")} options={withLabels(MONEY_OPTIONS, t)} value={moneyFilter} onChange={setMoneyFilter} />
 
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">De</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">{t("common.from")}</span>
               <input
                 type="date"
                 value={dateFrom}
@@ -1154,7 +1157,7 @@ export default function MobileBets({
               />
             </label>
             <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">Até</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">{t("common.to")}</span>
               <input
                 type="date"
                 value={dateTo}
@@ -1166,16 +1169,16 @@ export default function MobileBets({
           </div>
 
           <ChipGroup
-            label="Ordenar por"
-            options={SORT_OPTIONS}
+            label={t("bets.sortBy")}
+            options={withLabels(SORT_OPTIONS, t)}
             value={sortField}
             onChange={(v) => setSortField(v as SortField)}
           />
           <ChipGroup
-            label="Direção"
+            label={t("bets.direction")}
             options={[
-              { value: "desc", label: "Descendente" },
-              { value: "asc", label: "Ascendente" },
+              { value: "desc", label: t("bets.directionDesc") },
+              { value: "asc", label: t("bets.directionAsc") },
             ]}
             value={sortAsc ? "asc" : "desc"}
             onChange={(v) => setSortAsc(v === "asc")}
@@ -1186,7 +1189,7 @@ export default function MobileBets({
             onClick={() => setFiltersOpen(false)}
             className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center"
           >
-            Ver {filteredBets.length} {filteredBets.length === 1 ? "aposta" : "apostas"}
+            {t("dashboard.viewBets", { n: filteredBets.length })}
           </Pressable>
         </div>
       </BottomSheet>
@@ -1195,7 +1198,7 @@ export default function MobileBets({
       <SheetPage
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={form.editingBet ? "Editar aposta" : "Registar aposta"}
+title={form.editingBet ? t("bets.editTitle") : t("bets.new")}
         footer={
           <div className="space-y-2">
             {form.error && (
@@ -1203,10 +1206,10 @@ export default function MobileBets({
             )}
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <span>
-                Odd total <strong className="font-mono text-zinc-800 dark:text-zinc-100">{form.calculatedOdd.toFixed(2)}</strong>
+                {t("bets.field.totalOdd")} <strong className="font-mono text-zinc-800 dark:text-zinc-100">{form.calculatedOdd.toFixed(2)}</strong>
               </span>
               <span>
-                {form.status === "POR_LIQUIDAR" ? "Retorno potencial" : "Lucro"}{" "}
+                {form.status === "POR_LIQUIDAR" ? t("bets.form.potentialReturn") : t("bets.sort.profit")}{" "}
                 <strong
                   className={`font-mono ${
                     form.status === "POR_LIQUIDAR"
@@ -1227,7 +1230,7 @@ export default function MobileBets({
               onClick={handleSubmit}
               className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center"
             >
-              {form.editingBet ? "Guardar alterações" : "Registar aposta"}
+              {form.editingBet ? t("bets.form.save") : t("bets.new")}
             </Pressable>
           </div>
         }
@@ -1236,8 +1239,8 @@ export default function MobileBets({
           {/* Tipo */}
           <SegmentedControl
             segments={[
-              { value: "SIMPLES", label: "Simples" },
-              { value: "MULTIPLA", label: "Múltipla" },
+              { value: "SIMPLES", label: t("filters.type.single") },
+              { value: "MULTIPLA", label: t("filters.type.multiple") },
             ]}
             value={form.type}
             onChange={(v) => form.setType(v)}
@@ -1245,14 +1248,14 @@ export default function MobileBets({
 
           {/* Estado */}
           <ChipGroup
-            label="Estado"
-            options={STATUS_OPTIONS.filter((o) => o.value !== "ALL")}
+            label={t("filters.status")}
+            options={withLabels(STATUS_OPTIONS.filter((o) => o.value !== "ALL"), t)}
             value={form.status}
             onChange={(v) => form.setStatus(v as BetStatus)}
           />
 
           {form.status === "CASHOUT" && (
-            <FormField label="Valor recebido no cashout">
+            <FormField label={t("bets.form.cashoutReceived")}>
               <input
                 type="number"
                 inputMode="decimal"
@@ -1267,7 +1270,7 @@ export default function MobileBets({
           )}
 
           {(form.status === "MEIO_GANHA" || form.status === "MEIO_PERDIDA") && (
-            <FormField label="Retorno liquidado (opcional)">
+            <FormField label={t("bets.form.settledOptional")}>
               <input
                 type="number"
                 inputMode="decimal"
@@ -1275,14 +1278,14 @@ export default function MobileBets({
                 min="0"
                 value={form.settledReturn}
                 onChange={(e) => form.setSettledReturn(e.target.value)}
-                placeholder="Automático"
+placeholder={t("bets.form.automatic")}
                 className={inputClasses}
               />
             </FormField>
           )}
 
           {/* Casa + conta */}
-          <FormField label="Casa de apostas">
+          <FormField label={t("filters.bookmaker")}>
             <select
               value={form.bookmaker}
               onChange={(e) => form.changeBookmaker(e.target.value)}
@@ -1297,25 +1300,25 @@ export default function MobileBets({
           </FormField>
 
           {form.bookmaker === "Outra" && (
-            <FormField label="Nome da casa">
+            <FormField label={t("bets.form.bookmakerName")}>
               <input
                 type="text"
                 value={form.customBookmaker}
                 onChange={(e) => form.setCustomBookmaker(e.target.value)}
-                placeholder="Ex.: Bwin"
+placeholder={t("bets.form.bookmakerNamePlaceholder")}
                 className={inputClasses}
               />
             </FormField>
           )}
 
           {accountOptions.length > 0 && (
-            <FormField label="Conta (opcional)">
+            <FormField label={t("bets.form.accountOptional")}>
               <select
                 value={form.accountId}
                 onChange={(e) => form.setAccountId(e.target.value)}
                 className={inputClasses}
               >
-                <option value="">Sem conta</option>
+                <option value="">{t("filters.noAccount")}</option>
                 {accountOptions.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.label}
@@ -1328,7 +1331,7 @@ export default function MobileBets({
           {/* Seleções */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-1.5">
-              Seleções
+              {t("bets.form.selectionsShort")}
             </p>
             <div className="space-y-3">
               {form.selections.map((s, i) => (
@@ -1341,7 +1344,7 @@ export default function MobileBets({
                       <Pressable
                         as="button"
                         onClick={() => form.removeSelection(i)}
-                        aria-label="Remover seleção"
+aria-label={t("bets.form.removeSelection")}
                         className="p-1 text-rose-500"
                       >
                         <X size={14} />
@@ -1352,7 +1355,7 @@ export default function MobileBets({
                     type="text"
                     value={s.event}
                     onChange={(e) => form.changeSelection(i, "event", e.target.value)}
-                    placeholder="Evento (ex.: Benfica vs Porto)"
+placeholder={t("bets.form.eventPlaceholderShort")}
                     className={inputClasses}
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -1360,14 +1363,14 @@ export default function MobileBets({
                       type="text"
                       value={s.market}
                       onChange={(e) => form.changeSelection(i, "market", e.target.value)}
-                      placeholder="Mercado"
+placeholder={t("bets.field.market")}
                       className={inputClasses}
                     />
                     <input
                       type="text"
                       value={s.choice}
                       onChange={(e) => form.changeSelection(i, "choice", e.target.value)}
-                      placeholder="Escolha"
+placeholder={t("bets.form.choicePlaceholderShort")}
                       className={inputClasses}
                     />
                   </div>
@@ -1378,7 +1381,7 @@ export default function MobileBets({
                     min="1"
                     value={s.odd}
                     onChange={(e) => form.changeSelection(i, "odd", e.target.value)}
-                    placeholder="Odd"
+placeholder={t("bets.field.odd")}
                     className={inputClasses}
                   />
                 </MobileCard>
@@ -1389,14 +1392,14 @@ export default function MobileBets({
                   onClick={form.addSelection}
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 text-xs font-semibold text-zinc-500 dark:text-zinc-400"
                 >
-                  <PlusCircle size={14} /> Adicionar seleção
+                  <PlusCircle size={14} /> {t("bets.form.addSelection")}
                 </Pressable>
               )}
             </div>
           </div>
 
           {/* Stake + dinheiro */}
-          <FormField label={`Stake (${currency})`}>
+          <FormField label={t("bets.form.stakeCurrency", { currency })}>
             <input
               type="number"
               inputMode="decimal"
@@ -1412,21 +1415,21 @@ export default function MobileBets({
             <ToggleChip
               active={form.isFreebet}
               onClick={() => form.setIsFreebet(!form.isFreebet)}
-              label="Freebet"
+label={t("filters.money.freebet")}
             />
             <ToggleChip
               active={form.isRiskFree}
               onClick={() => form.setIsRiskFree(!form.isRiskFree)}
-              label="Sem risco"
+label={t("filters.money.riskFree")}
             />
           </div>
 
           {form.isFreebet && (
             <ChipGroup
-              label="Tipo de freebet"
+              label={t("bets.form.freebetType")}
               options={[
-                { value: "SNR", label: "SNR (stake não devolvida)" },
-                { value: "SR", label: "SR (stake devolvida)" },
+                { value: "SNR", label: t("bets.form.snrShort") },
+                { value: "SR", label: t("bets.form.srShort") },
               ]}
               value={form.freebetType}
               onChange={(v) => form.setFreebetType(v as "SNR" | "SR")}
@@ -1434,7 +1437,7 @@ export default function MobileBets({
           )}
 
           {/* Data + notas */}
-          <FormField label="Data e hora">
+          <FormField label={t("bets.details.dateTime")}>
             <input
               type="datetime-local"
               value={form.dateTime.replace(" ", "T")}
@@ -1443,12 +1446,12 @@ export default function MobileBets({
             />
           </FormField>
 
-          <FormField label="Notas (opcional)">
+          <FormField label={t("bets.form.notesOptional")}>
             <textarea
               value={form.notes}
               onChange={(e) => form.setNotes(e.target.value)}
               rows={2}
-              placeholder="Apontamentos sobre a aposta…"
+placeholder={t("bets.form.notesPlaceholderShort")}
               className={`${inputClasses} h-auto py-2.5`}
             />
           </FormField>

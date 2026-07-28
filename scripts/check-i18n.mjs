@@ -32,6 +32,13 @@ const MIGRATED = [
   "src/components/EnabledBookmakersCard.tsx",
   "src/components/BookieAccountsCard.tsx",
   "src/mobile/screens/MobileSettings.tsx",
+
+  // Fase 2 — Painel e histórico de apostas (desktop + mobile)
+  "src/components/Dashboard.tsx",
+  "src/mobile/screens/MobileDashboard.tsx",
+  "src/components/BetsManager.tsx",
+  "src/mobile/screens/MobileBets.tsx",
+  "src/hooks/useBetForm.ts",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são

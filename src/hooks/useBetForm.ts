@@ -14,6 +14,7 @@ import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType } from "
 import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, safeNum } from "../utils";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { hasCashoutSignal } from "../lib/betStatus";
+import { useI18n } from "../lib/i18n";
 
 export interface FormSelection {
   event: string;
@@ -25,6 +26,7 @@ export interface FormSelection {
 const nowLocal = () => new Date().toISOString().replace("T", " ").slice(0, 16);
 
 export function useBetForm(accounts: BookieAccount[]) {
+  const { t } = useI18n();
   const [editingBet, setEditingBet] = useState<Bet | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,13 +184,13 @@ export function useBetForm(accounts: BookieAccount[]) {
   const buildBet = (): Bet | null => {
     const stakeNum = parseFloat(stake);
     if (isNaN(stakeNum) || stakeNum <= 0) {
-      setError("Por favor insere uma Stake válida.");
+      setError(t("bets.error.stake"));
       return null;
     }
 
     const finalBookmaker = bookmaker === "Outra" ? customBookmaker.trim() : bookmaker;
     if (!finalBookmaker) {
-      setError("Por favor define a Casa de Apostas.");
+      setError(t("bets.error.bookmaker"));
       return null;
     }
 
@@ -210,7 +212,7 @@ export function useBetForm(accounts: BookieAccount[]) {
     });
 
     if (!isValid) {
-      setError("Por favor preenche todos os campos das seleções com valores válidos (odds devem ser maiores que 1.0).");
+      setError(t("bets.error.selections"));
       return null;
     }
 

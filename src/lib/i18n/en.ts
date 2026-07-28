@@ -14,6 +14,80 @@ export const EN: Record<TKey, Entry> = {
   "common.yes": "Yes",
   "common.no": "No",
   "common.loading": "Loading…",
+  "common.clear": "Clear",
+  "common.clearAll": "Clear all",
+  "common.confirm": "Confirm",
+  "common.edit": "Edit",
+  "common.delete": "Delete",
+  "common.filters": "Filters",
+  "common.from": "From",
+  "common.to": "To",
+
+  // ----------------------------------------------------------------
+  // Bet statuses (shared by the dashboard and the history)
+  // ----------------------------------------------------------------
+  "status.won": "Won",
+  "status.halfWon": "Half won",
+  "status.cashout": "Cashout",
+  "status.void": "Void",
+  "status.halfLost": "Half lost",
+  "status.lost": "Lost",
+  "status.pending": "Pending",
+  "status.unsettled": "Unsettled",
+  "status.unsettledLong": "Unsettled (pending)",
+  "status.resolved": "Resolved",
+
+  // ----------------------------------------------------------------
+  // Betting vocabulary (fallbacks and loose labels)
+  // ----------------------------------------------------------------
+  "bet.multiple": "Multiple",
+  "bet.various": "Various",
+  "bet.otherBookmaker": "Other",
+  "bet.noDate": "No date",
+  "bet.noData": "No data",
+  "bet.start": "Start",
+
+  // ----------------------------------------------------------------
+  // Filters (dashboard + history)
+  // ----------------------------------------------------------------
+  "filters.bookmaker": "Bookmaker",
+  "filters.account": "Account",
+  "filters.sport": "Sport",
+  "filters.type": "Type",
+  "filters.money": "Money",
+  "filters.period": "Period",
+  "filters.allFem": "All",
+  "filters.allMasc": "All",
+  "filters.allBookmakers": "All bookmakers",
+  "filters.allAccounts": "All accounts",
+  "filters.allSports": "All sports",
+  "filters.noAccount": "No account",
+  "filters.anyType": "Any type",
+  "filters.allStatuses": "All statuses",
+  "filters.status": "Status",
+  "filters.statusAria": "Filter by status",
+  "filters.type.single": "Single",
+  "filters.type.multiple": "Multiple",
+  "filters.money.all": "Cash and freebet",
+  "filters.money.real": "Real money",
+  "filters.money.freebet": "Freebet",
+  "filters.money.riskFree": "Risk-free",
+  "filters.bookmakerAria": "Filter by bookmaker",
+  "filters.accountAria": "Filter by account",
+  "filters.sportAria": "Filter by sport",
+  "filters.typeAria": "Filter by bet type",
+  "filters.moneyAria": "Filter by money type",
+
+  // ----------------------------------------------------------------
+  // Timeframes (mobile dashboard chips)
+  // ----------------------------------------------------------------
+  "timeframe.all": "All time",
+  "timeframe.7days": "7 days",
+  "timeframe.30days": "30 days",
+  "timeframe.90days": "90 days",
+  "timeframe.thisMonth": "This month",
+  "timeframe.thisYear": "This year",
+  "timeframe.custom": "Custom",
 
   // ----------------------------------------------------------------
   // Navigation / shell
@@ -51,6 +125,301 @@ export const EN: Record<TKey, Entry> = {
   "account.logoutHint":
     "Signs you out on this device. Your bets stay saved in your account.",
   "account.loadError": "Could not refresh the account details.",
+
+  // ----------------------------------------------------------------
+  // Bet history (desktop BetsManager + MobileBets)
+  // ----------------------------------------------------------------
+  "bets.searchPlaceholder": "Search team, market or notes...",
+  "bets.countOf": "{shown} of {total} bets",
+  "bets.new": "Add bet",
+  "bets.empty": "No bets found with the selected filters.",
+  "bets.addNew": "Add new bet",
+
+  // Multi-select and bulk actions
+  "bets.selectMultiple": "Select several",
+  "bets.cancelSelection": "Cancel selection",
+  "bets.deselectFiltered": "Deselect filtered",
+  "bets.selectFiltered": "Select filtered ({n})",
+  "bets.selectedSuffix": { one: "bet selected", other: "bets selected" },
+  "bets.deleteConfirm": { one: "Delete {n} bet?", other: "Delete {n} bets?" },
+  "bets.cancelDeleteAria": "Cancel deletion",
+  "bets.restore": "Restore",
+  "bets.ignore": "Ignore",
+  "bets.duplicate": "Duplicate",
+
+  "bets.bulkEdit.title": {
+    one: "Edit {n} bet — shared fields only",
+    other: "Edit {n} bets — shared fields only",
+  },
+  "bets.bulkEdit.close": "Close bulk edit",
+  "bets.bulkEdit.hint":
+    "Only the fields you change are applied. Each bet's stake, odds and selections stay untouched.",
+  "bets.bulkEdit.sport": "Sport (empty = keep)",
+  "bets.bulkEdit.keep": "Keep",
+  "bets.bulkEdit.keepStatus": "Keep status",
+  "bets.bulkEdit.keepBookmaker": "Keep bookmaker",
+  "bets.bulkEdit.keepAccount": "Keep account",
+  "bets.bulkEdit.keepMoney": "Keep type",
+  "bets.bulkEdit.note": "Append note (optional)",
+  "bets.bulkEdit.notePlaceholder": "Gets appended to the notes of every selected bet",
+  "bets.bulkEdit.apply": "Apply to {n}",
+  "bets.bulkIgnore.title": {
+    one: "Ignore {n} bet — excluded from stats",
+    other: "Ignore {n} bets — excluded from stats",
+  },
+  "bets.bulkIgnore.close": "Close bulk ignore",
+  "bets.bulkIgnore.reason": "Reason (optional, applied to all)",
+  "bets.bulkIgnore.reasonPlaceholder": "E.g. test bets, logging mistake…",
+  "bets.bulkIgnore.confirm": "Ignore {n}",
+
+  // Sorting
+  "bets.sort.date": "Date",
+  "bets.sort.stake": "Stake",
+  "bets.sort.odd": "Odds",
+  "bets.sort.profit": "Profit",
+  "bets.sort.potential": "Potential",
+  "bets.sort.aria": "Sort by {label}",
+  "bets.sort.ariaActive": "Sort by {label}, {direction} direction",
+  "bets.sort.asc": "ascending",
+  "bets.sort.desc": "descending",
+
+  // Bet card
+  "bets.cardAriaSelect": "Select bet from {date}",
+  "bets.cardAriaView": "View details of the bet from {date}",
+  "bets.selectBet": "Select bet",
+  "bets.ignored": "Ignored",
+  "bets.ignoredTitle": "Excluded from statistics",
+  "bets.deleteQ": "Delete?",
+  "bets.confirmDelete": "Confirm delete",
+  "bets.ignoreReasonPlaceholder": "Reason (optional)",
+  "bets.ignoreReasonAria": "Reason for ignoring the bet",
+  "bets.ignoreTitle": "Ignore bet (exclude from statistics)",
+  "bets.duplicateTitle": "Duplicate bet",
+  "bets.editTitle": "Edit bet",
+  "bets.restoreTitle": "Restore bet into the statistics",
+  "bets.deleteTitle": "Delete bet",
+
+  // Notes generated when duplicating
+  "bets.duplicatedNote": "Duplicated bet.",
+  "bets.duplicatedPrefix": "[Duplicated] {notes}",
+
+  // Bet details
+  "bets.details.title": "Bet details",
+  "bets.details.close": "Close bet details",
+  "bets.details.bookmaker": "Bookmaker",
+  "bets.details.dateTime": "Date and time",
+  "bets.details.origin": "Origin",
+  "bets.details.money": "Money",
+  "bets.details.stats": "Statistics",
+  "bets.details.ignoredValue": "Ignored (excluded)",
+  "bets.details.financial": "Financial summary",
+  "bets.details.selections": "Betslip selections",
+  "bets.details.selectionN": "Selection {n}",
+  "bets.details.noEvent": "Event unavailable",
+  "bets.details.noSelections": "This bet has no saved selections.",
+  "bets.details.notes": "Notes",
+  "bets.details.comment": "Comment",
+  "bets.details.tags": "Tags",
+
+  // Shared fields (details + form)
+  "bets.field.stake": "Stake",
+  "bets.field.totalOdd": "Total odds",
+  "bets.field.potential": "Potential",
+  "bets.field.return": "Return",
+  "bets.field.netProfit": "Net profit",
+  "bets.field.market": "Market",
+  "bets.field.choice": "Choice",
+  "bets.field.odd": "Odds",
+  "bets.field.moneyType": "Money type",
+
+  // Add/edit form
+  "bets.form.editTitle": "Edit bet record",
+  "bets.form.newTitle": "Add new bet",
+  "bets.form.type": "Bet type",
+  "bets.form.settleStatus": "Settlement status",
+  "bets.form.cashoutValue": "Cashout amount ({currency})",
+  "bets.form.cashoutHint":
+    "Amount actually received when cashing out (regardless of the result).",
+  "bets.form.otherBookmaker": "Other (type it in...)",
+  "bets.form.which": "Which one?",
+  "bets.form.whichPlaceholder": "E.g. Betfair, Betclic.fr",
+  "bets.form.dateTime": "Date / time",
+  "bets.form.moneyKind": "Bet type",
+  "bets.form.normal": "Normal",
+  "bets.form.normalHint": "Real stake",
+  "bets.form.freebetHint": "Free bet",
+  "bets.form.riskFreeHint": "Real stake, loss refunded",
+  "bets.form.freebetType": "Freebet type",
+  "bets.form.snr": "Stake not returned — SNR (win = (odds−1)×stake)",
+  "bets.form.sr": "Stake returned — SR (win = odds×stake)",
+  "bets.form.freebetDefault":
+    "Preset by the bookmaker ({bookmaker}). SNR is the default; Betclic uses SR.",
+  "bets.form.riskFreeInfo":
+    "Risk-free bet: the stake is real money and counts towards profit like a normal bet. If it wins, the profit is normal; if it loses, you lose the stake. Record the refunded freebet as a separate bet when you use it.",
+  "bets.form.stake": "Bet amount (stake)",
+  "bets.form.notes": "Additional notes (optional)",
+  "bets.form.notesPlaceholder": "E.g. followed tipster X, key match",
+  "bets.form.selections": "Betslip selections ({n})",
+  "bets.form.addSelection": "Add selection",
+  "bets.form.event": "Event / match",
+  "bets.form.eventPlaceholder": "E.g. Benfica vs Porto",
+  "bets.form.marketPlaceholder": "E.g. Full time result, total goals",
+  "bets.form.choiceLabel": "Choice / prediction",
+  "bets.form.choicePlaceholder": "E.g. Benfica, over 2.5",
+  "bets.form.oddIndividual": "Individual odds",
+  "bets.form.preview": "Betslip simulation",
+  "bets.form.totalOdd": "Total odds: ",
+  "bets.form.potentialReturn": "Potential return",
+  "bets.form.settledReturn": "Settled return",
+  "bets.form.settledReturnAria": "Settled return",
+  "bets.form.save": "Save changes",
+  "bets.form.submit": "Add bet",
+  "bets.error.stake": "Please enter a valid stake.",
+  "bets.error.bookmaker": "Please set the bookmaker.",
+  "bets.error.selections":
+    "Please fill in every selection field with valid values (odds must be greater than 1.0).",
+
+  // ---- Mobile screen specific ----
+  "bets.searchShort": "Search…",
+  "bets.selectAria": "Select bets",
+  "bets.day.today": "Today",
+  "bets.day.yesterday": "Yesterday",
+  "bets.selectedShort": "sel.",
+  "bets.emptyNoBets": "You haven't recorded any bets yet.",
+  "bets.emptyFiltered": "No bet matches the filters.",
+  "bets.detailFallbackTitle": "Bet",
+  "bets.potentialShort": "Pot. return",
+  "bets.detailAccount": "Account {label}",
+  "bets.detailIgnoredLine": "Ignored — excluded from statistics",
+  "bets.bulk.editAria": "Edit selected",
+  "bets.bulk.restoreAria": "Restore selected",
+  "bets.bulk.ignoreAria": "Ignore selected",
+  "bets.bulk.duplicateAria": "Duplicate selected",
+  "bets.bulk.deleteAria": "Delete selected",
+
+  "bets.ignoreSheet.title": "Ignore bet?",
+  "bets.ignoreSheet.desc":
+    "The bet on {event} stops counting towards the statistics and charts. It stays in the list and you can restore it whenever you want.",
+  "bets.ignoreSheet.reasonPlaceholder": "E.g. test bet, logging mistake…",
+  "bets.deleteSheet.title": "Delete bet?",
+  "bets.deleteSheet.desc": "The bet on {event} will be permanently deleted.",
+  "bets.bulkDelete.title": "Delete {n} bets?",
+  "bets.bulkDelete.desc": "The {n} selected bets will be permanently deleted.",
+  "bets.bulkDelete.confirm": "Delete {n}",
+  "bets.bulkIgnore.sheetTitle": "Ignore {n} bets?",
+  "bets.bulkIgnore.desc":
+    "The selected bets stop counting towards the statistics and charts. They stay in the list and you can restore them whenever you want.",
+  "bets.bulkEdit.sheetTitle": "Edit {n} bets",
+  "bets.bulkEdit.applyN": { one: "Apply to {n} bet", other: "Apply to {n} bets" },
+  "bets.bulkEdit.pickField": "Pick at least one field to change",
+  "bets.filtersSheet.title": "Filters and sorting",
+  "bets.sortBy": "Sort by",
+  "bets.direction": "Direction",
+  "bets.directionDesc": "Descending",
+  "bets.directionAsc": "Ascending",
+
+  "bets.form.cashoutReceived": "Amount received on cashout",
+  "bets.form.settledOptional": "Settled return (optional)",
+  "bets.form.automatic": "Automatic",
+  "bets.form.bookmakerName": "Bookmaker name",
+  "bets.form.bookmakerNamePlaceholder": "E.g. Bwin",
+  "bets.form.accountOptional": "Account (optional)",
+  "bets.form.selectionsShort": "Selections",
+  "bets.form.removeSelection": "Remove selection",
+  "bets.form.eventPlaceholderShort": "Event (e.g. Benfica vs Porto)",
+  "bets.form.choicePlaceholderShort": "Choice",
+  "bets.form.stakeCurrency": "Stake ({currency})",
+  "bets.form.snrShort": "SNR (stake not returned)",
+  "bets.form.srShort": "SR (stake returned)",
+  "bets.form.notesOptional": "Notes (optional)",
+  "bets.form.notesPlaceholderShort": "Notes about the bet…",
+
+  "bets.toast.updated": "Bet updated",
+  "bets.toast.added": "Bet recorded",
+  "bets.toast.duplicated": "Bet duplicated",
+  "bets.toast.ignored": "Bet ignored — excluded from statistics",
+  "bets.toast.restored": "Bet restored into the statistics",
+  "bets.toast.deleted": "Bet deleted",
+  "bets.toast.bulkUpdated": { one: "{n} bet updated", other: "{n} bets updated" },
+  "bets.toast.bulkIgnored": { one: "{n} bet ignored", other: "{n} bets ignored" },
+  "bets.toast.bulkRestored": { one: "{n} bet restored", other: "{n} bets restored" },
+  "bets.toast.bulkDuplicated": { one: "{n} bet duplicated", other: "{n} bets duplicated" },
+  "bets.toast.bulkDeleted": { one: "{n} bet deleted", other: "{n} bets deleted" },
+
+  // ----------------------------------------------------------------
+  // Dashboard (desktop Dashboard + MobileDashboard)
+  // ----------------------------------------------------------------
+  "dashboard.betsOf": "{shown} of {total} bets",
+  "dashboard.empty": "No bets match the selected filters.",
+  "dashboard.noRecords": "No records.",
+  "dashboard.viewBets": { one: "View {n} bet", other: "View {n} bets" },
+
+  // KPI cards
+  "dashboard.netProfit": "Net profit",
+  "dashboard.return": "Return",
+  "dashboard.roi": "ROI / Yield",
+  "dashboard.volume": "Volume",
+  "dashboard.totalVolume": "Total volume",
+  "dashboard.efficiency": "Efficiency",
+  "dashboard.winRate": "Win rate",
+  "dashboard.totalBets": "Total bets",
+  "dashboard.registered": "recorded",
+  "dashboard.active": "Active",
+  "dashboard.statWon": "{n} won",
+  "dashboard.statResolved": "{n} resolved",
+  "dashboard.statPending": "{n} pending",
+
+  // Evolution chart
+  "dashboard.evolution.title": "Net profit evolution",
+  "dashboard.evolution.desc": "Cumulative evolution across resolved bets",
+  "dashboard.cumulativeProfit": "Cumulative profit",
+  "dashboard.profit": "Profit",
+  "dashboard.evolution.tooltip": "Bet #{index} ({date}) - {event}",
+
+  // Result distribution
+  "dashboard.statusDistribution.title": "Result distribution",
+  "dashboard.statusDistribution.desc": "Percentage by bet status",
+  "dashboard.resolved": "Resolved",
+  "dashboard.resolvedDrill": "View resolved bets in the history",
+  "dashboard.viewBetsFor": "View bets: {name}",
+  "dashboard.betsTooltip": "{n} bets",
+  "dashboard.noResults": "No results recorded yet.",
+
+  // Monthly performance
+  "dashboard.monthly.title": "Monthly performance",
+  "dashboard.monthly.desc": "Net profit within the selected period",
+  "dashboard.monthly.tooltip": "{month}: {bets} bets | Volume: {volume}",
+  "dashboard.monthlyProfit": "Profit by month",
+
+  // Performance by bookmaker
+  "dashboard.bookmakers.title": "Performance by bookmaker",
+  "dashboard.bookmakers.titleShort": "Performance by bookmaker",
+  "dashboard.bookmakers.desc": "Profitability and volume analysis by operator",
+  "dashboard.bookmakers.subtitle": "{n} bets · Volume {volume}",
+  "dashboard.table.operator": "Operator",
+  "dashboard.table.bets": "Bets",
+
+  // Freebet analysis
+  "dashboard.freebets.title": "Freebet analysis",
+  "dashboard.freebets.desc": "Performance statistics for freebet bets",
+  "dashboard.freebets.count": "Freebets recorded",
+  "dashboard.freebets.invested": "Total staked (freebet)",
+  "dashboard.freebets.profit": "Net profit generated",
+  "dashboard.freebets.winRate": "Win rate (freebets)",
+  "dashboard.freebets.resolvedRatio": "Resolved / total",
+  "dashboard.freebets.ofTotal": "{resolved} of {total}",
+
+  // Insights
+  "dashboard.insights.title": "Insights",
+  "dashboard.insights.bestBookmaker": "Most profitable operator",
+  "dashboard.insights.bestBookmakerHint": "Where you make the most money",
+  "dashboard.insights.notEnoughData": "Not enough data",
+  "dashboard.insights.avgOdd": "Average odds of winning bets",
+  "dashboard.insights.avgOddShort": "Average winning odds",
+  "dashboard.insights.avgOddHint": "Average level of winning risk",
+  "dashboard.insights.biggestWin": "Biggest single profit",
+  "dashboard.insights.biggestWinHint": "Your most successful betslip",
+  "dashboard.insights.noWin": "No winnings yet.",
 
   // ----------------------------------------------------------------
   // Settings — general preferences

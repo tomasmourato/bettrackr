@@ -20,6 +20,80 @@ export const PT = {
   "common.yes": "Sim",
   "common.no": "Não",
   "common.loading": "A carregar…",
+  "common.clear": "Limpar",
+  "common.clearAll": "Limpar tudo",
+  "common.confirm": "Confirmar",
+  "common.edit": "Editar",
+  "common.delete": "Apagar",
+  "common.filters": "Filtros",
+  "common.from": "De",
+  "common.to": "Até",
+
+  // ----------------------------------------------------------------
+  // Estados de aposta (partilhados pelo painel e pelo histórico)
+  // ----------------------------------------------------------------
+  "status.won": "Ganha",
+  "status.halfWon": "Meio ganha",
+  "status.cashout": "Cashout",
+  "status.void": "Anulada",
+  "status.halfLost": "Meio perdida",
+  "status.lost": "Perdida",
+  "status.pending": "Pendente",
+  "status.unsettled": "Por liquidar",
+  "status.unsettledLong": "Por liquidar (pendente)",
+  "status.resolved": "Resolvidas",
+
+  // ----------------------------------------------------------------
+  // Vocabulário de apostas (fallbacks e etiquetas soltas)
+  // ----------------------------------------------------------------
+  "bet.multiple": "Múltipla",
+  "bet.various": "Vários",
+  "bet.otherBookmaker": "Outra",
+  "bet.noDate": "Sem data",
+  "bet.noData": "Sem dados",
+  "bet.start": "Início",
+
+  // ----------------------------------------------------------------
+  // Filtros (painel + histórico)
+  // ----------------------------------------------------------------
+  "filters.bookmaker": "Casa de apostas",
+  "filters.account": "Conta",
+  "filters.sport": "Desporto",
+  "filters.type": "Tipo",
+  "filters.money": "Dinheiro",
+  "filters.period": "Período",
+  "filters.allFem": "Todas",
+  "filters.allMasc": "Todos",
+  "filters.allBookmakers": "Todas as casas",
+  "filters.allAccounts": "Todas as contas",
+  "filters.allSports": "Todos os desportos",
+  "filters.noAccount": "Sem conta",
+  "filters.anyType": "Qualquer tipo",
+  "filters.allStatuses": "Todos os estados",
+  "filters.status": "Estado",
+  "filters.statusAria": "Filtrar por estado",
+  "filters.type.single": "Simples",
+  "filters.type.multiple": "Múltipla",
+  "filters.money.all": "Dinheiro e freebet",
+  "filters.money.real": "Dinheiro real",
+  "filters.money.freebet": "Freebet",
+  "filters.money.riskFree": "Sem risco",
+  "filters.bookmakerAria": "Filtrar por casa de apostas",
+  "filters.accountAria": "Filtrar por conta",
+  "filters.sportAria": "Filtrar por desporto",
+  "filters.typeAria": "Filtrar por tipo de aposta",
+  "filters.moneyAria": "Filtrar por tipo de dinheiro",
+
+  // ----------------------------------------------------------------
+  // Períodos (chips do painel mobile)
+  // ----------------------------------------------------------------
+  "timeframe.all": "Todo o período",
+  "timeframe.7days": "7 dias",
+  "timeframe.30days": "30 dias",
+  "timeframe.90days": "90 dias",
+  "timeframe.thisMonth": "Este mês",
+  "timeframe.thisYear": "Este ano",
+  "timeframe.custom": "Personalizado",
 
   // ----------------------------------------------------------------
   // Navegação / shell
@@ -57,6 +131,301 @@ export const PT = {
   "account.logoutHint":
     "Termina a sessão neste dispositivo. As tuas apostas ficam guardadas na conta.",
   "account.loadError": "Não foi possível atualizar os dados da conta.",
+
+  // ----------------------------------------------------------------
+  // Histórico de apostas (BetsManager desktop + MobileBets)
+  // ----------------------------------------------------------------
+  "bets.searchPlaceholder": "Pesquisar equipa, mercado ou notas...",
+  "bets.countOf": "{shown} de {total} apostas",
+  "bets.new": "Registar aposta",
+  "bets.empty": "Nenhuma aposta encontrada com os filtros selecionados.",
+  "bets.addNew": "Adicionar nova aposta",
+
+  // Seleção múltipla e ações em massa
+  "bets.selectMultiple": "Selecionar várias",
+  "bets.cancelSelection": "Cancelar seleção",
+  "bets.deselectFiltered": "Desmarcar filtradas",
+  "bets.selectFiltered": "Selecionar filtradas ({n})",
+  "bets.selectedSuffix": { one: "aposta selecionada", other: "apostas selecionadas" },
+  "bets.deleteConfirm": { one: "Apagar {n} aposta?", other: "Apagar {n} apostas?" },
+  "bets.cancelDeleteAria": "Cancelar eliminação",
+  "bets.restore": "Repor",
+  "bets.ignore": "Ignorar",
+  "bets.duplicate": "Duplicar",
+
+  "bets.bulkEdit.title": {
+    one: "Editar {n} aposta — só campos comuns",
+    other: "Editar {n} apostas — só campos comuns",
+  },
+  "bets.bulkEdit.close": "Fechar edição em massa",
+  "bets.bulkEdit.hint":
+    "Só os campos que alterares são aplicados. O montante, a odd e as seleções de cada aposta ficam intactos.",
+  "bets.bulkEdit.sport": "Desporto (vazio = manter)",
+  "bets.bulkEdit.keep": "Manter",
+  "bets.bulkEdit.keepStatus": "Manter estado",
+  "bets.bulkEdit.keepBookmaker": "Manter casa",
+  "bets.bulkEdit.keepAccount": "Manter conta",
+  "bets.bulkEdit.keepMoney": "Manter tipo",
+  "bets.bulkEdit.note": "Acrescentar nota (opcional)",
+  "bets.bulkEdit.notePlaceholder": "Fica anexada às notas de cada aposta selecionada",
+  "bets.bulkEdit.apply": "Aplicar a {n}",
+  "bets.bulkIgnore.title": {
+    one: "Ignorar {n} aposta — fora das estatísticas",
+    other: "Ignorar {n} apostas — fora das estatísticas",
+  },
+  "bets.bulkIgnore.close": "Fechar ignorar em massa",
+  "bets.bulkIgnore.reason": "Motivo (opcional, aplicado a todas)",
+  "bets.bulkIgnore.reasonPlaceholder": "Ex.: apostas de teste, erro de registo…",
+  "bets.bulkIgnore.confirm": "Ignorar {n}",
+
+  // Ordenação
+  "bets.sort.date": "Data",
+  "bets.sort.stake": "Stake",
+  "bets.sort.odd": "Odd",
+  "bets.sort.profit": "Lucro",
+  "bets.sort.potential": "Potencial",
+  "bets.sort.aria": "Ordenar por {label}",
+  "bets.sort.ariaActive": "Ordenar por {label}, direção {direction}",
+  "bets.sort.asc": "ascendente",
+  "bets.sort.desc": "descendente",
+
+  // Cartão de aposta
+  "bets.cardAriaSelect": "Selecionar aposta de {date}",
+  "bets.cardAriaView": "Ver detalhes da aposta de {date}",
+  "bets.selectBet": "Selecionar aposta",
+  "bets.ignored": "Ignorada",
+  "bets.ignoredTitle": "Excluída das estatísticas",
+  "bets.deleteQ": "Apagar?",
+  "bets.confirmDelete": "Confirmar apagar",
+  "bets.ignoreReasonPlaceholder": "Motivo (opcional)",
+  "bets.ignoreReasonAria": "Motivo para ignorar a aposta",
+  "bets.ignoreTitle": "Ignorar aposta (excluir das estatísticas)",
+  "bets.duplicateTitle": "Duplicar aposta",
+  "bets.editTitle": "Editar aposta",
+  "bets.restoreTitle": "Repor aposta nas estatísticas",
+  "bets.deleteTitle": "Apagar aposta",
+
+  // Notas geradas ao duplicar
+  "bets.duplicatedNote": "Aposta duplicada.",
+  "bets.duplicatedPrefix": "[Duplicado] {notes}",
+
+  // Detalhes da aposta
+  "bets.details.title": "Detalhes da aposta",
+  "bets.details.close": "Fechar detalhes da aposta",
+  "bets.details.bookmaker": "Casa",
+  "bets.details.dateTime": "Data e hora",
+  "bets.details.origin": "Origem",
+  "bets.details.money": "Dinheiro",
+  "bets.details.stats": "Estatísticas",
+  "bets.details.ignoredValue": "Ignorada (excluída)",
+  "bets.details.financial": "Resumo financeiro",
+  "bets.details.selections": "Seleções do boletim",
+  "bets.details.selectionN": "Seleção {n}",
+  "bets.details.noEvent": "Evento indisponível",
+  "bets.details.noSelections": "Esta aposta não tem seleções guardadas.",
+  "bets.details.notes": "Notas",
+  "bets.details.comment": "Comentário",
+  "bets.details.tags": "Etiquetas",
+
+  // Campos partilhados (detalhes + formulário)
+  "bets.field.stake": "Stake",
+  "bets.field.totalOdd": "Odd total",
+  "bets.field.potential": "Potencial",
+  "bets.field.return": "Retorno",
+  "bets.field.netProfit": "Lucro líquido",
+  "bets.field.market": "Mercado",
+  "bets.field.choice": "Escolha",
+  "bets.field.odd": "Odd",
+  "bets.field.moneyType": "Tipo de dinheiro",
+
+  // Formulário de registo/edição
+  "bets.form.editTitle": "Editar registo de aposta",
+  "bets.form.newTitle": "Registar nova aposta",
+  "bets.form.type": "Tipo de aposta",
+  "bets.form.settleStatus": "Estado de liquidação",
+  "bets.form.cashoutValue": "Valor do cashout ({currency})",
+  "bets.form.cashoutHint":
+    "Montante efetivamente recebido ao fazer cashout (independente do resultado).",
+  "bets.form.otherBookmaker": "Outra (escrever...)",
+  "bets.form.which": "Qual?",
+  "bets.form.whichPlaceholder": "Ex: Betfair, Betclic.fr",
+  "bets.form.dateTime": "Data / hora",
+  "bets.form.moneyKind": "Tipo de aposta",
+  "bets.form.normal": "Normal",
+  "bets.form.normalHint": "Stake real",
+  "bets.form.freebetHint": "Aposta grátis",
+  "bets.form.riskFreeHint": "Stake real, derrota devolvida",
+  "bets.form.freebetType": "Tipo de freebet",
+  "bets.form.snr": "Stake não devolvida — SNR (ganho = (odd−1)×stake)",
+  "bets.form.sr": "Stake devolvida — SR (ganho = odd×stake)",
+  "bets.form.freebetDefault":
+    "Predefinido pela casa ({bookmaker}). SNR é o padrão; o Betclic usa SR.",
+  "bets.form.riskFreeInfo":
+    "Aposta sem risco: a stake é dinheiro real e conta para o lucro como uma aposta normal. Se ganhar, o lucro é normal; se perder, perde a stake. Regista a freebet devolvida como uma aposta à parte quando a usares.",
+  "bets.form.stake": "Valor da aposta (stake)",
+  "bets.form.notes": "Notas adicionais (opcional)",
+  "bets.form.notesPlaceholder": "Ex: Segui tipster X, jogo crucial",
+  "bets.form.selections": "Seleções do bilhete ({n})",
+  "bets.form.addSelection": "Adicionar seleção",
+  "bets.form.event": "Evento / jogo",
+  "bets.form.eventPlaceholder": "Ex: Benfica vs Porto",
+  "bets.form.marketPlaceholder": "Ex: Resultado final, total de golos",
+  "bets.form.choiceLabel": "Escolha / prognóstico",
+  "bets.form.choicePlaceholder": "Ex: Benfica, mais de 2.5",
+  "bets.form.oddIndividual": "Odd individual",
+  "bets.form.preview": "Simulação do boletim",
+  "bets.form.totalOdd": "Odd total: ",
+  "bets.form.potentialReturn": "Retorno potencial",
+  "bets.form.settledReturn": "Retorno liquidado",
+  "bets.form.settledReturnAria": "Retorno liquidado",
+  "bets.form.save": "Guardar alterações",
+  "bets.form.submit": "Registar aposta",
+  "bets.error.stake": "Por favor insere uma stake válida.",
+  "bets.error.bookmaker": "Por favor define a casa de apostas.",
+  "bets.error.selections":
+    "Por favor preenche todos os campos das seleções com valores válidos (odds devem ser maiores que 1.0).",
+
+  // ---- Específicos do ecrã mobile ----
+  "bets.searchShort": "Pesquisar…",
+  "bets.selectAria": "Selecionar apostas",
+  "bets.day.today": "Hoje",
+  "bets.day.yesterday": "Ontem",
+  "bets.selectedShort": "sel.",
+  "bets.emptyNoBets": "Ainda não registaste apostas.",
+  "bets.emptyFiltered": "Nenhuma aposta corresponde aos filtros.",
+  "bets.detailFallbackTitle": "Aposta",
+  "bets.potentialShort": "Retorno pot.",
+  "bets.detailAccount": "Conta {label}",
+  "bets.detailIgnoredLine": "Ignorada — excluída das estatísticas",
+  "bets.bulk.editAria": "Editar selecionadas",
+  "bets.bulk.restoreAria": "Repor selecionadas",
+  "bets.bulk.ignoreAria": "Ignorar selecionadas",
+  "bets.bulk.duplicateAria": "Duplicar selecionadas",
+  "bets.bulk.deleteAria": "Apagar selecionadas",
+
+  "bets.ignoreSheet.title": "Ignorar aposta?",
+  "bets.ignoreSheet.desc":
+    "A aposta em {event} deixa de contar para as estatísticas e gráficos. Continua na lista e podes repô-la quando quiseres.",
+  "bets.ignoreSheet.reasonPlaceholder": "Ex.: aposta de teste, erro de registo…",
+  "bets.deleteSheet.title": "Apagar aposta?",
+  "bets.deleteSheet.desc": "A aposta em {event} será apagada definitivamente.",
+  "bets.bulkDelete.title": "Apagar {n} apostas?",
+  "bets.bulkDelete.desc": "As {n} apostas selecionadas serão apagadas definitivamente.",
+  "bets.bulkDelete.confirm": "Apagar {n}",
+  "bets.bulkIgnore.sheetTitle": "Ignorar {n} apostas?",
+  "bets.bulkIgnore.desc":
+    "As selecionadas deixam de contar para as estatísticas e gráficos. Continuam na lista e podes repô-las quando quiseres.",
+  "bets.bulkEdit.sheetTitle": "Editar {n} apostas",
+  "bets.bulkEdit.applyN": { one: "Aplicar a {n} aposta", other: "Aplicar a {n} apostas" },
+  "bets.bulkEdit.pickField": "Escolhe pelo menos um campo para alterar",
+  "bets.filtersSheet.title": "Filtros e ordenação",
+  "bets.sortBy": "Ordenar por",
+  "bets.direction": "Direção",
+  "bets.directionDesc": "Descendente",
+  "bets.directionAsc": "Ascendente",
+
+  "bets.form.cashoutReceived": "Valor recebido no cashout",
+  "bets.form.settledOptional": "Retorno liquidado (opcional)",
+  "bets.form.automatic": "Automático",
+  "bets.form.bookmakerName": "Nome da casa",
+  "bets.form.bookmakerNamePlaceholder": "Ex.: Bwin",
+  "bets.form.accountOptional": "Conta (opcional)",
+  "bets.form.selectionsShort": "Seleções",
+  "bets.form.removeSelection": "Remover seleção",
+  "bets.form.eventPlaceholderShort": "Evento (ex.: Benfica vs Porto)",
+  "bets.form.choicePlaceholderShort": "Escolha",
+  "bets.form.stakeCurrency": "Stake ({currency})",
+  "bets.form.snrShort": "SNR (stake não devolvida)",
+  "bets.form.srShort": "SR (stake devolvida)",
+  "bets.form.notesOptional": "Notas (opcional)",
+  "bets.form.notesPlaceholderShort": "Apontamentos sobre a aposta…",
+
+  "bets.toast.updated": "Aposta atualizada",
+  "bets.toast.added": "Aposta registada",
+  "bets.toast.duplicated": "Aposta duplicada",
+  "bets.toast.ignored": "Aposta ignorada — fora das estatísticas",
+  "bets.toast.restored": "Aposta reposta nas estatísticas",
+  "bets.toast.deleted": "Aposta apagada",
+  "bets.toast.bulkUpdated": { one: "{n} aposta atualizada", other: "{n} apostas atualizadas" },
+  "bets.toast.bulkIgnored": { one: "{n} aposta ignorada", other: "{n} apostas ignoradas" },
+  "bets.toast.bulkRestored": { one: "{n} aposta reposta", other: "{n} apostas repostas" },
+  "bets.toast.bulkDuplicated": { one: "{n} aposta duplicada", other: "{n} apostas duplicadas" },
+  "bets.toast.bulkDeleted": { one: "{n} aposta apagada", other: "{n} apostas apagadas" },
+
+  // ----------------------------------------------------------------
+  // Painel (Dashboard desktop + MobileDashboard)
+  // ----------------------------------------------------------------
+  "dashboard.betsOf": "{shown} de {total} apostas",
+  "dashboard.empty": "Sem apostas para os filtros escolhidos.",
+  "dashboard.noRecords": "Sem registos.",
+  "dashboard.viewBets": { one: "Ver {n} aposta", other: "Ver {n} apostas" },
+
+  // Cartões KPI
+  "dashboard.netProfit": "Lucro líquido",
+  "dashboard.return": "Retorno",
+  "dashboard.roi": "ROI / Yield",
+  "dashboard.volume": "Volume",
+  "dashboard.totalVolume": "Volume total",
+  "dashboard.efficiency": "Eficiência",
+  "dashboard.winRate": "Taxa de acerto",
+  "dashboard.totalBets": "Total de apostas",
+  "dashboard.registered": "registadas",
+  "dashboard.active": "Ativas",
+  "dashboard.statWon": "{n} ganhas",
+  "dashboard.statResolved": "{n} resolvidas",
+  "dashboard.statPending": "{n} pendentes",
+
+  // Gráfico de evolução
+  "dashboard.evolution.title": "Evolução do lucro líquido",
+  "dashboard.evolution.desc": "Evolução acumulada ao longo das apostas resolvidas",
+  "dashboard.cumulativeProfit": "Lucro acumulado",
+  "dashboard.profit": "Lucro",
+  "dashboard.evolution.tooltip": "Aposta #{index} ({date}) - {event}",
+
+  // Distribuição de resultados
+  "dashboard.statusDistribution.title": "Distribuição de resultados",
+  "dashboard.statusDistribution.desc": "Percentagem por estado de aposta",
+  "dashboard.resolved": "Resolvidas",
+  "dashboard.resolvedDrill": "Ver apostas resolvidas no histórico",
+  "dashboard.viewBetsFor": "Ver apostas: {name}",
+  "dashboard.betsTooltip": "{n} apostas",
+  "dashboard.noResults": "Nenhum resultado registado ainda.",
+
+  // Desempenho mensal
+  "dashboard.monthly.title": "Desempenho mensal",
+  "dashboard.monthly.desc": "Lucro líquido dentro do período selecionado",
+  "dashboard.monthly.tooltip": "{month}: {bets} apostas | Volume: {volume}",
+  "dashboard.monthlyProfit": "Lucro por mês",
+
+  // Desempenho por casa
+  "dashboard.bookmakers.title": "Desempenho por casa de apostas",
+  "dashboard.bookmakers.titleShort": "Desempenho por casa",
+  "dashboard.bookmakers.desc": "Análise de rentabilidade e volume por operador",
+  "dashboard.bookmakers.subtitle": "{n} apostas · Volume {volume}",
+  "dashboard.table.operator": "Operador",
+  "dashboard.table.bets": "Apostas",
+
+  // Análise de freebets
+  "dashboard.freebets.title": "Análise de freebets",
+  "dashboard.freebets.desc": "Estatísticas de desempenho das apostas com freebet",
+  "dashboard.freebets.count": "Freebets registadas",
+  "dashboard.freebets.invested": "Total investido (freebet)",
+  "dashboard.freebets.profit": "Lucro líquido gerado",
+  "dashboard.freebets.winRate": "Taxa de acerto (freebets)",
+  "dashboard.freebets.resolvedRatio": "Resolvidas / total",
+  "dashboard.freebets.ofTotal": "{resolved} de {total}",
+
+  // Insights
+  "dashboard.insights.title": "Insights",
+  "dashboard.insights.bestBookmaker": "Operador mais rentável",
+  "dashboard.insights.bestBookmakerHint": "Onde fazes mais dinheiro",
+  "dashboard.insights.notEnoughData": "Sem dados suficientes",
+  "dashboard.insights.avgOdd": "Odd média das apostas ganhas",
+  "dashboard.insights.avgOddShort": "Odd média das ganhas",
+  "dashboard.insights.avgOddHint": "Nível médio de risco vitorioso",
+  "dashboard.insights.biggestWin": "Maior lucro individual",
+  "dashboard.insights.biggestWinHint": "O teu boletim de maior sucesso",
+  "dashboard.insights.noWin": "Nenhum prémio ganho.",
 
   // ----------------------------------------------------------------
   // Configurações — preferências gerais

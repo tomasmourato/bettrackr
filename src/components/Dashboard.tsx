@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Bet, BetStatus, BookieAccount, DashboardStats } from "../types";
 import { calculateDashboardStats, safeNum } from "../utils";
+import { useI18n } from "../lib/i18n";
 import FilterDropdown from "./FilterDropdown";
 import FiltersBar from "./FiltersBar";
 import TimeframeFilter, {
@@ -75,6 +76,7 @@ export interface DashboardBetsFilters {
 }
 
 export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch }: DashboardProps) {
+  const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   // Filtros do dashboard (D2): recalculam TODAS as estatísticas/gráficos para o
   // subconjunto escolhido. As opções vêm da lista completa; o cálculo usa a
   // lista filtrada `bets` (sombreada abaixo).
@@ -248,21 +250,21 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
       runningProfit += safeNum(bet.netProfit);
       return {
         index: index + 1,
-        data: bet.dateTime ? bet.dateTime.split(" ")[0] : "Sem Data", // Just date
-        lucro: Number(runningProfit.toFixed(2)),
-        lucroIndividual: safeNum(bet.netProfit),
-        evento: (bet.selections && bet.selections[0]?.event) || "Vários"
+        data: bet.dateTime ? bet.dateTime.split(" ")[0] : t("bet.noDate"), // Just date
+        profit: Number(runningProfit.toFixed(2)),
+        betProfit: safeNum(bet.netProfit),
+        event: (bet.selections && bet.selections[0]?.event) || t("bet.various")
       };
     });
 
     // If empty, add a default start point
     if (data.length === 0) {
-      return [{ index: 0, data: "Sem Dados", lucro: 0, lucroIndividual: 0, evento: "" }];
+      return [{ index: 0, data: t("bet.noData"), profit: 0, betProfit: 0, event: "" }];
     }
 
     // Add initial 0 point
-    return [{ index: 0, data: "Início", lucro: 0, lucroIndividual: 0, evento: "Início" }, ...data];
-  }, [bets]);
+    return [{ index: 0, data: t("bet.start"), profit: 0, betProfit: 0, event: t("bet.start") }, ...data];
+  }, [bets, t]);
 
   const monthlyChartBounds = useMemo(() => {
     const settledDates = bets
@@ -286,7 +288,6 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
   // the selected range stay visible with zero values, but months outside it do not.
   const monthlyPerformanceData = useMemo(() => {
     const monthsData: { year: number; month: number; label: string; profit: number; volume: number; betsCount: number }[] = [];
-    const monthNamesPT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const firstMonth = new Date(monthlyChartBounds.start.getFullYear(), monthlyChartBounds.start.getMonth(), 1);
     const lastMonth = new Date(monthlyChartBounds.end.getFullYear(), monthlyChartBounds.end.getMonth(), 1);
 
@@ -296,7 +297,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
       monthsData.push({
         year: y,
         month: m,
-        label: `${monthNamesPT[m]} ${String(y).substring(2)}`,
+        label: `${formatDate(new Date(y, m, 1), { month: "short" })} ${String(y).substring(2)}`,
         profit: 0,
         volume: 0,
         betsCount: 0
@@ -327,18 +328,18 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
     });
 
     return monthsData.map(md => ({
-      mes: md.label,
-      "Lucro Líquido": Number(md.profit.toFixed(2)),
-      "Volume": Number(md.volume.toFixed(2)),
-      "Apostas": md.betsCount
+      month: md.label,
+      profit: Number(md.profit.toFixed(2)),
+      volume: Number(md.volume.toFixed(2)),
+      bets: md.betsCount
     }));
-  }, [bets, monthlyChartBounds]);
+  }, [bets, monthlyChartBounds, formatDate]);
 
   // 2. Prepare data for Bookmaker distribution
   const bookmakerData = useMemo(() => {
     const counts: Record<string, { stake: number; profit: number; count: number }> = {};
     bets.forEach(b => {
-      const bkm = b.bookmaker || "Outra";
+      const bkm = b.bookmaker || t("bet.otherBookmaker");
       if (!counts[bkm]) {
         counts[bkm] = { stake: 0, profit: 0, count: 0 };
       }
@@ -351,11 +352,11 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
 
     return Object.entries(counts).map(([name, data]) => ({
       name,
-      apostas: data.count,
+      bets: data.count,
       volume: Number(safeNum(data.stake).toFixed(2)),
-      lucro: Number(safeNum(data.profit).toFixed(2))
-    })).sort((a, b) => b.lucro - a.lucro);
-  }, [bets]);
+      profit: Number(safeNum(data.profit).toFixed(2))
+    })).sort((a, b) => b.profit - a.profit);
+  }, [bets, t]);
 
   // 3. Prepare data for Bet Status distribution.
   // "Distribuição de Resultados" mostra apenas apostas RESOLVIDAS — as
@@ -379,14 +380,14 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
     });
 
     return [
-      { name: "Ganha", status: "GANHA" as BetStatus, value: statusCounts.GANHA, color: "#10B981" },
-      { name: "Meio Ganha", status: "MEIO_GANHA" as BetStatus, value: statusCounts.MEIO_GANHA, color: "#34D399" },
-      { name: "Cashout", status: "CASHOUT" as BetStatus, value: statusCounts.CASHOUT, color: "#8B5CF6" },
-      { name: "Anulada", status: "ANULADA" as BetStatus, value: statusCounts.ANULADA, color: "#9CA3AF" },
-      { name: "Meio Perdida", status: "MEIO_PERDIDA" as BetStatus, value: statusCounts.MEIO_PERDIDA, color: "#F87171" },
-      { name: "Perdida", status: "PERDIDA" as BetStatus, value: statusCounts.PERDIDA, color: "#EF4444" },
+      { name: t("status.won"), status: "GANHA" as BetStatus, value: statusCounts.GANHA, color: "#10B981" },
+      { name: t("status.halfWon"), status: "MEIO_GANHA" as BetStatus, value: statusCounts.MEIO_GANHA, color: "#34D399" },
+      { name: t("status.cashout"), status: "CASHOUT" as BetStatus, value: statusCounts.CASHOUT, color: "#8B5CF6" },
+      { name: t("status.void"), status: "ANULADA" as BetStatus, value: statusCounts.ANULADA, color: "#9CA3AF" },
+      { name: t("status.halfLost"), status: "MEIO_PERDIDA" as BetStatus, value: statusCounts.MEIO_PERDIDA, color: "#F87171" },
+      { name: t("status.lost"), status: "PERDIDA" as BetStatus, value: statusCounts.PERDIDA, color: "#EF4444" },
     ].filter(item => item.value > 0);
-  }, [bets]);
+  }, [bets, t]);
 
   // Freebet summary stats (calculated solely from registered bets)
   const freebetStats = useMemo(() => {
@@ -438,16 +439,16 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
           onClear={clearFilters}
           trailing={
             <span className="shrink-0 text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
-              {bets.length} de {allBets.length} apostas
+              {t("dashboard.betsOf", { shown: bets.length, total: allBets.length })}
             </span>
           }
         >
           <FilterDropdown
             className="flex-1 min-w-40"
             value={filterBookmaker}
-            options={[{ value: "ALL", label: "Todas as Casas" }, ...bookmakerOptions.map(bookmaker => ({ value: bookmaker, label: bookmaker }))]}
+            options={[{ value: "ALL", label: t("filters.allBookmakers") }, ...bookmakerOptions.map(bookmaker => ({ value: bookmaker, label: bookmaker }))]}
             onChange={setFilterBookmaker}
-            ariaLabel="Filtrar por casa de apostas"
+            ariaLabel={t("filters.bookmakerAria")}
           />
 
           {accounts.length > 0 && (
@@ -455,46 +456,46 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
               className="flex-1 min-w-40"
               value={filterAccount}
               options={[
-                { value: "ALL", label: "Todas as Contas" },
+                { value: "ALL", label: t("filters.allAccounts") },
                 ...accounts.map(account => ({ value: account.id, label: `${account.bookmaker} · ${account.label}` })),
-                { value: "NONE", label: "Sem conta" }
+                { value: "NONE", label: t("filters.noAccount") }
               ]}
               onChange={setFilterAccount}
-              ariaLabel="Filtrar por conta"
+              ariaLabel={t("filters.accountAria")}
             />
           )}
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={filterSport}
-            options={[{ value: "ALL", label: "Todos os Desportos" }, ...sportOptions.map(sport => ({ value: sport, label: sport }))]}
+            options={[{ value: "ALL", label: t("filters.allSports") }, ...sportOptions.map(sport => ({ value: sport, label: sport }))]}
             onChange={setFilterSport}
-            ariaLabel="Filtrar por desporto"
+            ariaLabel={t("filters.sportAria")}
           />
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={filterType}
             options={[
-              { value: "ALL", label: "Qualquer Tipo" },
-              { value: "SIMPLES", label: "Simples" },
-              { value: "MULTIPLA", label: "Múltipla" }
+              { value: "ALL", label: t("filters.anyType") },
+              { value: "SIMPLES", label: t("filters.type.single") },
+              { value: "MULTIPLA", label: t("filters.type.multiple") }
             ]}
             onChange={setFilterType}
-            ariaLabel="Filtrar por tipo de aposta"
+            ariaLabel={t("filters.typeAria")}
           />
 
           <FilterDropdown
             className="flex-1 min-w-40"
             value={filterFreebet}
             options={[
-              { value: "ALL", label: "Dinheiro e Freebet" },
-              { value: "NORMAL", label: "Dinheiro Real" },
-              { value: "FREEBET", label: "Freebet" },
-              { value: "RISK_FREE", label: "Sem risco" }
+              { value: "ALL", label: t("filters.money.all") },
+              { value: "NORMAL", label: t("filters.money.real") },
+              { value: "FREEBET", label: t("filters.money.freebet") },
+              { value: "RISK_FREE", label: t("filters.money.riskFree") }
             ]}
             onChange={setFilterFreebet}
-            ariaLabel="Filtrar por tipo de dinheiro"
+            ariaLabel={t("filters.moneyAria")}
           />
 
           <TimeframeFilter
@@ -512,9 +513,9 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40" id="card-net-profit">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Lucro Líquido</p>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{t("dashboard.netProfit")}</p>
               <h3 className={`text-2xl font-bold mt-1.5 tracking-tight font-mono ${stats.netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                {stats.netProfit >= 0 ? "+" : ""}{stats.netProfit.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}
+                {formatSignedMoney(stats.netProfit, currency)}
               </h3>
             </div>
             <div className={`p-2 rounded ${stats.netProfit >= 0 ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400" : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"}`}>
@@ -522,7 +523,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span>Retorno: <strong className="text-zinc-700 dark:text-zinc-200 font-medium">{stats.totalReturn.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}</strong></span>
+            <span>{t("dashboard.return")}: <strong className="text-zinc-700 dark:text-zinc-200 font-medium">{formatMoney(stats.totalReturn, currency)}</strong></span>
             <span className={`font-semibold flex items-center gap-0.5 ${stats.netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
               {stats.netProfit >= 0 ? "+" : ""}{stats.totalStake > 0 ? (safeNum(stats.netProfit / stats.totalStake) * 100).toFixed(1) : "0.0"}%
             </span>
@@ -533,7 +534,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40" id="card-roi">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">ROI / Yield</p>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{t("dashboard.roi")}</p>
               <h3 className={`text-2xl font-bold mt-1.5 tracking-tight font-mono ${stats.yield >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                 {stats.yield >= 0 ? "+" : ""}{safeNum(stats.yield).toFixed(2)}%
               </h3>
@@ -543,8 +544,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span>Volume: <strong className="text-zinc-700 dark:text-zinc-200 font-medium">{stats.totalStake.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}</strong></span>
-            <span className="text-zinc-400 dark:text-zinc-500">Eficiência</span>
+            <span>{t("dashboard.volume")}: <strong className="text-zinc-700 dark:text-zinc-200 font-medium">{formatMoney(stats.totalStake, currency)}</strong></span>
+            <span className="text-zinc-400 dark:text-zinc-500">{t("dashboard.efficiency")}</span>
           </div>
         </div>
 
@@ -552,7 +553,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40" id="card-winrate">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Taxa de Acerto</p>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{t("dashboard.winRate")}</p>
               <h3 className="text-2xl font-bold mt-1.5 tracking-tight text-zinc-800 dark:text-zinc-100 font-mono">
                 {safeNum(stats.winRate).toFixed(1)}%
               </h3>
@@ -566,8 +567,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
               <div className="bg-cyan-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, stats.winRate)}%` }} />
             </div>
             <div className="flex justify-between text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
-              <span>{stats.wonBets} Ganhas</span>
-              <span>{bets.filter(b => b.status !== "POR_LIQUIDAR").length} Resolvidas</span>
+              <span>{t("dashboard.statWon", { n: stats.wonBets })}</span>
+              <span>{t("dashboard.statResolved", { n: bets.filter(b => b.status !== "POR_LIQUIDAR").length })}</span>
             </div>
           </div>
         </div>
@@ -576,9 +577,9 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40" id="card-totalbets">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total de Apostas</p>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{t("dashboard.totalBets")}</p>
               <h3 className="text-2xl font-bold mt-1.5 tracking-tight text-zinc-800 dark:text-zinc-100 font-mono">
-                {stats.totalBets} <span className="text-xs text-zinc-400 dark:text-zinc-500 font-normal">registadas</span>
+                {stats.totalBets} <span className="text-xs text-zinc-400 dark:text-zinc-500 font-normal">{t("dashboard.registered")}</span>
               </h3>
             </div>
             <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
@@ -586,8 +587,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span className="flex items-center gap-1"><Clock size={12} className="text-blue-500" /> {stats.pendingBets} Pendentes</span>
-            <span className="text-zinc-400 dark:text-zinc-500">Ativas</span>
+            <span className="flex items-center gap-1"><Clock size={12} className="text-blue-500" /> {t("dashboard.statPending", { n: stats.pendingBets })}</span>
+            <span className="text-zinc-400 dark:text-zinc-500">{t("dashboard.active")}</span>
           </div>
         </div>
 
@@ -600,8 +601,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-[380px]" id="chart-profit-evolution">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">Evolução do Lucro Líquido</h4>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Evolução acumulada ao longo das apostas resolvidas</p>
+              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">{t("dashboard.evolution.title")}</h4>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.evolution.desc")}</p>
             </div>
           </div>
           <div className="flex-1 w-full min-h-0">
@@ -630,11 +631,15 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                   tickFormatter={(v) => `${v}${currency}`}
                 />
                 <Tooltip 
-                  formatter={(value: any) => [`${Number(value).toFixed(2)}${currency}`, "Lucro Acumulado"]}
+                  formatter={(value: any) => [formatMoney(Number(value), currency), t("dashboard.cumulativeProfit")]}
                   labelFormatter={(label, payload) => {
                     if (payload && payload[0]) {
                       const payloadData = payload[0].payload;
-                      return `Aposta #${payloadData.index} (${payloadData.data}) - ${payloadData.evento}`;
+                      return t("dashboard.evolution.tooltip", {
+                        index: payloadData.index,
+                        date: payloadData.data,
+                        event: payloadData.event,
+                      });
                     }
                     return label;
                   }}
@@ -642,7 +647,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                 />
                 <Area 
                   type="monotone" 
-                  dataKey="lucro" 
+                  dataKey="profit" 
                   stroke="#10b981" 
                   strokeWidth={2}
                   fillOpacity={1} 
@@ -655,8 +660,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
 
         {/* Status Distribution */}
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-[380px]" id="chart-status-distribution">
-          <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display mb-1">Distribuição de Resultados</h4>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">Percentagem por estado de aposta</p>
+          <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display mb-1">{t("dashboard.statusDistribution.title")}</h4>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">{t("dashboard.statusDistribution.desc")}</p>
           
           <div className="flex-1 flex flex-col justify-between min-h-0">
             {statusData.length > 0 ? (
@@ -683,7 +688,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: any) => [`${value} Apostas`]}
+                        formatter={(value: any) => [t("dashboard.betsTooltip", { n: value })]}
                         contentStyle={chart.tooltip}
                       />
                     </PieChart>
@@ -694,10 +699,10 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                     type="button"
                     onClick={openResolvedBets}
                     disabled={!onOpenBets}
-                    title={onOpenBets ? "Ver apostas resolvidas no histórico" : undefined}
+                    title={onOpenBets ? t("dashboard.resolvedDrill") : undefined}
                     className={`group absolute flex flex-col items-center text-center bg-transparent border-0 outline-none rounded-sm ${onOpenBets ? "cursor-pointer" : "cursor-default"}`}
                   >
-                    <span className={`text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest transition-colors ${canDrill ? "group-hover:text-emerald-600 dark:group-hover:text-emerald-400" : ""}`}>Resolvidas</span>
+                    <span className={`text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest transition-colors ${canDrill ? "group-hover:text-emerald-600 dark:group-hover:text-emerald-400" : ""}`}>{t("dashboard.resolved")}</span>
                     <span className={`text-2xl font-bold text-zinc-800 dark:text-zinc-100 font-mono mt-0.5 ${canDrill ? "group-hover:underline" : ""}`}>
                       {bets.filter(b => b.status !== "POR_LIQUIDAR").length}
                     </span>
@@ -713,7 +718,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                       onClick={canDrill ? () => openBetsForStatus(item.status) : undefined}
                       disabled={!canDrill}
                       className={`group flex items-center gap-1.5 rounded-sm px-1 py-0.5 text-left text-zinc-600 transition-colors dark:text-zinc-200 ${canDrill ? "hover:bg-zinc-50 hover:text-emerald-600 dark:hover:bg-zinc-800 dark:hover:text-white cursor-pointer" : "cursor-default"}`}
-                      title={canDrill ? `Ver apostas: ${item.name}` : undefined}
+                      title={canDrill ? t("dashboard.viewBetsFor", { name: item.name }) : undefined}
                     >
                       <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ backgroundColor: item.color }} />
                       <span className={`truncate ${canDrill ? "group-hover:underline" : ""}`}>{item.name} ({item.value})</span>
@@ -724,7 +729,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-zinc-400 dark:text-zinc-500">
                 <AlertCircle className="stroke-1 text-zinc-300 dark:text-zinc-600 mb-2" size={32} />
-                <p className="text-xs">Nenhum resultado registado ainda.</p>
+                <p className="text-xs">{t("dashboard.noResults")}</p>
               </div>
             )}
           </div>
@@ -735,8 +740,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-[380px]" id="chart-monthly-performance">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">Desempenho Mensal</h4>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Lucro líquido dentro do período selecionado</p>
+              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">{t("dashboard.monthly.title")}</h4>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.monthly.desc")}</p>
             </div>
           </div>
           <div className="flex-1 w-full min-h-0">
@@ -747,7 +752,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chart.grid} />
                 <XAxis
-                  dataKey="mes"
+                  dataKey="month"
                   tickLine={false}
                   axisLine={false}
                   tick={{ fontSize: 10, fill: chart.axis }}
@@ -759,11 +764,15 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                   tickFormatter={(v) => `${v}${currency}`}
                 />
                 <Tooltip 
-                  formatter={(value: any) => [`${Number(value).toFixed(2)}${currency}`, "Lucro Líquido"]}
+                  formatter={(value: any) => [formatMoney(Number(value), currency), t("dashboard.netProfit")]}
                   labelFormatter={(label, payload) => {
                     if (payload && payload[0]) {
                       const payloadData = payload[0].payload;
-                      return `${payloadData.mes}: ${payloadData.Apostas} Apostas | Volume: ${payloadData.Volume}${currency}`;
+                      return t("dashboard.monthly.tooltip", {
+                        month: payloadData.month,
+                        bets: payloadData.bets,
+                        volume: formatMoney(payloadData.volume, currency),
+                      });
                     }
                     return label;
                   }}
@@ -771,7 +780,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="Lucro Líquido" 
+                  dataKey="profit" 
                   stroke="#06b6d4" 
                   strokeWidth={3}
                   dot={{ r: 4, strokeWidth: 2, fill: chart.dot }}
@@ -792,31 +801,31 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 lg:col-span-2 flex flex-col" id="bookmakers-performance">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">Desempenho por Casa de Apostas</h4>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Análise de rentabilidade e volume por operador</p>
+              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">{t("dashboard.bookmakers.title")}</h4>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.bookmakers.desc")}</p>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
-                  <th className="py-2.5">Operador</th>
-                  <th className="py-2.5 text-center">Apostas</th>
-                  <th className="py-2.5 text-right">Volume</th>
-                  <th className="py-2.5 text-right">Lucro Líquido</th>
+                  <th className="py-2.5">{t("dashboard.table.operator")}</th>
+                  <th className="py-2.5 text-center">{t("dashboard.table.bets")}</th>
+                  <th className="py-2.5 text-right">{t("dashboard.volume")}</th>
+                  <th className="py-2.5 text-right">{t("dashboard.netProfit")}</th>
                   <th className="py-2.5 text-right">ROI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {bookmakerData.map((bkm, idx) => {
-                  const bkmRoi = bkm.volume > 0 ? (bkm.lucro / bkm.volume) * 100 : 0;
+                  const bkmRoi = bkm.volume > 0 ? (bkm.profit / bkm.volume) * 100 : 0;
                   return (
                     <tr key={idx} className="text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
                       <td className="py-2.5 font-medium text-zinc-800 dark:text-zinc-100">{bkm.name}</td>
-                      <td className="py-2.5 text-center">{bkm.apostas}</td>
-                      <td className="py-2.5 text-right font-mono">{bkm.volume.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}</td>
-                      <td className={`py-2.5 text-right font-semibold font-mono ${bkm.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        {bkm.lucro >= 0 ? "+" : ""}{bkm.lucro.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}
+                      <td className="py-2.5 text-center">{bkm.bets}</td>
+                      <td className="py-2.5 text-right font-mono">{formatMoney(bkm.volume, currency)}</td>
+                      <td className={`py-2.5 text-right font-semibold font-mono ${bkm.profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                        {formatSignedMoney(bkm.profit, currency)}
                       </td>
                       <td className={`py-2.5 text-right font-medium font-mono ${bkmRoi >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                         {bkmRoi >= 0 ? "+" : ""}{bkmRoi.toFixed(1)}%
@@ -826,7 +835,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                 })}
                 {bookmakerData.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-4 text-center text-zinc-400 dark:text-zinc-500">Sem registos.</td>
+                    <td colSpan={5} className="py-4 text-center text-zinc-400 dark:text-zinc-500">{t("dashboard.noRecords")}</td>
                   </tr>
                 )}
               </tbody>
@@ -837,29 +846,29 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         {/* Freebets Overview card */}
         <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between" id="freebets-performance-summary">
           <div>
-            <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display mb-1">Análise de Freebets</h4>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">Estatísticas de desempenho das apostas com freebet</p>
+            <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display mb-1">{t("dashboard.freebets.title")}</h4>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">{t("dashboard.freebets.desc")}</p>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-500 dark:text-zinc-400">Total de Freebets Registadas:</span>
+                <span className="text-zinc-500 dark:text-zinc-400">{t("dashboard.freebets.count")}:</span>
                 <span className="font-semibold text-zinc-800 dark:text-zinc-100">{freebetStats.usageCount}</span>
               </div>
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-500 dark:text-zinc-400">Total Investido (Freebet):</span>
-                <span className="font-semibold text-zinc-800 dark:text-zinc-100">{freebetStats.totalStakeUsed.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}</span>
+                <span className="text-zinc-500 dark:text-zinc-400">{t("dashboard.freebets.invested")}:</span>
+                <span className="font-semibold text-zinc-800 dark:text-zinc-100">{formatMoney(freebetStats.totalStakeUsed, currency)}</span>
               </div>
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Lucro Líquido Gerado:</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium">{t("dashboard.freebets.profit")}:</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  +{freebetStats.profit.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}
+                  {formatSignedMoney(freebetStats.profit, currency)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-500 dark:text-zinc-400">Taxa de Acerto (Freebets):</span>
+                <span className="text-zinc-500 dark:text-zinc-400">{t("dashboard.freebets.winRate")}:</span>
                 <span className="font-semibold text-zinc-800 dark:text-zinc-100">{safeNum(freebetStats.winRate).toFixed(1)}%</span>
               </div>
             </div>
@@ -867,8 +876,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
 
           <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-2">
             <div className="flex justify-between text-[11px] text-zinc-400 dark:text-zinc-500">
-              <span>Resolvidas / Total:</span>
-              <span>{freebetStats.resolvedCount} de {freebetStats.usageCount}</span>
+              <span>{t("dashboard.freebets.resolvedRatio")}:</span>
+              <span>{t("dashboard.freebets.ofTotal", { resolved: freebetStats.resolvedCount, total: freebetStats.usageCount })}</span>
             </div>
             <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
               <div 
@@ -893,14 +902,14 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
               <CheckCircle2 size={16} />
             </div>
             <div>
-              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Operador Mais Rentável</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Onde fazes mais dinheiro</p>
-              {insights.bestBkm && insights.bestBkm.lucro > 0 ? (
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{t("dashboard.insights.bestBookmaker")}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.insights.bestBookmakerHint")}</p>
+              {insights.bestBkm && insights.bestBkm.profit > 0 ? (
                 <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100 mt-1">
-                  {insights.bestBkm.name} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">({insights.bestBkm.lucro > 0 ? "+" : ""}{safeNum(insights.bestBkm.lucro).toFixed(2)}{currency})</span>
+                  {insights.bestBkm.name} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">({formatSignedMoney(safeNum(insights.bestBkm.profit), currency)})</span>
                 </p>
               ) : (
-                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mt-1">Sem dados suficientes</p>
+                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mt-1">{t("dashboard.insights.notEnoughData")}</p>
               )}
             </div>
           </div>
@@ -910,8 +919,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
               <ArrowUpRight size={16} />
             </div>
             <div>
-              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Odd Média das Apostas Ganhas</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Nível médio de risco vitorioso</p>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{t("dashboard.insights.avgOdd")}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.insights.avgOddHint")}</p>
               <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100 mt-1 font-mono">
                 {insights.averageWonOdd > 1 ? safeNum(insights.averageWonOdd).toFixed(2) : "1.00"}
               </p>
@@ -923,17 +932,17 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
               <Award size={16} />
             </div>
             <div>
-              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Maior Lucro Individual</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">O teu boletim de maior sucesso</p>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{t("dashboard.insights.biggestWin")}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.insights.biggestWinHint")}</p>
               {insights.highestWin ? (
                 <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100 mt-1 truncate max-w-[200px]">
-                  +{safeNum(insights.highestWin.netProfit).toFixed(2)}{currency}
+                  {formatSignedMoney(safeNum(insights.highestWin.netProfit), currency)}
                   <span className="text-[10px] font-normal text-zinc-400 dark:text-zinc-500 ml-1">
-                    ({insights.highestWin.selections && insights.highestWin.selections[0]?.event || "Múltipla"})
+                    ({insights.highestWin.selections && insights.highestWin.selections[0]?.event || t("bet.multiple")})
                   </span>
                 </p>
               ) : (
-                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mt-1">Nenhum prémio ganho.</p>
+                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mt-1">{t("dashboard.insights.noWin")}</p>
               )}
             </div>
           </div>

@@ -35,6 +35,7 @@ import {
 import { Bet, BetStatus, BookieAccount } from "../../types";
 import type { DashboardBetsFilters } from "../../components/Dashboard";
 import { calculateDashboardStats, safeNum } from "../../utils";
+import { useI18n, type TKey } from "../../lib/i18n";
 import { SectionHeader, MobileCard, ListGroup, ListItem, BottomSheet, Pressable, ChipGroup } from "../ui";
 
 interface MobileDashboardProps {
@@ -47,38 +48,38 @@ interface MobileDashboardProps {
 
 type Timeframe = "ALL" | "7_DAYS" | "30_DAYS" | "90_DAYS" | "THIS_MONTH" | "THIS_YEAR" | "CUSTOM";
 
-const TIMEFRAME_OPTIONS: { value: Timeframe; label: string }[] = [
-  { value: "ALL", label: "Todo o período" },
-  { value: "7_DAYS", label: "7 dias" },
-  { value: "30_DAYS", label: "30 dias" },
-  { value: "90_DAYS", label: "90 dias" },
-  { value: "THIS_MONTH", label: "Este mês" },
-  { value: "THIS_YEAR", label: "Este ano" },
-  { value: "CUSTOM", label: "Personalizado" },
+// As listas guardam CHAVES de traducao; o texto e resolvido dentro do
+// componente, onde o useI18n() esta disponivel.
+const TIMEFRAME_OPTIONS: { value: Timeframe; key: TKey }[] = [
+  { value: "ALL", key: "timeframe.all" },
+  { value: "7_DAYS", key: "timeframe.7days" },
+  { value: "30_DAYS", key: "timeframe.30days" },
+  { value: "90_DAYS", key: "timeframe.90days" },
+  { value: "THIS_MONTH", key: "timeframe.thisMonth" },
+  { value: "THIS_YEAR", key: "timeframe.thisYear" },
+  { value: "CUSTOM", key: "timeframe.custom" },
 ];
 
-const TYPE_OPTIONS = [
-  { value: "ALL", label: "Qualquer tipo" },
-  { value: "SIMPLES", label: "Simples" },
-  { value: "MULTIPLA", label: "Múltipla" },
+const TYPE_OPTIONS: { value: string; key: TKey }[] = [
+  { value: "ALL", key: "filters.anyType" },
+  { value: "SIMPLES", key: "filters.type.single" },
+  { value: "MULTIPLA", key: "filters.type.multiple" },
 ];
 
-const MONEY_OPTIONS = [
-  { value: "ALL", label: "Dinheiro e freebet" },
-  { value: "NORMAL", label: "Dinheiro real" },
-  { value: "FREEBET", label: "Freebet" },
-  { value: "RISK_FREE", label: "Sem risco" },
+const MONEY_OPTIONS: { value: string; key: TKey }[] = [
+  { value: "ALL", key: "filters.money.all" },
+  { value: "NORMAL", key: "filters.money.real" },
+  { value: "FREEBET", key: "filters.money.freebet" },
+  { value: "RISK_FREE", key: "filters.money.riskFree" },
 ];
 
-const MONTHS_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-const STATUS_META: { name: string; status: BetStatus; color: string }[] = [
-  { name: "Ganha", status: "GANHA", color: "#10B981" },
-  { name: "Meio ganha", status: "MEIO_GANHA", color: "#34D399" },
-  { name: "Cashout", status: "CASHOUT", color: "#8B5CF6" },
-  { name: "Anulada", status: "ANULADA", color: "#9CA3AF" },
-  { name: "Meio perdida", status: "MEIO_PERDIDA", color: "#F87171" },
-  { name: "Perdida", status: "PERDIDA", color: "#EF4444" },
+const STATUS_META: { key: TKey; status: BetStatus; color: string }[] = [
+  { key: "status.won", status: "GANHA", color: "#10B981" },
+  { key: "status.halfWon", status: "MEIO_GANHA", color: "#34D399" },
+  { key: "status.cashout", status: "CASHOUT", color: "#8B5CF6" },
+  { key: "status.void", status: "ANULADA", color: "#9CA3AF" },
+  { key: "status.halfLost", status: "MEIO_PERDIDA", color: "#F87171" },
+  { key: "status.lost", status: "PERDIDA", color: "#EF4444" },
 ];
 
 const toKey = (d: Date) =>
@@ -91,6 +92,7 @@ export default function MobileDashboard({
   accounts = [],
   onOpenBets,
 }: MobileDashboardProps) {
+  const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterBookmaker, setFilterBookmaker] = useState("ALL");
   const [filterAccount, setFilterAccount] = useState("ALL");
@@ -101,9 +103,8 @@ export default function MobileDashboard({
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
-  const money = (n: number) =>
-    `${safeNum(n).toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${currency}`;
-  const signed = (n: number) => `${n >= 0 ? "+" : ""}${money(n)}`;
+  const money = (n: number) => formatMoney(safeNum(n), currency);
+  const signed = (n: number) => formatSignedMoney(safeNum(n), currency);
 
   const bookmakerOptions = useMemo(
     () => Array.from(new Set(allBets.map((b) => b.bookmaker).filter((b): b is string => !!b))).sort(),
@@ -209,7 +210,7 @@ export default function MobileDashboard({
     const months: { year: number; month: number; label: string; profit: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({ year: d.getFullYear(), month: d.getMonth(), label: MONTHS_PT[d.getMonth()], profit: 0 });
+      months.push({ year: d.getFullYear(), month: d.getMonth(), label: formatDate(d, { month: "short" }), profit: 0 });
     }
     bets.forEach((b) => {
       if (b.status === "POR_LIQUIDAR" || !b.dateTime) return;
@@ -218,8 +219,8 @@ export default function MobileDashboard({
       const found = months.find((md) => md.year === y && md.month === m - 1);
       if (found) found.profit += safeNum(b.netProfit);
     });
-    return months.map((md) => ({ mes: md.label, lucro: Number(md.profit.toFixed(2)) }));
-  }, [bets]);
+    return months.map((md) => ({ month: md.label, profit: Number(md.profit.toFixed(2)) }));
+  }, [bets, formatDate]);
 
   // Distribuição de resultados (só resolvidas).
   const statusData = useMemo(() => {
@@ -227,14 +228,14 @@ export default function MobileDashboard({
     bets.forEach((b) => {
       counts[b.status] = (counts[b.status] || 0) + 1;
     });
-    return STATUS_META.map((m) => ({ ...m, value: counts[m.status] || 0 })).filter((m) => m.value > 0);
-  }, [bets]);
+    return STATUS_META.map((m) => ({ ...m, name: t(m.key), value: counts[m.status] || 0 })).filter((m) => m.value > 0);
+  }, [bets, t]);
 
   // Desempenho por casa de apostas.
   const bookmakerData = useMemo(() => {
     const acc: Record<string, { stake: number; profit: number; count: number }> = {};
     bets.forEach((b) => {
-      const key = b.bookmaker || "Outra";
+      const key = b.bookmaker || t("bet.otherBookmaker");
       if (!acc[key]) acc[key] = { stake: 0, profit: 0, count: 0 };
       acc[key].count++;
       if (b.status !== "POR_LIQUIDAR") {
@@ -245,12 +246,12 @@ export default function MobileDashboard({
     return Object.entries(acc)
       .map(([name, d]) => ({
         name,
-        apostas: d.count,
+        bets: d.count,
         volume: Number(safeNum(d.stake).toFixed(2)),
-        lucro: Number(safeNum(d.profit).toFixed(2)),
+        profit: Number(safeNum(d.profit).toFixed(2)),
       }))
-      .sort((a, b) => b.lucro - a.lucro);
-  }, [bets]);
+      .sort((a, b) => b.profit - a.profit);
+  }, [bets, t]);
 
   // Análise de freebets.
   const freebetStats = useMemo(() => {
@@ -300,7 +301,7 @@ export default function MobileDashboard({
           className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-700 dark:text-zinc-200"
         >
           <Filter size={14} />
-          Filtros
+          {t("common.filters")}
           {activeFilterCount > 0 && (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white">
               {activeFilterCount}
@@ -313,7 +314,7 @@ export default function MobileDashboard({
             onClick={clearFilters}
             className="px-3 py-2 rounded-full text-xs font-semibold text-zinc-500 dark:text-zinc-400"
           >
-            Limpar
+            {t("common.clear")}
           </Pressable>
         )}
       </div>
@@ -323,7 +324,7 @@ export default function MobileDashboard({
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-mono">
-              Lucro líquido
+              {t("dashboard.netProfit")}
             </p>
             <h3 className={`mt-1.5 text-3xl font-bold font-display tabular-nums ${profitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
               {signed(stats.netProfit)}
@@ -344,13 +345,13 @@ export default function MobileDashboard({
                 </linearGradient>
               </defs>
               <Area type="monotone" dataKey="lucro" stroke={areaColor} strokeWidth={2} fill="url(#dashArea)" isAnimationActive={false} dot={false} />
-              <Tooltip cursor={false} contentStyle={tooltipStyle} formatter={(v) => [money(Number(v)), "Lucro"]} labelFormatter={() => ""} />
+              <Tooltip cursor={false} contentStyle={tooltipStyle} formatter={(v) => [money(Number(v)), t("dashboard.profit")]} labelFormatter={() => ""} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         <div className="mt-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-          <span>Retorno: <strong className="text-zinc-700 dark:text-zinc-200 font-medium">{money(stats.totalReturn)}</strong></span>
+          <span>{t("dashboard.return")}: <strong className="text-zinc-700 dark:text-zinc-200 font-medium">{money(stats.totalReturn)}</strong></span>
           <span className={`font-semibold ${profitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
             {stats.netProfit >= 0 ? "+" : ""}{stats.totalStake > 0 ? (safeNum(stats.netProfit / stats.totalStake) * 100).toFixed(1) : "0.0"}%
           </span>
@@ -360,14 +361,14 @@ export default function MobileDashboard({
       {/* KPIs 2–4 em grelha */}
       <div className="grid grid-cols-2 gap-3">
         <KpiCard
-          label="ROI / Yield"
+          label={t("dashboard.roi")}
           icon={Percent}
           tone={stats.yield >= 0 ? "positive" : "negative"}
           value={`${stats.yield >= 0 ? "+" : ""}${safeNum(stats.yield).toFixed(2)}%`}
-          footer={<span>Volume <strong className="text-zinc-700 dark:text-zinc-200">{money(stats.totalStake)}</strong></span>}
+          footer={<span>{t("dashboard.volume")} <strong className="text-zinc-700 dark:text-zinc-200">{money(stats.totalStake)}</strong></span>}
         />
         <KpiCard
-          label="Taxa de acerto"
+          label={t("dashboard.winRate")}
           icon={Award}
           tone="cyan"
           value={`${safeNum(stats.winRate).toFixed(1)}%`}
@@ -377,32 +378,32 @@ export default function MobileDashboard({
                 <div className="bg-cyan-500 h-full rounded-full" style={{ width: `${Math.min(100, stats.winRate)}%` }} />
               </div>
               <div className="flex justify-between text-[10px] mt-1">
-                <span>{stats.wonBets} ganhas</span>
-                <span>{settledCount} resolvidas</span>
+                <span>{t("dashboard.statWon", { n: stats.wonBets })}</span>
+                <span>{t("dashboard.statResolved", { n: settledCount })}</span>
               </div>
             </div>
           }
         />
         <KpiCard
-          label="Total de apostas"
+          label={t("dashboard.totalBets")}
           icon={Layers}
           tone="blue"
           value={String(stats.totalBets)}
-          footer={<span className="flex items-center gap-1"><Clock size={11} className="text-blue-500" />{stats.pendingBets} pendentes</span>}
+          footer={<span className="flex items-center gap-1"><Clock size={11} className="text-blue-500" />{t("dashboard.statPending", { n: stats.pendingBets })}</span>}
         />
         <KpiCard
-          label="Volume total"
+          label={t("dashboard.totalVolume")}
           icon={TrendingUp}
           tone="neutral"
           value={money(stats.totalStake)}
-          footer={<span>Retorno {money(stats.totalReturn)}</span>}
+          footer={<span>{t("dashboard.return")} {money(stats.totalReturn)}</span>}
         />
       </div>
 
       {/* Distribuição de resultados */}
       {statusData.length > 0 && (
         <>
-          <SectionHeader>Distribuição de resultados</SectionHeader>
+          <SectionHeader>{t("dashboard.statusDistribution.title")}</SectionHeader>
           <MobileCard>
             <div className="h-44 relative">
               <ResponsiveContainer width="100%" height="100%">
@@ -427,7 +428,7 @@ export default function MobileDashboard({
               {/* Total ao centro */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-2xl font-bold font-display tabular-nums text-zinc-900 dark:text-zinc-100">{settledCount}</span>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Resolvidas</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{t("dashboard.resolved")}</span>
               </div>
             </div>
 
@@ -455,16 +456,16 @@ export default function MobileDashboard({
       )}
 
       {/* Lucro por mês */}
-      <SectionHeader>Lucro por mês</SectionHeader>
+      <SectionHeader>{t("dashboard.monthlyProfit")}</SectionHeader>
       <MobileCard>
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlySeries} margin={{ top: 6, right: 0, bottom: 0, left: 0 }}>
-              <XAxis dataKey="mes" tick={{ fontSize: 10, fill: axisColor }} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: isDark ? "#27272a55" : "#f4f4f555" }} contentStyle={tooltipStyle} formatter={(v) => [money(Number(v)), "Lucro"]} />
-              <Bar dataKey="lucro" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+              <XAxis dataKey="month" tick={{ fontSize: 10, fill: axisColor }} axisLine={false} tickLine={false} />
+              <Tooltip cursor={{ fill: isDark ? "#27272a55" : "#f4f4f555" }} contentStyle={tooltipStyle} formatter={(v) => [money(Number(v)), t("dashboard.profit")]} />
+              <Bar dataKey="profit" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                 {monthlySeries.map((m, i) => (
-                  <Cell key={i} fill={m.lucro >= 0 ? "#10b981" : "#f43f5e"} />
+                  <Cell key={i} fill={m.profit >= 0 ? "#10b981" : "#f43f5e"} />
                 ))}
               </Bar>
             </BarChart>
@@ -473,20 +474,20 @@ export default function MobileDashboard({
       </MobileCard>
 
       {/* Desempenho por casa de apostas */}
-      <SectionHeader>Desempenho por casa</SectionHeader>
+      <SectionHeader>{t("dashboard.bookmakers.titleShort")}</SectionHeader>
       {bookmakerData.length > 0 ? (
         <ListGroup>
           {bookmakerData.map((bkm) => {
-            const roi = bkm.volume > 0 ? (bkm.lucro / bkm.volume) * 100 : 0;
+            const roi = bkm.volume > 0 ? (bkm.profit / bkm.volume) * 100 : 0;
             return (
               <ListItem
                 key={bkm.name}
                 title={bkm.name}
-                subtitle={`${bkm.apostas} apostas · Volume ${money(bkm.volume)}`}
+                subtitle={t("dashboard.bookmakers.subtitle", { n: bkm.bets, volume: money(bkm.volume) })}
                 trailing={
                   <span className="text-right">
-                    <span className={`block font-semibold ${bkm.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                      {signed(bkm.lucro)}
+                    <span className={`block font-semibold ${bkm.profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {signed(bkm.profit)}
                     </span>
                     <span className={`block text-[10px] ${roi >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                       {roi >= 0 ? "+" : ""}{roi.toFixed(1)}% ROI
@@ -498,26 +499,26 @@ export default function MobileDashboard({
           })}
         </ListGroup>
       ) : (
-        <MobileCard className="text-center text-xs text-zinc-400 dark:text-zinc-500">Sem registos.</MobileCard>
+        <MobileCard className="text-center text-xs text-zinc-400 dark:text-zinc-500">{t("dashboard.noRecords")}</MobileCard>
       )}
 
       {/* Análise de freebets */}
-      <SectionHeader>Análise de freebets</SectionHeader>
+      <SectionHeader>{t("dashboard.freebets.title")}</SectionHeader>
       <MobileCard>
         <div className="space-y-2.5 text-xs">
-          <Row label="Freebets registadas" value={String(freebetStats.usageCount)} />
-          <Row label="Total investido (freebet)" value={money(freebetStats.totalStakeUsed)} />
+          <Row label={t("dashboard.freebets.count")} value={String(freebetStats.usageCount)} />
+          <Row label={t("dashboard.freebets.invested")} value={money(freebetStats.totalStakeUsed)} />
           <Row
-            label="Lucro líquido gerado"
+            label={t("dashboard.freebets.profit")}
             value={signed(freebetStats.profit)}
             valueClass={freebetStats.profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}
           />
-          <Row label="Taxa de acerto (freebets)" value={`${safeNum(freebetStats.winRate).toFixed(1)}%`} />
+          <Row label={t("dashboard.freebets.winRate")} value={`${safeNum(freebetStats.winRate).toFixed(1)}%`} />
         </div>
         <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
           <div className="flex justify-between text-[11px] text-zinc-400 dark:text-zinc-500 mb-1">
-            <span>Resolvidas / total</span>
-            <span>{freebetStats.resolvedCount} de {freebetStats.usageCount}</span>
+            <span>{t("dashboard.freebets.resolvedRatio")}</span>
+            <span>{t("dashboard.freebets.ofTotal", { resolved: freebetStats.resolvedCount, total: freebetStats.usageCount })}</span>
           </div>
           <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
             <div
@@ -531,35 +532,35 @@ export default function MobileDashboard({
       {/* Insights */}
       {insights && (
         <>
-          <SectionHeader>Insights</SectionHeader>
+          <SectionHeader>{t("dashboard.insights.title")}</SectionHeader>
           <MobileCard className="space-y-4">
             <Insight
               icon={CheckCircle2}
               tone="emerald"
-              title="Operador mais rentável"
-              hint="Onde fazes mais dinheiro"
+              title={t("dashboard.insights.bestBookmaker")}
+              hint={t("dashboard.insights.bestBookmakerHint")}
               value={
-                insights.bestBkm && insights.bestBkm.lucro > 0
-                  ? `${insights.bestBkm.name} (${signed(insights.bestBkm.lucro)})`
-                  : "Sem dados suficientes"
+                insights.bestBkm && insights.bestBkm.profit > 0
+                  ? `${insights.bestBkm.name} (${signed(insights.bestBkm.profit)})`
+                  : t("dashboard.insights.notEnoughData")
               }
             />
             <Insight
               icon={ArrowUpRight}
               tone="emerald"
-              title="Odd média das ganhas"
-              hint="Nível médio de risco vitorioso"
+              title={t("dashboard.insights.avgOddShort")}
+              hint={t("dashboard.insights.avgOddHint")}
               value={insights.averageWonOdd > 1 ? safeNum(insights.averageWonOdd).toFixed(2) : "1.00"}
             />
             <Insight
               icon={Award}
               tone="amber"
-              title="Maior lucro individual"
-              hint="O teu boletim de maior sucesso"
+              title={t("dashboard.insights.biggestWin")}
+              hint={t("dashboard.insights.biggestWinHint")}
               value={
                 insights.highestWin
-                  ? `${signed(safeNum(insights.highestWin.netProfit))} · ${insights.highestWin.selections?.[0]?.event || "Múltipla"}`
-                  : "Nenhum prémio ganho."
+                  ? `${signed(safeNum(insights.highestWin.netProfit))} · ${insights.highestWin.selections?.[0]?.event || t("bet.multiple")}`
+                  : t("dashboard.insights.noWin")
               }
             />
           </MobileCard>
@@ -568,7 +569,7 @@ export default function MobileDashboard({
 
       {stats.totalBets === 0 && (
         <div className="text-center py-16 text-zinc-400 dark:text-zinc-500 text-sm">
-          Sem apostas para os filtros escolhidos.
+          {t("dashboard.empty")}
         </div>
       )}
 
@@ -576,19 +577,19 @@ export default function MobileDashboard({
       <BottomSheet
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        title="Filtros"
+title={t("common.filters")}
         headerAction={
           activeFilterCount > 0 ? (
             <Pressable as="button" onClick={clearFilters} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 px-2 py-1">
-              Limpar tudo
+              {t("common.clearAll")}
             </Pressable>
           ) : undefined
         }
       >
         <div className="space-y-4 pb-2">
           <ChipGroup
-            label="Período"
-            options={TIMEFRAME_OPTIONS}
+            label={t("filters.period")}
+            options={TIMEFRAME_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
             value={filterTimeframe}
             onChange={(v) => setFilterTimeframe(v as Timeframe)}
           />
@@ -596,7 +597,7 @@ export default function MobileDashboard({
           {filterTimeframe === "CUSTOM" && (
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">De</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">{t("common.from")}</span>
                 <input
                   type="date"
                   value={customStart}
@@ -606,7 +607,7 @@ export default function MobileDashboard({
                 />
               </label>
               <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">Até</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">{t("common.to")}</span>
                 <input
                   type="date"
                   value={customEnd}
@@ -619,19 +620,19 @@ export default function MobileDashboard({
           )}
 
           <ChipGroup
-            label="Casa de apostas"
-            options={[{ value: "ALL", label: "Todas" }, ...bookmakerOptions.map((b) => ({ value: b, label: b }))]}
+            label={t("filters.bookmaker")}
+            options={[{ value: "ALL", label: t("filters.allFem") }, ...bookmakerOptions.map((b) => ({ value: b, label: b }))]}
             value={filterBookmaker}
             onChange={setFilterBookmaker}
           />
 
           {accounts.length > 0 && (
             <ChipGroup
-              label="Conta"
+              label={t("filters.account")}
               options={[
-                { value: "ALL", label: "Todas" },
+                { value: "ALL", label: t("filters.allFem") },
                 ...accounts.map((a) => ({ value: a.id, label: `${a.bookmaker} · ${a.label}` })),
-                { value: "NONE", label: "Sem conta" },
+                { value: "NONE", label: t("filters.noAccount") },
               ]}
               value={filterAccount}
               onChange={setFilterAccount}
@@ -640,22 +641,32 @@ export default function MobileDashboard({
 
           {sportOptions.length > 0 && (
             <ChipGroup
-              label="Desporto"
-              options={[{ value: "ALL", label: "Todos" }, ...sportOptions.map((s) => ({ value: s, label: s }))]}
+              label={t("filters.sport")}
+              options={[{ value: "ALL", label: t("filters.allMasc") }, ...sportOptions.map((s) => ({ value: s, label: s }))]}
               value={filterSport}
               onChange={setFilterSport}
             />
           )}
 
-          <ChipGroup label="Tipo" options={TYPE_OPTIONS} value={filterType} onChange={setFilterType} />
-          <ChipGroup label="Dinheiro" options={MONEY_OPTIONS} value={filterMoney} onChange={setFilterMoney} />
+          <ChipGroup
+            label={t("filters.type")}
+            options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
+            value={filterType}
+            onChange={setFilterType}
+          />
+          <ChipGroup
+            label={t("filters.money")}
+            options={MONEY_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
+            value={filterMoney}
+            onChange={setFilterMoney}
+          />
 
           <Pressable
             as="button"
             onClick={() => setFiltersOpen(false)}
             className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center"
           >
-            Ver {bets.length} {bets.length === 1 ? "aposta" : "apostas"}
+            {t("dashboard.viewBets", { n: bets.length })}
           </Pressable>
         </div>
       </BottomSheet>
