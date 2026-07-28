@@ -14,6 +14,13 @@
       (function () {
         try {
           var prefs = JSON.parse(localStorage.getItem("g_prefs") || "{}");
+
+          // O idioma do documento antes do React montar, pela mesma razão que
+          // o tema: o <html lang> é lido por leitores de ecrã e por motores de
+          // busca ainda antes da app arrancar. O I18nProvider reconfirma-o.
+          if (prefs.language === "en") document.documentElement.lang = "en-GB";
+          else document.documentElement.lang = "pt-PT";
+
           var theme = prefs.theme || "system";
           var isDark =
             theme === "dark" ||

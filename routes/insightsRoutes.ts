@@ -31,6 +31,22 @@ const MAX_ATTEMPTS = 3;
 const TIME_BUDGET_MS = 40_000;
 
 /** Data de "hoje" em Lisboa (o dia desportivo do utilizador, não UTC). */
+// Idiomas com dicionário na app (espelha src/lib/i18n e o settingsRoutes).
+// A instrução de língua entra no prompt e o idioma entra na chave da cache,
+// senão o primeiro pedido do dia fixava a língua das dicas para toda a gente.
+const SUPPORTED_LANGS = ["pt", "en"] as const;
+type Lang = (typeof SUPPORTED_LANGS)[number];
+
+function cleanLang(raw: unknown): Lang {
+  const key = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return (SUPPORTED_LANGS as readonly string[]).includes(key) ? (key as Lang) : "pt";
+}
+
+const LANG_INSTRUCTION: Record<Lang, string> = {
+  pt: "a escrever em português de Portugal",
+  en: "writing in English",
+};
+
 function todayInLisbon(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date());
 }
@@ -72,7 +88,7 @@ function sanitizeContent(raw: any): { summary: string; picks: Pick[] } {
   return { summary: clip(raw?.summary, 600), picks };
 }
 
-function buildPrompt(dateLisbon: string, insistOnJson: boolean) {
+function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang) {
   // Nas repetições reforçamos a instrução de formato: a falha mais comum é o
   // modelo devolver só a prosa da pesquisa, sem o JSON.
   const insist = insistOnJson
@@ -80,7 +96,7 @@ function buildPrompt(dateLisbon: string, insistOnJson: boolean) {
     : "";
 
   return `
-Hoje é ${dateLisbon}. És um analista de apostas desportivas experiente e prudente, a escrever em português de Portugal.
+Hoje é ${dateLisbon}. És um analista de apostas desportivas experiente e prudente, ${LANG_INSTRUCTION[lang]}.
 
 USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds — inclui apenas eventos que confirmaste na pesquisa.
 
@@ -134,7 +150,7 @@ async function callModel(prompt: string): Promise<string> {
  * o 503 "high demand" da API, e a resposta sem JSON (o grounding impede
  * responseSchema, por isso o formato nunca é garantido no pedido).
  */
-async function generateInsights(dateLisbon: string) {
+async function generateInsights(dateLisbon: string, lang: Lang) {
   const started = Date.now();
   let lastError: unknown = new Error("Falha desconhecida ao gerar insights.");
 
@@ -143,7 +159,7 @@ async function generateInsights(dateLisbon: string) {
     if (attempt > 1 && Date.now() - started > TIME_BUDGET_MS) break;
 
     try {
-      const text = await callModel(buildPrompt(dateLisbon, attempt > 1));
+      const text = await callModel(buildPrompt(dateLisbon, attempt > 1, lang));
       return sanitizeContent(extractJson(text));
     } catch (err) {
       lastError = err;
@@ -176,7 +192,7 @@ interface EvaluatedLeg {
   estimatedProbability: number;
 }
 
-function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean, insistOnJson: boolean): string {
+function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean, insistOnJson: boolean, lang: Lang): string {
   const insist = insistOnJson
     ? `\n\nATENÇÃO: a resposta anterior não continha JSON válido. Responde SÓ com o objeto JSON, a começar em { e a terminar em }. Sem texto antes ou depois, sem blocos de código.`
     : "";
@@ -190,7 +206,7 @@ function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean
 
   const textBlock = userText ? `\n\nDescrição do utilizador:\n"""\n${userText}\n"""` : "";
 
-  return `Hoje é ${dateLisbon} (fuso Europe/Lisbon). És um analista quantitativo de apostas desportivas — rigoroso, calibrado e prudente — a escrever em português de Portugal.
+  return `Hoje é ${dateLisbon} (fuso Europe/Lisbon). És um analista quantitativo de apostas desportivas — rigoroso, calibrado e prudente — ${LANG_INSTRUCTION[lang]}.
 
 TAREFA: avaliar a(s) aposta(s) descrita(s) ${sources} e determinar se têm VALOR ESPERADO positivo (se a odd oferecida é generosa face à probabilidade real).${textBlock}
 
@@ -371,14 +387,14 @@ function buildEvalSummary(bets: any[]): string {
   return `${bets.length} apostas avaliadas: ${parts.join(", ")}.`;
 }
 
-async function evaluateBet(input: { imageBase64?: string; text: string }) {
+async function evaluateBet(input: { imageBase64?: string; text: string; lang: Lang }) {
   const started = Date.now();
   let lastError: unknown = new Error("Falha desconhecida ao avaliar a aposta.");
 
   for (let attempt = 1; attempt <= EVAL_MAX_ATTEMPTS; attempt++) {
     if (attempt > 1 && Date.now() - started > EVAL_TIME_BUDGET_MS) break;
     try {
-      const prompt = buildEvalPrompt(todayInLisbon(), input.text, Boolean(input.imageBase64), attempt > 1);
+      const prompt = buildEvalPrompt(todayInLisbon(), input.text, Boolean(input.imageBase64), attempt > 1, input.lang);
       const text = await callEvalModel(prompt, input.imageBase64);
       return sanitizeEvaluation(extractJson(text));
     } catch (err) {
@@ -395,27 +411,27 @@ async function evaluateBet(input: { imageBase64?: string; text: string }) {
  * pedido do utilizador e pelo cron — o cron aquece a cache de madrugada e o
  * utilizador normal só lê; se o cron falhar, o primeiro pedido ainda gera.
  */
-async function ensureInsightsForDate(date: string) {
+async function ensureInsightsForDate(date: string, lang: Lang) {
   const cached = await pool.query(
-    "SELECT content, created_at FROM daily_insights WHERE insight_date = $1",
-    [date]
+    "SELECT content, created_at FROM daily_insights WHERE insight_date = $1 AND lang = $2",
+    [date, lang]
   );
   if (cached.rows.length > 0) {
     return { row: cached.rows[0], generated: false };
   }
 
-  const content = await generateInsights(date);
+  const content = await generateInsights(date, lang);
 
   // Corrida entre instâncias serverless: o UNIQUE decide; quem perde relê.
   await pool.query(
-    `INSERT INTO daily_insights (insight_date, content, model)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (insight_date) DO NOTHING`,
-    [date, JSON.stringify(content), MODEL]
+    `INSERT INTO daily_insights (insight_date, lang, content, model)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (insight_date, lang) DO NOTHING`,
+    [date, lang, JSON.stringify(content), MODEL]
   );
   const final = await pool.query(
-    "SELECT content, created_at FROM daily_insights WHERE insight_date = $1",
-    [date]
+    "SELECT content, created_at FROM daily_insights WHERE insight_date = $1 AND lang = $2",
+    [date, lang]
   );
   return {
     row: final.rows[0] ?? { content, created_at: new Date().toISOString() },
@@ -438,8 +454,14 @@ router.get("/cron", async (req, res) => {
 
   const date = todayInLisbon();
   try {
-    const { generated } = await ensureInsightsForDate(date);
-    res.json({ date, generated, model: MODEL });
+    // O cron aquece a cache de TODOS os idiomas suportados: caso contrário o
+    // primeiro utilizador do dia na outra língua pagava a geração na hora.
+    const generatedLangs: string[] = [];
+    for (const lang of SUPPORTED_LANGS) {
+      const { generated } = await ensureInsightsForDate(date, lang);
+      if (generated) generatedLangs.push(lang);
+    }
+    res.json({ date, generated: generatedLangs.length > 0, langs: generatedLangs, model: MODEL });
   } catch (error: any) {
     console.error("[insights] cron falhou:", error);
     res.status(503).json({ date, error: error?.message || "Falha ao gerar." });
@@ -451,12 +473,14 @@ router.use(authenticateToken);
 // ============================================================
 // GET /api/insights -> dicas de hoje (lê a cache; gera se o cron não correu)
 // ============================================================
-router.get("/", async (_req: AuthenticatedRequest, res) => {
+router.get("/", async (req: AuthenticatedRequest, res) => {
   const date = todayInLisbon();
+  const lang = cleanLang(req.query.lang);
   try {
-    const { row } = await ensureInsightsForDate(date);
+    const { row } = await ensureInsightsForDate(date, lang);
     res.json({
       date,
+      lang,
       generatedAt: row?.created_at ?? new Date().toISOString(),
       ...row?.content,
     });
@@ -474,6 +498,7 @@ router.get("/", async (_req: AuthenticatedRequest, res) => {
 // ============================================================
 router.post("/evaluate", async (req: AuthenticatedRequest, res) => {
   const { imageBase64, text } = req.body ?? {};
+  const lang = cleanLang(req.body?.lang);
   const hasImage = typeof imageBase64 === "string" && imageBase64.trim().length > 0;
   const cleanText = typeof text === "string" ? text.trim().slice(0, 2000) : "";
 
@@ -483,7 +508,7 @@ router.post("/evaluate", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
-    const result = await evaluateBet({ imageBase64: hasImage ? imageBase64 : undefined, text: cleanText });
+    const result = await evaluateBet({ imageBase64: hasImage ? imageBase64 : undefined, text: cleanText, lang });
     res.json({ evaluatedAt: new Date().toISOString(), ...result });
   } catch (error: any) {
     console.error("[insights] avaliação falhou:", error?.message);

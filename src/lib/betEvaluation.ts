@@ -68,6 +68,8 @@ export async function requestBetEvaluation(
   payload: {
     imageBase64?: string;
     text?: string;
+    /** Idioma em que a IA deve responder. */
+    lang: string;
   },
   fallbackError: string,
 ): Promise<BetEvaluationResponse> {

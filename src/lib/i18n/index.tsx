@@ -12,7 +12,7 @@
 // erro de compilação. A completude do inglês é garantida pelo tipo de EN
 // (ver en.ts) e verificada também por `node scripts/check-i18n.mjs`.
 
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
 import type { Language } from "../../types";
 import { PT, type Entry, type TKey } from "./pt";
 import { EN } from "./en";
@@ -91,6 +91,17 @@ export function I18nProvider({
   // O valor só muda quando o idioma muda — evita re-render de toda a árvore
   // a cada render do App (o Provider está agora na raiz).
   const value = useMemo(() => buildValue(lang), [lang]);
+
+  // O documento também tem de seguir o idioma: o <html lang> é o que os
+  // leitores de ecrã e os motores de busca leem, e o <title> aparece no
+  // separador do browser e no histórico. O index.html arranca em "pt" (ver o
+  // script inline que também trata do tema) e aqui corrige-se após montar.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.lang = value.locale;
+    document.title = `BetTrackr — ${value.t("app.brandTagline")}`;
+  }, [value]);
+
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 

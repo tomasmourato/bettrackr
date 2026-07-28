@@ -101,7 +101,7 @@ function toneClasses(bet: EvaluatedBet) {
 }
 
 export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
-  const { t, formatDate, formatTime } = useI18n();
+  const { t, lang, formatDate, formatTime } = useI18n();
   const [mode, setMode] = useState<"picks" | "evaluate">("picks");
 
   // ---- Dicas de hoje ----
@@ -113,7 +113,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await authFetch("/api/insights");
+      const res = await authFetch(`/api/insights?lang=${lang}`);
       const body = await parseJsonResponse(res);
       if (!res.ok) throw new Error(body.error || t("insights.error.picks"));
       setData(body as InsightsResponse);
@@ -166,6 +166,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
         {
           imageBase64: evalImage ?? undefined,
           text: evalText.trim() || undefined,
+          lang,
         },
         t("ai.evalError"),
       );

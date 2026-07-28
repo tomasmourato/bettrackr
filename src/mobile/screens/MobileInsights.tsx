@@ -153,7 +153,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 export default function MobileInsights({ onSessionExpired }: MobileInsightsProps) {
-  const { t, formatDate, formatTime } = useI18n();
+  const { t, lang, formatDate, formatTime } = useI18n();
   const toast = useToast();
   const [mode, setMode] = useState<"picks" | "evaluate">("picks");
 
@@ -165,7 +165,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
   const load = async () => {
     setError(null);
     try {
-      const res = await authFetch("/api/insights");
+      const res = await authFetch(`/api/insights?lang=${lang}`);
       const body = await parseJsonResponse(res);
       if (!res.ok) throw new Error(body.error || t("insights.error.picks"));
       setData(body as InsightsResponse);
@@ -235,6 +235,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
         {
           imageBase64: evalImage ?? undefined,
           text: evalText.trim() || undefined,
+          lang,
         },
         t("ai.evalError"),
       );
