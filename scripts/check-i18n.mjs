@@ -47,6 +47,15 @@ const MIGRATED = [
   "src/mobile/screens/MobileSocial.tsx",
   "src/components/AuthPage.tsx",
   "src/components/ErrorBoundary.tsx",
+
+  // Fase 4 — Importação e IA
+  "src/components/ScreenshotImporter.tsx",
+  "src/components/BetclicImport.tsx",
+  "src/mobile/screens/MobileImport.tsx",
+  "src/components/AIInsights.tsx",
+  "src/mobile/screens/MobileInsights.tsx",
+  "src/hooks/useLoadingSteps.ts",
+  "src/lib/betEvaluation.ts",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são
@@ -55,6 +64,11 @@ const PT_WORDS = [
   "aposta", "apostas", "conta", "contas", "casa", "casas", "dados", "ficheiro",
   "guardar", "apagar", "cancelar", "utilizador", "nenhum", "nenhuma", "todos",
   "todas", "escolhe", "repor", "moeda", "idioma",
+  // Sem acento e sem colisão com inglês — o teste dos acentos não as apanha.
+  "erro", "imagem", "ocorreu", "inesperado", "decorridos", "recorta", "novamente",
+  "excede", "seleciona", "boletim", "sucesso", "gravada", "gravar", "atualizada",
+  "amigo", "amigos", "procurar", "carregar", "jogo", "jogos", "dinheiro",
+  "montante", "escolha", "mercado", "pedido", "pedidos", "tenta",
 ];
 const PT_ACCENTS = /[áàâãéêíóôõúüç]/i;
 const PT_WORD_RE = new RegExp(`\\b(${PT_WORDS.join("|")})\\b`, "i");

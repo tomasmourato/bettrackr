@@ -13,6 +13,7 @@ import { defaultFreebetTypeFor } from "../../lib/bookmakers";
 import { authFetch, parseJsonResponse } from "../../lib/authApi";
 import { matchBookmaker, matchStatus } from "../../lib/screenshotMatch";
 import { isNativeApp } from "../../lib/apiBase";
+import { useI18n, type TKey } from "../../lib/i18n";
 import {
   MobileCard,
   SheetPage,
@@ -29,14 +30,14 @@ interface MobileImportProps {
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
-const STATUS_FORM_OPTIONS = [
-  { value: "POR_LIQUIDAR", label: "Por liquidar" },
-  { value: "GANHA", label: "Ganha" },
-  { value: "PERDIDA", label: "Perdida" },
-  { value: "MEIO_GANHA", label: "Meio ganha" },
-  { value: "MEIO_PERDIDA", label: "Meio perdida" },
-  { value: "CASHOUT", label: "Cashout" },
-  { value: "ANULADA", label: "Anulada" },
+const STATUS_FORM_OPTIONS: { value: string; key: TKey }[] = [
+  { value: "POR_LIQUIDAR", key: "status.unsettled" },
+  { value: "GANHA", key: "status.won" },
+  { value: "PERDIDA", key: "status.lost" },
+  { value: "MEIO_GANHA", key: "status.halfWon" },
+  { value: "MEIO_PERDIDA", key: "status.halfLost" },
+  { value: "CASHOUT", key: "status.cashout" },
+  { value: "ANULADA", key: "status.void" },
 ];
 
 const inputClasses =
@@ -56,6 +57,7 @@ async function pickNativePhoto(source: "camera" | "photos"): Promise<string | nu
 }
 
 export default function MobileImport({ currency, onAddBet }: MobileImportProps) {
+  const { t, formatMoney, formatSignedMoney } = useI18n();
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,18 +103,18 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
         odd: s.odd ? s.odd.toString() : "1.50",
       })),
     );
-    setEditNotes("Importado automaticamente via Inteligência Artificial.");
+    setEditNotes(t("import.aiNote"));
     setFormError(null);
   };
 
   const analyze = async (imageBase64: string) => {
     setIsLoading(true);
     setSelectedImage(imageBase64);
-    setLoadingStep("A carregar imagem e a otimizar para envio…");
+    setLoadingStep(t("import.step.upload"));
 
     const steps = [
-      window.setTimeout(() => setLoadingStep("A estabelecer ligação com os serviços do Gemini AI…"), 1500),
-      window.setTimeout(() => setLoadingStep("A analisar layout e a extrair seleções do boletim…"), 3500),
+      window.setTimeout(() => setLoadingStep(t("import.step.connect")), 1500),
+      window.setTimeout(() => setLoadingStep(t("import.step.extract")), 3500),
     ];
 
     try {
@@ -122,11 +124,11 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
       });
       const resData = await parseJsonResponse(response);
       if (!response.ok || !resData.success) {
-        throw new Error(resData.error || "Não foi possível extrair os dados da imagem.");
+        throw new Error(resData.error || t("import.error.noData"));
       }
 
       const betsArr: any[] = Array.isArray(resData.data?.bets) ? resData.data.bets : resData.data ? [resData.data] : [];
-      if (betsArr.length === 0) throw new Error("Nenhum boletim de apostas foi detetado na imagem.");
+      if (betsArr.length === 0) throw new Error(t("import.error.noBets"));
 
       setDetectedBets(betsArr);
       setDetectedIndex(0);
@@ -134,7 +136,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
       loadDetectedBet(betsArr[0]);
       setReviewOpen(true);
     } catch (error: any) {
-      toast.show(error?.message || "Ocorreu um erro ao comunicar com a IA.", "error");
+      toast.show(error?.message || t("import.error.genericMobile"), "error");
       setSelectedImage(null);
     } finally {
       steps.forEach(clearTimeout);
@@ -149,7 +151,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
       if (!dataUrl) return;
       // ~3MB de imagem ≈ 4MB de base64.
       if (dataUrl.length * 0.75 > MAX_IMAGE_BYTES) {
-        toast.show("A imagem excede 3MB. Tira a foto mais próxima do boletim.", "error");
+        toast.show(t("import.error.tooLargeMobile"), "error");
         return;
       }
       await analyze(dataUrl);
@@ -160,11 +162,11 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.show("Seleciona apenas ficheiros de imagem (PNG, JPG, WEBP).", "error");
+      toast.show(t("import.error.notImageMobile"), "error");
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.show("A imagem excede 3MB. Recorta o screenshot e tenta novamente.", "error");
+      toast.show(t("import.error.tooLargeCrop"), "error");
       return;
     }
     const reader = new FileReader();
@@ -215,7 +217,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
   const handleConfirmAndSave = async () => {
     const stakeNum = parseFloat(editStake);
     if (isNaN(stakeNum) || stakeNum <= 0) {
-      setFormError("Por favor insira uma stake válida.");
+      setFormError(t("import.error.stake"));
       return;
     }
 
@@ -236,7 +238,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
     });
 
     if (!isValid) {
-      setFormError("Por favor confirma todas as seleções. Os valores devem ser válidos e as odds superiores a 1.0.");
+      setFormError(t("import.error.selections"));
       return;
     }
     setFormError(null);
@@ -284,11 +286,11 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
     if (nextIndex < detectedBets.length) {
       setDetectedIndex(nextIndex);
       loadDetectedBet(detectedBets[nextIndex]);
-      toast.show(`Aposta ${savedSoFar} gravada. A rever ${nextIndex + 1}/${detectedBets.length}…`, "success");
+      toast.show(t("import.savedNextShort", { n: savedSoFar, index: nextIndex + 1, total: detectedBets.length }), "success");
       return;
     }
 
-    toast.show(savedSoFar === 1 ? "Aposta importada com sucesso!" : `${savedSoFar} apostas importadas!`, "success");
+    toast.show(savedSoFar === 1 ? t("import.savedOneMobile") : t("import.savedManyMobile", { n: savedSoFar }), "success");
     closeReview();
   };
 
@@ -302,10 +304,10 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
           <Sparkles size={22} />
         </span>
         <h2 className="text-base font-bold font-display text-zinc-900 dark:text-zinc-100">
-          Importar boletim por foto
+          {t("import.mobileTitle")}
         </h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 mb-4">
-          A IA lê o boletim e preenche a aposta por ti. Confirmas antes de gravar.
+          {t("import.mobileSubtitle")}
         </p>
 
         {isLoading ? (
@@ -321,7 +323,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
               className="flex flex-col items-center gap-2 py-5 rounded-xl bg-emerald-600 text-white"
             >
               <CameraIcon size={22} />
-              <span className="text-sm font-semibold">Tirar foto</span>
+              <span className="text-sm font-semibold">{t("import.takePhoto")}</span>
             </Pressable>
             <Pressable
               as="button"
@@ -329,7 +331,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
               className="flex flex-col items-center gap-2 py-5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200"
             >
               <ImageIcon size={22} />
-              <span className="text-sm font-semibold">Galeria</span>
+              <span className="text-sm font-semibold">{t("import.gallery")}</span>
             </Pressable>
           </div>
         ) : (
@@ -338,11 +340,11 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
             onClick={() => fileInputRef.current?.click()}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-emerald-600 text-white text-sm font-semibold"
           >
-            <ImageIcon size={18} /> Escolher imagem
+            <ImageIcon size={18} /> {t("import.chooseImage")}
           </Pressable>
         )}
 
-        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-3 font-mono">Máx. 3MB · PNG, JPG, WEBP</p>
+        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-3 font-mono">{t("import.fileTypesShort")}</p>
       </MobileCard>
 
       <input
@@ -363,18 +365,18 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
         onClose={closeReview}
         title={
           detectedBets.length > 1
-            ? `Confirmar aposta (${detectedIndex + 1}/${detectedBets.length})`
-            : "Confirmar aposta"
+            ? t("import.confirmBetN", { index: detectedIndex + 1, total: detectedBets.length })
+            : t("import.confirmBet")
         }
         footer={
           <div className="space-y-2">
             {formError && <p className="text-xs font-medium text-rose-600 dark:text-rose-400">{formError}</p>}
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <span>
-                Odd total <strong className="font-mono text-zinc-800 dark:text-zinc-100">{calculatedTotalOdd.toFixed(2)}</strong>
+                {t("bets.field.totalOdd")} <strong className="font-mono text-zinc-800 dark:text-zinc-100">{calculatedTotalOdd.toFixed(2)}</strong>
               </span>
               <span>
-                {editStatus === "POR_LIQUIDAR" ? "Retorno potencial" : "Lucro"}{" "}
+                {editStatus === "POR_LIQUIDAR" ? t("bets.form.potentialReturn") : t("bets.sort.profit")}{" "}
                 <strong
                   className={`font-mono ${
                     editStatus === "POR_LIQUIDAR"
@@ -385,8 +387,8 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
                   }`}
                 >
                   {editStatus === "POR_LIQUIDAR"
-                    ? `${previewReturns.potentialReturn.toFixed(2)}${currency}`
-                    : `${previewReturns.netProfit >= 0 ? "+" : ""}${previewReturns.netProfit.toFixed(2)}${currency}`}
+                    ? formatMoney(previewReturns.potentialReturn, currency)
+                    : formatSignedMoney(previewReturns.netProfit, currency)}
                 </strong>
               </span>
             </div>
@@ -395,7 +397,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
               onClick={() => void handleConfirmAndSave()}
               className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center"
             >
-              Confirmar e gravar
+              {t("import.confirmSaveShort")}
             </Pressable>
           </div>
         }
@@ -405,26 +407,26 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
           {selectedImage && (
             <img
               src={selectedImage}
-              alt="Screenshot analisado"
+              alt={t("import.screenshotAltMobile")}
               className="w-full max-h-40 object-contain rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900"
             />
           )}
 
           <SegmentedControl
             segments={[
-              { value: "SIMPLES", label: "Simples" },
-              { value: "MULTIPLA", label: "Múltipla" },
+              { value: "SIMPLES", label: t("filters.type.single") },
+              { value: "MULTIPLA", label: t("filters.type.multiple") },
             ]}
             value={editType}
             onChange={setEditType}
           />
 
-          <ChipGroup label="Estado" options={STATUS_FORM_OPTIONS} value={editStatus} onChange={(v) => setEditStatus(v as BetStatus)} />
+          <ChipGroup label={t("filters.status")} options={STATUS_FORM_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))} value={editStatus} onChange={(v) => setEditStatus(v as BetStatus)} />
 
           {editStatus === "CASHOUT" && (
             <label className="block">
               <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-                Valor recebido no cashout
+                {t("bets.form.cashoutReceived")}
               </span>
               <input
                 type="number"
@@ -440,7 +442,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
 
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-              Casa de apostas
+              {t("filters.bookmaker")}
             </span>
             <select value={editBookmaker} onChange={(e) => setEditBookmaker(e.target.value)} className={`mt-1 ${inputClasses}`}>
               {[...new Set([...AVAILABLE_BOOKMAKERS, "Outra"])].map((b) => (
@@ -454,7 +456,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
           {/* Seleções */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-1.5">
-              Seleções detetadas
+              {t("import.detectedSelectionsShort")}
             </p>
             <div className="space-y-3">
               {editSelections.map((s, i) => (
@@ -465,19 +467,19 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
                       <Pressable
                         as="button"
                         onClick={() => setEditSelections((prev) => prev.filter((_, j) => j !== i))}
-                        aria-label="Remover seleção"
+                        aria-label={t("bets.form.removeSelection")}
                         className="p-1 text-rose-500"
                       >
                         <X size={14} />
                       </Pressable>
                     )}
                   </div>
-                  <input type="text" value={s.event} onChange={(e) => changeSelection(i, "event", e.target.value)} placeholder="Evento" className={inputClasses} />
+                  <input type="text" value={s.event} onChange={(e) => changeSelection(i, "event", e.target.value)} placeholder={t("import.eventPlaceholder")} className={inputClasses} />
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="text" value={s.market} onChange={(e) => changeSelection(i, "market", e.target.value)} placeholder="Mercado" className={inputClasses} />
-                    <input type="text" value={s.choice} onChange={(e) => changeSelection(i, "choice", e.target.value)} placeholder="Escolha" className={inputClasses} />
+                    <input type="text" value={s.market} onChange={(e) => changeSelection(i, "market", e.target.value)} placeholder={t("bets.field.market")} className={inputClasses} />
+                    <input type="text" value={s.choice} onChange={(e) => changeSelection(i, "choice", e.target.value)} placeholder={t("bets.form.choicePlaceholderShort")} className={inputClasses} />
                   </div>
-                  <input type="number" inputMode="decimal" step="0.01" min="1" value={s.odd} onChange={(e) => changeSelection(i, "odd", e.target.value)} placeholder="Odd" className={inputClasses} />
+                  <input type="number" inputMode="decimal" step="0.01" min="1" value={s.odd} onChange={(e) => changeSelection(i, "odd", e.target.value)} placeholder={t("bets.field.odd")} className={inputClasses} />
                 </MobileCard>
               ))}
               {editType === "MULTIPLA" && (
@@ -486,7 +488,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
                   onClick={() => setEditSelections((prev) => [...prev, { event: "", market: "", choice: "", odd: "1.50" }])}
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 text-xs font-semibold text-zinc-500 dark:text-zinc-400"
                 >
-                  <PlusCircle size={14} /> Adicionar seleção
+                  <PlusCircle size={14} /> {t("bets.form.addSelection")}
                 </Pressable>
               )}
             </div>
@@ -494,7 +496,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
 
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-              Stake ({currency})
+              {t("bets.form.stakeCurrency", { currency })}
             </span>
             <input
               type="number"
@@ -516,16 +518,16 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
                   : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300"
               }`}
             >
-              Freebet
+              {t("filters.money.freebet")}
             </button>
           </div>
 
           {isFreebet && (
             <ChipGroup
-              label="Tipo de freebet"
+              label={t("bets.form.freebetType")}
               options={[
-                { value: "SNR", label: "SNR (stake não devolvida)" },
-                { value: "SR", label: "SR (stake devolvida)" },
+                { value: "SNR", label: t("bets.form.snrShort") },
+                { value: "SR", label: t("bets.form.srShort") },
               ]}
               value={editFreebetType}
               onChange={(v) => setEditFreebetType(v as FreebetType)}
@@ -534,7 +536,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
 
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-              Data e hora
+              {t("bets.details.dateTime")}
             </span>
             <input
               type="datetime-local"
@@ -546,7 +548,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
 
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
-              Notas
+              {t("bets.details.notes")}
             </span>
             <textarea
               value={editNotes}

@@ -16,6 +16,7 @@ import { AVAILABLE_BOOKMAKERS, calculateBetReturnAndProfit } from "../utils";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { authFetch, parseJsonResponse } from "../lib/authApi";
 import { matchBookmaker, matchStatus } from "../lib/screenshotMatch";
+import { useI18n } from "../lib/i18n";
 
 interface ScreenshotImporterProps {
   currency: string;
@@ -24,17 +25,19 @@ interface ScreenshotImporterProps {
 
 /** Marca os campos que foram pré-preenchidos automaticamente pela IA. */
 function AiChip() {
+  const { t } = useI18n();
   return (
     <span
-      title="Preenchido automaticamente pela IA — confirma antes de gravar"
+      title={t("import.aiChipTitle")}
       className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900 px-1 py-0.5 rounded-xs"
     >
-      <Sparkles size={8} /> IA
+      <Sparkles size={8} /> {t("import.aiChip")}
     </span>
   );
 }
 
 export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImporterProps) {
+  const { t, formatMoney, formatSignedMoney } = useI18n();
   const [dragActive, setDragActive] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState<string>("");
@@ -124,11 +127,11 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
   // Convert file and send to backend
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      setErrorMessage("Por favor, seleciona apenas ficheiros de imagem (PNG, JPG, WEBP).");
+      setErrorMessage(t("import.error.notImage"));
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setErrorMessage("A imagem excede 3MB. Recorta o screenshot ou reduz a resolução e tenta novamente.");
+      setErrorMessage(t("import.error.tooLarge"));
       return;
     }
 
@@ -193,23 +196,23 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
       choice: s.choice || "",
       odd: s.odd ? s.odd.toString() : "1.50",
     })));
-    setEditNotes("Importado automaticamente via Inteligência Artificial.");
+    setEditNotes(t("import.aiNote"));
   };
 
   // Call the server API
   const analyzeWithGemini = async (imageBase64: string) => {
     setIsLoading(true);
     setParsedBet(null);
-    setLoadingStep("A carregar imagem e a otimizar para envio...");
+    setLoadingStep(t("import.step.upload"));
 
     try {
       // Step simulation for good UX
       setTimeout(() => {
-        setLoadingStep("A estabelecer ligação com os serviços do Gemini AI...");
+        setLoadingStep(t("import.step.connect"));
       }, 1500);
 
       setTimeout(() => {
-        setLoadingStep("A analisar layout e a extrair seleções do boletim de apostas...");
+        setLoadingStep(t("import.step.extract"));
       }, 3500);
 
       // authFetch injeta o header Authorization — a rota /api/parse-screenshot
@@ -222,7 +225,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
       const resData = await parseJsonResponse(response);
 
       if (!response.ok || !resData.success) {
-        throw new Error(resData.error || "Não foi possível extrair os dados da imagem.");
+        throw new Error(resData.error || t("import.error.noData"));
       }
 
       // A IA devolve agora TODOS os boletins da imagem em data.bets (G1).
@@ -234,7 +237,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
           : [];
 
       if (betsArr.length === 0) {
-        throw new Error("Nenhum boletim de apostas foi detetado na imagem.");
+        throw new Error(t("import.error.noBets"));
       }
 
       setDetectedBets(betsArr);
@@ -244,7 +247,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
 
     } catch (error: any) {
       console.error("Error analyzing image:", error);
-      setErrorMessage(error.message || "Ocorreu um erro ao comunicar com a IA do Gemini.");
+      setErrorMessage(error.message || t("import.error.generic"));
     } finally {
       setIsLoading(false);
       setLoadingStep("");
@@ -286,7 +289,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
 
     const stakeNum = parseFloat(editStake);
     if (isNaN(stakeNum) || stakeNum <= 0) {
-      setErrorMessage("Por favor insira uma stake válida.");
+      setErrorMessage(t("import.error.stake"));
       return;
     }
 
@@ -309,7 +312,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
     });
 
     if (!isValid) {
-      setErrorMessage("Por favor confirma todas as seleções. Os valores devem ser válidos e as odds superiores a 1.0.");
+      setErrorMessage(t("import.error.selections"));
       return;
     }
 
@@ -360,7 +363,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
     if (nextIndex < detectedBets.length) {
       setDetectedIndex(nextIndex);
       loadDetectedBet(detectedBets[nextIndex]);
-      setSuccessMessage(`Aposta ${savedSoFar} gravada. A rever a próxima (${nextIndex + 1}/${detectedBets.length})…`);
+      setSuccessMessage(t("import.savedNext", { n: savedSoFar, index: nextIndex + 1, total: detectedBets.length }));
       setTimeout(() => setSuccessMessage(null), 4000);
       return;
     }
@@ -371,11 +374,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
     setImageFileName("");
     setDetectedBets([]);
     setDetectedIndex(0);
-    setSuccessMessage(
-      savedSoFar > 1
-        ? `${savedSoFar} apostas importadas e gravadas com sucesso!`
-        : "Aposta importada e gravada com sucesso!"
-    );
+    setSuccessMessage(savedSoFar > 1 ? t("import.savedMany", { n: savedSoFar }) : t("import.savedOne"));
     setTimeout(() => setSuccessMessage(null), 5000);
   };
 
@@ -427,14 +426,14 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
         <div aria-hidden="true" className="pointer-events-none absolute -top-16 -right-16 w-56 h-56 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="relative">
           <h4 className="text-lg font-semibold tracking-tight font-display flex items-center gap-1.5">
-            <Sparkles size={18} className="text-emerald-400" /> Importador Inteligente de Apostas
+            <Sparkles size={18} className="text-emerald-400" /> {t("import.title")}
           </h4>
           <p className="text-xs text-zinc-400 mt-1 max-w-xl">
-            Tira um screenshot ao teu boletim na Betano, Betclic ou Placard, cola-o com Ctrl+V ou faz o upload — o Gemini AI extrai as seleções, odds, stake, casa de apostas, estado e freebet por ti.
+            {t("import.subtitle")}
           </p>
         </div>
         <div className="relative text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-300 px-3 py-2 rounded-sm border border-emerald-500/25 shrink-0">
-          Powered by <strong>Gemini 2.5 Flash</strong>
+          {t("import.poweredBy")} <strong>Gemini 2.5 Flash</strong>
         </div>
       </div>
 
@@ -467,19 +466,19 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-sm mb-4">
                 <Upload size={30} />
               </div>
-              <h5 className="font-semibold text-zinc-800 dark:text-zinc-100 text-sm sm:text-base">Arrasta o screenshot para aqui</h5>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Ou clica para pesquisar nos teus ficheiros</p>
+              <h5 className="font-semibold text-zinc-800 dark:text-zinc-100 text-sm sm:text-base">{t("import.dropTitle")}</h5>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t("import.dropHint")}</p>
 
               {/* Atalho de colagem (apenas relevante em desktop) */}
               <p className="hidden sm:flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300 mt-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-100 dark:border-emerald-900 px-3 py-1.5 rounded-sm">
                 <ClipboardPaste size={12} className="shrink-0" />
-                Podes colar diretamente com
+                {t("import.pasteHint")}
                 <kbd className="font-mono font-bold bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800 rounded-xs px-1">Ctrl</kbd>
                 +
                 <kbd className="font-mono font-bold bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800 rounded-xs px-1">V</kbd>
               </p>
 
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-3 py-1 rounded-sm">PNG, JPG ou WEBP até 3MB</p>
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-3 py-1 rounded-sm">{t("import.fileTypes")}</p>
             </div>
           </div>
 
@@ -508,11 +507,11 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
             <RefreshCw className="text-emerald-600 dark:text-emerald-400 animate-spin" size={20} />
           </div>
           <div className="space-y-1.5">
-            <h5 className="font-semibold text-zinc-800 dark:text-zinc-100 text-sm">O Gemini está a analisar o teu boletim...</h5>
+            <h5 className="font-semibold text-zinc-800 dark:text-zinc-100 text-sm">{t("import.analyzing")}</h5>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto animate-pulse">{loadingStep}</p>
           </div>
           <div className="pt-3 border-t border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-400 dark:text-zinc-500">
-            Falta muito pouco. O processamento com visão computacional demora cerca de 5-10 segundos.
+            {t("import.analyzingHint")}
           </div>
         </div>
       )}
@@ -525,19 +524,19 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800">
               <div className="flex justify-between items-center mb-3">
-                <h5 className="font-bold text-zinc-700 dark:text-zinc-300 text-[10px] uppercase tracking-wider">Screenshot Fornecido</h5>
+                <h5 className="font-bold text-zinc-700 dark:text-zinc-300 text-[10px] uppercase tracking-wider">{t("import.screenshotTitle")}</h5>
                 <button
                   onClick={handleResetImport}
                   className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs flex items-center gap-1 cursor-pointer"
                 >
-                  <X size={14} /> Remover
+                  <X size={14} /> {t("import.remove")}
                 </button>
               </div>
               {selectedImage && (
                 <div className="rounded-sm overflow-hidden border border-zinc-200 dark:border-zinc-800 max-h-[420px] bg-zinc-900 flex items-center justify-center">
                   <img
                     src={selectedImage}
-                    alt="Screenshot do boletim"
+alt={t("import.screenshotAlt")}
                     className="max-w-full max-h-[420px] object-contain"
                   />
                 </div>
@@ -548,8 +547,8 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
             <div className="p-4 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-900 rounded-sm flex gap-2.5 text-xs leading-normal">
               <CheckCircle2 size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <strong className="block font-bold mb-0.5">Confirmação Obrigatória</strong>
-                A IA detetou os dados do teu boletim, incluindo a casa de apostas, o estado da aposta e se foi usada uma freebet. Verifica e corrige qualquer imprecisão nas caixas ao lado antes de confirmar a gravação definitiva.
+                <strong className="block font-bold mb-0.5">{t("import.confirmRequired")}</strong>
+                {t("import.confirmRequiredDesc")}
               </div>
             </div>
           </div>
@@ -560,23 +559,23 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
 
               <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h5 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display flex items-center gap-1.5">
-                  <Sparkles size={16} className="text-emerald-600 dark:text-emerald-400" /> Validar Dados Extraídos
+                  <Sparkles size={16} className="text-emerald-600 dark:text-emerald-400" /> {t("import.validate")}
                 </h5>
                 {detectedBets.length > 1 ? (
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider border border-emerald-200 dark:border-emerald-900">
-                      Boletim {detectedIndex + 1} de {detectedBets.length}
+                      {t("import.slipOf", { index: detectedIndex + 1, total: detectedBets.length })}
                     </span>
                     <button
                       type="button"
                       onClick={skipDetectedBet}
                       className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 uppercase tracking-wider cursor-pointer"
                     >
-                      Saltar
+                      {t("import.skip")}
                     </button>
                   </div>
                 ) : (
-                  <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider border border-emerald-200 dark:border-emerald-900">Sucesso</span>
+                  <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider border border-emerald-200 dark:border-emerald-900">{t("import.success")}</span>
                 )}
               </div>
 
@@ -591,7 +590,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-semibold mb-1">
-                    Casa de Apostas
+                    {t("filters.bookmaker")}
                     <AiChip />
                   </label>
                   <select
@@ -602,11 +601,11 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                     {AVAILABLE_BOOKMAKERS.map((b, idx) => (
                       <option key={idx} value={b}>{b}</option>
                     ))}
-                    <option value="Outra">Outra ({parsedBet.bookmaker})</option>
+                    <option value="Outra">{t("import.otherBookmaker", { name: parsedBet.bookmaker })}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Tipo de Aposta</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.type")}</label>
                   <select
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 text-zinc-800 dark:text-zinc-100 font-medium"
                     value={editType}
@@ -618,8 +617,8 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                       }
                     }}
                   >
-                    <option value="SIMPLES">Simples</option>
-                    <option value="MULTIPLA">Múltipla</option>
+                    <option value="SIMPLES">{t("filters.type.single")}</option>
+                    <option value="MULTIPLA">{t("filters.type.multiple")}</option>
                   </select>
                 </div>
               </div>
@@ -627,7 +626,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               {/* Stake & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Valor Apostado (Stake)</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.stake")}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -639,7 +638,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                 </div>
                 <div>
                   <label className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-semibold mb-1">
-                    Estado de Liquidação
+                    {t("bets.form.settleStatus")}
                     <AiChip />
                   </label>
                   <select
@@ -647,13 +646,13 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value as BetStatus)}
                   >
-                    <option value="POR_LIQUIDAR">Por Liquidar (Pendente)</option>
-                    <option value="GANHA">Ganha (Liquidar total)</option>
-                    <option value="PERDIDA">Perdida (Liquidar perda)</option>
-                    <option value="ANULADA">Anulada (Reembolsar)</option>
-                    <option value="MEIO_GANHA">Meio Ganha</option>
-                    <option value="MEIO_PERDIDA">Meio Perdida</option>
-                    <option value="CASHOUT">Cashout</option>
+                    <option value="POR_LIQUIDAR">{t("status.unsettledLong")}</option>
+                    <option value="GANHA">{t("import.status.wonLong")}</option>
+                    <option value="PERDIDA">{t("import.status.lostLong")}</option>
+                    <option value="ANULADA">{t("import.status.voidLong")}</option>
+                    <option value="MEIO_GANHA">{t("status.halfWon")}</option>
+                    <option value="MEIO_PERDIDA">{t("status.halfLost")}</option>
+                    <option value="CASHOUT">{t("status.cashout")}</option>
                   </select>
                 </div>
               </div>
@@ -662,7 +661,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               {editStatus === "CASHOUT" && (
                 <div>
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">
-                    Valor do Cashout ({currency})
+                    {t("bets.form.cashoutValue", { currency })}
                   </label>
                   <input
                     type="number"
@@ -685,7 +684,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                     checked={isFreebet}
                     onChange={(e) => setIsFreebet(e.target.checked)}
                   />
-                  <span>Esta aposta usa saldo de Freebet?</span>
+                  <span>{t("import.freebetQ")}</span>
                   <AiChip />
                 </label>
 
@@ -695,8 +694,8 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                     value={editFreebetType}
                     onChange={(e) => setEditFreebetType(e.target.value as FreebetType)}
                   >
-                    <option value="SNR">Stake não devolvida — SNR</option>
-                    <option value="SR">Stake devolvida — SR (Betclic)</option>
+                    <option value="SNR">{t("import.snr")}</option>
+                    <option value="SR">{t("import.sr")}</option>
                   </select>
                 )}
               </div>
@@ -704,14 +703,14 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               {/* Selections Extraction Form */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="text-zinc-500 dark:text-zinc-400 font-semibold">Seleções Detetadas ({editSelections.length})</label>
+                  <label className="text-zinc-500 dark:text-zinc-400 font-semibold">{t("import.detectedSelections", { n: editSelections.length })}</label>
                   {editType === "MULTIPLA" && (
                     <button
                       type="button"
                       onClick={addSelection}
                       className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-0.5 cursor-pointer"
                     >
-                      <PlusCircle size={12} /> Adicionar Seleção
+                      <PlusCircle size={12} /> {t("bets.form.addSelection")}
                     </button>
                   )}
                 </div>
@@ -734,7 +733,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Evento</label>
+                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">{t("import.eventPlaceholder")}</label>
                           <input
                             type="text"
                             required
@@ -744,7 +743,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Mercado Detetado</label>
+                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">{t("import.marketDetected")}</label>
                           <input
                             type="text"
                             required
@@ -757,7 +756,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
 
                       <div className="grid grid-cols-3 gap-2">
                         <div className="col-span-2">
-                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Escolha</label>
+                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">{t("bets.field.choice")}</label>
                           <input
                             type="text"
                             required
@@ -767,7 +766,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Odd</label>
+                          <label className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">{t("bets.field.odd")}</label>
                           <input
                             type="number"
                             step="0.01"
@@ -787,7 +786,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               {/* Calculations review */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Data de Registo</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("import.registerDate")}</label>
                   <input
                     type="text"
                     className="w-full px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-emerald-600 font-mono text-[11px]"
@@ -796,7 +795,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                   />
                 </div>
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">Notas adicionais</label>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("import.notes")}</label>
                   <input
                     type="text"
                     className="w-full px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-emerald-600 text-[11px]"
@@ -809,17 +808,17 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
               {/* Simulation Result preview */}
               <div className="p-4 bg-zinc-900 dark:bg-zinc-950 dark:border dark:border-zinc-800 text-zinc-100 rounded-sm flex justify-between items-center shadow-inner">
                 <div>
-                  <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">Resultado da Validação</p>
+                  <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">{t("import.validationResult")}</p>
                   <p className="text-xs font-semibold mt-1">
-                    Odd Total: <span className="font-mono text-emerald-300 font-bold">@{calculatedTotalOdd.toFixed(2)}</span>
+                    {t("bets.form.totalOdd")}<span className="font-mono text-emerald-300 font-bold">@{calculatedTotalOdd.toFixed(2)}</span>
                   </p>
                   {isFreebet && (
-                    <p className="text-[9px] text-amber-300 font-bold uppercase tracking-wider mt-1">Freebet — a stake não conta para o lucro</p>
+                    <p className="text-[9px] text-amber-300 font-bold uppercase tracking-wider mt-1">{t("import.freebetNote")}</p>
                   )}
                 </div>
                 <div className="text-right">
                   <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">
-                    {editStatus === "POR_LIQUIDAR" ? "Retorno Potencial" : "Lucro Líquido"}
+                    {editStatus === "POR_LIQUIDAR" ? t("bets.form.potentialReturn") : t("bets.field.netProfit")}
                   </p>
                   <p className={`text-base font-bold font-mono mt-0.5 ${
                     editStatus === "POR_LIQUIDAR"
@@ -831,8 +830,8 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                           : "text-zinc-300"
                   }`}>
                     {editStatus === "POR_LIQUIDAR"
-                      ? `${previewReturns.potentialReturn.toFixed(2)}${currency}`
-                      : `${previewReturns.netProfit >= 0 ? "+" : ""}${previewReturns.netProfit.toFixed(2)}${currency}`}
+                      ? formatMoney(previewReturns.potentialReturn, currency)
+                      : formatSignedMoney(previewReturns.netProfit, currency)}
                   </p>
                 </div>
               </div>
@@ -844,13 +843,13 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
                   onClick={handleResetImport}
                   className="px-4 py-2 rounded-sm border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer"
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
                 >
-                  <Check size={14} /> {detectedIndex + 1 < detectedBets.length ? "Gravar e Seguinte" : "Confirmar e Gravar Aposta"}
+                  <Check size={14} /> {detectedIndex + 1 < detectedBets.length ? t("import.saveNext") : t("import.confirmSave")}
                 </button>
               </div>
 

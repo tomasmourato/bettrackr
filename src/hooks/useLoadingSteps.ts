@@ -7,34 +7,36 @@
 // MobileInsights para os dois mostrarem exatamente o mesmo texto.
 
 import { useEffect, useState } from "react";
+import type { TKey } from "../lib/i18n";
 
 export interface LoadingStep {
   /** Segundos decorridos a partir dos quais este passo passa a ser o atual. */
   after: number;
-  label: string;
+  /** Chave de traducao; quem mostra o passo e que chama t(). */
+  key: TKey;
 }
 
 /** Passos da avaliação de uma aposta (varia com a existência de print). */
 export const evalStepsFor = (hasImage: boolean): LoadingStep[] => [
-  { after: 0, label: hasImage ? "A ler o print do boletim…" : "A interpretar a descrição da aposta…" },
-  { after: 4, label: "A identificar evento, mercado e odd…" },
-  { after: 9, label: "A pesquisar forma recente e confrontos diretos…" },
-  { after: 15, label: "A verificar lesões, castigos e onze provável…" },
-  { after: 22, label: "A comparar as odds de mercado entre casas…" },
-  { after: 30, label: "A estimar a probabilidade justa…" },
-  { after: 38, label: "A calcular o Valor Esperado e o edge…" },
-  { after: 46, label: "Quase lá — a finalizar a análise…" },
+  { after: 0, key: hasImage ? "ai.step.readImage" : "ai.step.readText" },
+  { after: 4, key: "ai.step.identify" },
+  { after: 9, key: "ai.step.form" },
+  { after: 15, key: "ai.step.injuries" },
+  { after: 22, key: "ai.step.odds" },
+  { after: 30, key: "ai.step.probability" },
+  { after: 38, key: "ai.step.ev" },
+  { after: 46, key: "ai.step.finishing" },
 ];
 
 /** Passos da geração das dicas diárias. */
 export const PICKS_STEPS: LoadingStep[] = [
-  { after: 0, label: "A preparar a análise do dia…" },
-  { after: 4, label: "A pesquisar os jogos de hoje…" },
-  { after: 10, label: "A recolher as odds aproximadas…" },
-  { after: 18, label: "A avaliar forma, lesões e confrontos…" },
-  { after: 27, label: "A selecionar os melhores picks…" },
-  { after: 36, label: "A escrever as justificações…" },
-  { after: 45, label: "Quase lá — a finalizar…" },
+  { after: 0, key: "ai.picks.prepare" },
+  { after: 4, key: "ai.picks.games" },
+  { after: 10, key: "ai.picks.odds" },
+  { after: 18, key: "ai.picks.form" },
+  { after: 27, key: "ai.picks.select" },
+  { after: 36, key: "ai.picks.write" },
+  { after: 45, key: "ai.picks.finishing" },
 ];
 
 /**
@@ -62,5 +64,5 @@ export function useLoadingSteps(active: boolean, steps: LoadingStep[]) {
     if (elapsed >= steps[i].after) index = i;
   }
 
-  return { index, elapsed, label: steps[index]?.label ?? "" };
+  return { index, elapsed, key: steps[index]?.key };
 }

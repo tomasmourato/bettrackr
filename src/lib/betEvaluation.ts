@@ -62,15 +62,20 @@ export function formatEvPct(pct: number): string {
  * Pede a avaliação ao servidor. Lança SessionExpiredError (via authFetch) num
  * 401 — cada shell trata-o com o seu onSessionExpired.
  */
-export async function requestBetEvaluation(payload: {
-  imageBase64?: string;
-  text?: string;
-}): Promise<BetEvaluationResponse> {
+// `fallbackError` vem traduzido de quem chama: este modulo nao e um hook e
+// por isso nao tem acesso ao useI18n().
+export async function requestBetEvaluation(
+  payload: {
+    imageBase64?: string;
+    text?: string;
+  },
+  fallbackError: string,
+): Promise<BetEvaluationResponse> {
   const res = await authFetch("/api/insights/evaluate", {
     method: "POST",
     body: JSON.stringify(payload),
   });
   const body = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(body.error || "Não foi possível avaliar a aposta.");
+  if (!res.ok) throw new Error(body.error || fallbackError);
   return body as BetEvaluationResponse;
 }

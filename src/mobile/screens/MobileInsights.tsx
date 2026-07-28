@@ -24,6 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { authFetch, parseJsonResponse, SessionExpiredError } from "../../lib/authApi";
+import { useI18n } from "../../lib/i18n";
 import { useLoadingSteps, evalStepsFor, PICKS_STEPS, type LoadingStep } from "../../hooks/useLoadingSteps";
 import { isNativeApp } from "../../lib/apiBase";
 import {
@@ -60,12 +61,10 @@ interface MobileInsightsProps {
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
-const AI_DISCLAIMER =
-  "Conteúdo gerado por IA com pesquisa web — a probabilidade e o Valor Esperado são estimativas, podem conter erros e não garantem qualquer resultado. Nada disto é aconselhamento financeiro. Aposta apenas o que podes perder. +18 · jogo responsável.";
-
 function ConfidenceDots({ level }: { level: number }) {
+  const { t } = useI18n();
   return (
-    <span className="inline-flex items-center gap-0.5" title={`Confiança ${level}/5`}>
+    <span className="inline-flex items-center gap-0.5" title={t("insights.confidenceLevel", { level })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} className={`w-1.5 h-1.5 rounded-full ${i <= level ? "bg-emerald-500" : "bg-zinc-200 dark:bg-zinc-700"}`}></span>
       ))}
@@ -109,14 +108,15 @@ async function pickNativePhoto(source: "camera" | "photos"): Promise<string | nu
 
 // Cartão de espera com os passos da IA (mesmo texto do desktop).
 function AiProgress({ active, steps, hint }: { active: boolean; steps: LoadingStep[]; hint: string }) {
-  const { index, elapsed, label } = useLoadingSteps(active, steps);
+  const { t } = useI18n();
+  const { index, elapsed, key } = useLoadingSteps(active, steps);
 
   return (
     <MobileCard className="!p-6 flex flex-col items-center gap-4 text-center">
       <div className="w-7 h-7 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
 
       <div>
-        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{label}</p>
+        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{key ? t(key) : ""}</p>
         <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">{hint}</p>
       </div>
 
@@ -131,14 +131,14 @@ function AiProgress({ active, steps, hint }: { active: boolean; steps: LoadingSt
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0 mx-[3px]"></span>
               )}
               <span className={done ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-200 font-medium"}>
-                {step.label}
+                {t(step.key)}
               </span>
             </li>
           );
         })}
       </ul>
 
-      <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 tabular-nums">{elapsed}s decorridos</p>
+      <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 tabular-nums">{t("insights.elapsed", { n: elapsed })}</p>
     </MobileCard>
   );
 }
@@ -153,6 +153,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 export default function MobileInsights({ onSessionExpired }: MobileInsightsProps) {
+  const { t, formatDate, formatTime } = useI18n();
   const toast = useToast();
   const [mode, setMode] = useState<"picks" | "evaluate">("picks");
 
@@ -166,14 +167,14 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
     try {
       const res = await authFetch("/api/insights");
       const body = await parseJsonResponse(res);
-      if (!res.ok) throw new Error(body.error || "Não foi possível obter as dicas de hoje.");
+      if (!res.ok) throw new Error(body.error || t("insights.error.picks"));
       setData(body as InsightsResponse);
     } catch (err) {
       if (err instanceof SessionExpiredError) {
         onSessionExpired();
         return;
       }
-      setError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
+      setError(err instanceof Error ? err.message : t("insights.error.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -196,11 +197,11 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      setEvalError("Seleciona um ficheiro de imagem (PNG, JPG, WEBP).");
+      setEvalError(t("insights.error.notImage"));
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setEvalError("A imagem excede 3MB. Recorta o print e tenta novamente.");
+      setEvalError(t("insights.error.tooLargePrint"));
       return;
     }
     setEvalError(null);
@@ -214,7 +215,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
       const dataUrl = await pickNativePhoto(source);
       if (!dataUrl) return;
       if (dataUrl.length * 0.75 > MAX_IMAGE_BYTES) {
-        setEvalError("A imagem excede 3MB. Aproxima a foto do boletim.");
+        setEvalError(t("insights.error.tooLargePhoto"));
         return;
       }
       setEvalError(null);
@@ -230,17 +231,20 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
     setEvalError(null);
     setEvaluation(null);
     try {
-      const result = await requestBetEvaluation({
-        imageBase64: evalImage ?? undefined,
-        text: evalText.trim() || undefined,
-      });
+      const result = await requestBetEvaluation(
+        {
+          imageBase64: evalImage ?? undefined,
+          text: evalText.trim() || undefined,
+        },
+        t("ai.evalError"),
+      );
       setEvaluation(result);
     } catch (err) {
       if (err instanceof SessionExpiredError) {
         onSessionExpired();
         return;
       }
-      const msg = err instanceof Error ? err.message : "Ocorreu um erro inesperado.";
+      const msg = err instanceof Error ? err.message : t("insights.error.unexpected");
       setEvalError(msg);
       toast.show(msg, "error");
     } finally {
@@ -274,7 +278,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
             {mode === "picks"
               ? formattedDate
                 ? `Dicas para ${formattedDate}${generatedTime ? ` · ${generatedTime}` : ""}`
-                : "Dicas para os jogos de hoje"
+                : t("insights.picksSubtitleShort")
               : "Print e/ou texto — a IA estima o Valor Esperado"}
           </p>
         </div>
@@ -286,7 +290,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
               void load();
             }}
             disabled={loading}
-            aria-label="Atualizar dicas"
+            aria-label={t("insights.refreshAria")}
             className="flex items-center justify-center w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400"
           >
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -296,8 +300,8 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
 
       <SegmentedControl
         segments={[
-          { value: "picks", label: "Dicas de hoje" },
-          { value: "evaluate", label: "Avaliar aposta" },
+          { value: "picks", label: t("insights.picksTab") },
+          { value: "evaluate", label: t("insights.evaluateTab") },
         ]}
         value={mode}
         onChange={(v) => setMode(v as "picks" | "evaluate")}
@@ -305,7 +309,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
 
       <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl flex items-start gap-2.5 text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
         <ShieldAlert size={15} className="shrink-0 mt-0.5" />
-        <span>{AI_DISCLAIMER}</span>
+        <span>{t("insights.disclaimer")}</span>
       </div>
     </div>
   );
@@ -321,7 +325,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
             <AiProgress
               active={loading}
               steps={PICKS_STEPS}
-              hint="Na primeira visita do dia a análise é gerada na hora — pode demorar até um minuto."
+              hint={t("insights.picksHint")}
             />
           )}
 
@@ -337,7 +341,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                 }}
                 className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs"
               >
-                Tentar novamente
+                {t("insights.retry")}
               </Pressable>
             </MobileCard>
           )}
@@ -394,7 +398,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
               ))}
 
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center pb-2">
-                As odds são aproximadas e mudam ao longo do dia — confirma sempre na casa de apostas.
+                {t("insights.oddsNoteShort")}
               </p>
             </>
           )}
@@ -414,7 +418,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
           onChange={(e) => setEvalText(e.target.value)}
           rows={3}
           maxLength={2000}
-          placeholder="Descreve a aposta: evento, mercado, seleção, odd e casa. Ex.: Benfica vencer o Porto @2.10 na Betano. (podes também colar um print)"
+          placeholder={t("insights.evalPlaceholderShort")}
           className="w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-800 dark:text-zinc-100 outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-emerald-500 resize-y"
         />
 
@@ -460,13 +464,13 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
           <div className="relative">
             <img
               src={evalImage}
-              alt="Print da aposta"
+              alt={t("insights.printAlt")}
               className="w-full max-h-40 object-contain rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900"
             />
             <Pressable
               as="button"
               onClick={() => setEvalImage(null)}
-              aria-label="Remover imagem"
+              aria-label={t("insights.removeImage")}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-zinc-900/80 text-white flex items-center justify-center"
             >
               <X size={14} />
@@ -489,7 +493,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
             </>
           ) : (
             <>
-              <Send size={15} /> Avaliar aposta
+              <Send size={15} /> {t("insights.evaluate")}
             </>
           )}
         </Pressable>
@@ -499,7 +503,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
         <AiProgress
           active={evalLoading}
           steps={evalStepsFor(Boolean(evalImage))}
-          hint="A IA pesquisa no Google e calcula o Valor Esperado — pode demorar até um minuto."
+          hint={t("insights.evalHint")}
         />
       )}
 
@@ -522,7 +526,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                     <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">{bet.event}</p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                       {[bet.competition, bet.bookmaker].filter(Boolean).join(" · ")}
-                      {bet.type === "MULTIPLA" && " · Múltipla"}
+                      {bet.type === "MULTIPLA" && ` · ${t("filters.type.multiple")}`}
                     </p>
                     <p className="text-xs mt-1.5">
                       <span className="text-zinc-500 dark:text-zinc-400">{bet.market}: </span>
@@ -534,23 +538,23 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                       <tc.Icon size={14} /> {formatEvPct(bet.expectedValuePct)}
                     </span>
                     <p className="text-[9px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mt-1">
-                      Valor Esperado
+                      {t("insights.expectedValue")}
                     </p>
                   </div>
                 </div>
 
                 <div className={`px-4 py-2 border-b text-[11px] font-semibold ${tc.soft}`}>
-                  {bet.verdictLabel} — EV {formatEvPct(bet.expectedValuePct)} por unidade
+                  {t("insights.verdictLineShort", { verdict: bet.verdictLabel, ev: formatEvPct(bet.expectedValuePct) })}
                 </div>
 
                 <div className="p-4 grid grid-cols-3 gap-3 text-center">
-                  <Metric label="Odd oferec." value={bet.offeredOdd.toFixed(2)} />
-                  <Metric label="Odd justa" value={bet.fairOdd.toFixed(2)} />
-                  <Metric label="Edge" value={`${bet.edgePct >= 0 ? "+" : ""}${bet.edgePct.toFixed(1)}%`} />
-                  <Metric label="Prob. est." value={`${(bet.estimatedProbability * 100).toFixed(1)}%`} />
-                  <Metric label="Prob. merc." value={`${(bet.impliedProbability * 100).toFixed(1)}%`} />
+                  <Metric label={t("insights.metric.offeredOddShort")} value={bet.offeredOdd.toFixed(2)} />
+                  <Metric label={t("insights.metric.fairOdd")} value={bet.fairOdd.toFixed(2)} />
+                  <Metric label={t("insights.metric.edge")} value={`${bet.edgePct >= 0 ? "+" : ""}${bet.edgePct.toFixed(1)}%`} />
+                  <Metric label={t("insights.metric.estProbShort")} value={`${(bet.estimatedProbability * 100).toFixed(1)}%`} />
+                  <Metric label={t("insights.metric.marketProbShort")} value={`${(bet.impliedProbability * 100).toFixed(1)}%`} />
                   <div>
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Confiança</p>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{t("insights.confidence")}</p>
                     <div className="mt-1.5 flex justify-center">
                       <ConfidenceDots level={bet.confidence} />
                     </div>
@@ -560,9 +564,8 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                 {halfKellyPct && (
                   <div className="px-4 pb-3 -mt-1">
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Stake sugerida (½ Kelly):{" "}
-                      <strong className="font-mono text-zinc-800 dark:text-zinc-100">{halfKellyPct}%</strong> do banco. Kelly é
-                      agressivo — usa fração e nunca apostes mais do que podes perder.
+                      {t("insights.kellyLabel")}{" "}
+                      {t("insights.kellyNote", { pct: halfKellyPct })}
                     </p>
                   </div>
                 )}
@@ -605,7 +608,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                   {bet.legs && bet.legs.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
-                        Pernas da múltipla
+                        {t("insights.legs")}
                       </p>
                       <div className="space-y-1">
                         {bet.legs.map((leg, j) => (

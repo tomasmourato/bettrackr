@@ -27,6 +27,7 @@ import {
   Check,
 } from "lucide-react";
 import { authFetch, parseJsonResponse, SessionExpiredError } from "../lib/authApi";
+import { useI18n } from "../lib/i18n";
 import { useLoadingSteps, evalStepsFor, PICKS_STEPS, type LoadingStep } from "../hooks/useLoadingSteps";
 import {
   requestBetEvaluation,
@@ -62,8 +63,9 @@ interface AIInsightsProps {
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 function ConfidenceDots({ level }: { level: number }) {
+  const { t } = useI18n();
   return (
-    <span className="inline-flex items-center gap-0.5" title={`Confiança ${level}/5`}>
+    <span className="inline-flex items-center gap-0.5" title={t("insights.confidenceLevel", { level })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
@@ -98,10 +100,8 @@ function toneClasses(bet: EvaluatedBet) {
   };
 }
 
-const AI_DISCLAIMER =
-  "Conteúdo gerado por IA com pesquisa web — a probabilidade e o Valor Esperado são estimativas, podem conter erros e não garantem qualquer resultado. Nada disto é aconselhamento financeiro. Aposta apenas o que podes perder. +18 · jogo responsável.";
-
 export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
+  const { t, formatDate, formatTime } = useI18n();
   const [mode, setMode] = useState<"picks" | "evaluate">("picks");
 
   // ---- Dicas de hoje ----
@@ -115,14 +115,14 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
     try {
       const res = await authFetch("/api/insights");
       const body = await parseJsonResponse(res);
-      if (!res.ok) throw new Error(body.error || "Não foi possível obter as dicas de hoje.");
+      if (!res.ok) throw new Error(body.error || t("insights.error.picks"));
       setData(body as InsightsResponse);
     } catch (err) {
       if (err instanceof SessionExpiredError) {
         onSessionExpired();
         return;
       }
-      setError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
+      setError(err instanceof Error ? err.message : t("insights.error.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -143,11 +143,11 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
 
   const handleEvalFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      setEvalError("Seleciona um ficheiro de imagem (PNG, JPG, WEBP).");
+      setEvalError(t("insights.error.notImage"));
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setEvalError("A imagem excede 3MB. Recorta o print e tenta novamente.");
+      setEvalError(t("insights.error.tooLargePrint"));
       return;
     }
     setEvalError(null);
@@ -162,17 +162,20 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
     setEvalError(null);
     setEvaluation(null);
     try {
-      const result = await requestBetEvaluation({
-        imageBase64: evalImage ?? undefined,
-        text: evalText.trim() || undefined,
-      });
+      const result = await requestBetEvaluation(
+        {
+          imageBase64: evalImage ?? undefined,
+          text: evalText.trim() || undefined,
+        },
+        t("ai.evalError"),
+      );
       setEvaluation(result);
     } catch (err) {
       if (err instanceof SessionExpiredError) {
         onSessionExpired();
         return;
       }
-      setEvalError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
+      setEvalError(err instanceof Error ? err.message : t("insights.error.unexpected"));
     } finally {
       setEvalLoading(false);
     }
@@ -211,12 +214,8 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
     groups.set(pick.sport, list);
   }
 
-  const formattedDate = data?.date
-    ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "full" }).format(new Date(`${data.date}T12:00:00`))
-    : "";
-  const generatedTime = data?.generatedAt
-    ? new Intl.DateTimeFormat("pt-PT", { hour: "2-digit", minute: "2-digit" }).format(new Date(data.generatedAt))
-    : "";
+  const formattedDate = data?.date ? formatDate(`${data.date}T12:00:00`, { dateStyle: "full" }) : "";
+  const generatedTime = data?.generatedAt ? formatTime(data.generatedAt) : "";
 
   return (
     <div className="space-y-5" id="insights-tab">
@@ -224,14 +223,16 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display flex items-center gap-2">
-            <Lightbulb size={20} className="text-amber-500" /> AI Insights
+            <Lightbulb size={20} className="text-amber-500" /> {t("insights.title")}
           </h3>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
             {mode === "picks"
               ? formattedDate
-                ? `Dicas para ${formattedDate}${generatedTime ? ` · geradas às ${generatedTime}` : ""}`
-                : "Dicas de picks para os jogos de hoje"
-              : "Cola um print e/ou descreve a aposta — a IA estima o Valor Esperado"}
+                ? generatedTime
+                  ? t("insights.picksForAt", { date: formattedDate, time: generatedTime })
+                  : t("insights.picksFor", { date: formattedDate })
+                : t("insights.picksSubtitle")
+              : t("insights.evalSubtitle")}
           </p>
         </div>
         {mode === "picks" && (
@@ -240,7 +241,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
             disabled={loading}
             className="px-3 py-1.5 rounded-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Atualizar
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> {t("insights.refresh")}
           </button>
         )}
       </div>
@@ -255,7 +256,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
               : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
           }`}
         >
-          <Sparkles size={13} /> Dicas de hoje
+          <Sparkles size={13} /> {t("insights.picksTab")}
         </button>
         <button
           onClick={() => setMode("evaluate")}
@@ -265,14 +266,14 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
               : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
           }`}
         >
-          <Calculator size={13} /> Avaliar aposta
+          <Calculator size={13} /> {t("insights.evaluateTab")}
         </button>
       </div>
 
       {/* Aviso: conteúdo gerado por IA + jogo responsável */}
       <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-sm flex items-start gap-2.5 text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
         <ShieldAlert size={15} className="shrink-0 mt-0.5" />
-        <span>{AI_DISCLAIMER}</span>
+        <span>{t("insights.disclaimer")}</span>
       </div>
 
       {/* =============== MODO: DICAS DE HOJE =============== */}
@@ -282,7 +283,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
             <AiProgress
               active={loading}
               steps={PICKS_STEPS}
-              hint="Na primeira visita do dia a análise é gerada na hora — pode demorar até um minuto."
+              hint={t("insights.picksHint")}
             />
           )}
 
@@ -294,7 +295,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                 onClick={load}
                 className="px-3.5 py-2 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors cursor-pointer"
               >
-                Tentar novamente
+                {t("insights.retry")}
               </button>
             </div>
           )}
@@ -358,8 +359,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
               ))}
 
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center pb-2">
-                As odds são aproximadas no momento da geração e mudam ao longo do dia — confirma sempre na casa de
-                apostas. Uma análise nova é gerada a cada dia.
+                {t("insights.oddsNote")}
               </p>
             </>
           )}
@@ -375,7 +375,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
               onChange={(e) => setEvalText(e.target.value)}
               rows={3}
               maxLength={2000}
-              placeholder="Descreve a aposta: evento, mercado, seleção, odd e casa. Ex.: Benfica vencer o Porto @2.10 na Betano. (podes também colar um print do boletim com Ctrl+V)"
+placeholder={t("insights.evalPlaceholder")}
               className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-zinc-800 dark:text-zinc-100 outline-none focus:border-emerald-600 resize-y"
             />
 
@@ -384,7 +384,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                 onClick={() => fileInputRef.current?.click()}
                 className="px-3 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-emerald-300 dark:hover:border-emerald-700 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
               >
-                <ImageIcon size={13} /> {evalImage ? "Trocar print" : "Anexar print"}
+                <ImageIcon size={13} /> {evalImage ? t("insights.swapPrint") : t("insights.attachPrint")}
               </button>
               <input
                 ref={fileInputRef}
@@ -398,9 +398,9 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                 }}
               />
               <span className="text-[10px] text-zinc-400 dark:text-zinc-500 inline-flex items-center gap-1">
-                <ClipboardPaste size={12} /> ou cola com <kbd className="px-1 py-0.5 rounded-sm border border-zinc-300 dark:border-zinc-600 font-mono text-[9px]">Ctrl+V</kbd>
+                <ClipboardPaste size={12} /> {t("insights.pasteWith")} <kbd className="px-1 py-0.5 rounded-sm border border-zinc-300 dark:border-zinc-600 font-mono text-[9px]">Ctrl+V</kbd>
               </span>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">Máx. 3MB · PNG, JPG, WEBP</span>
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">{t("import.fileTypesShort")}</span>
               <button
                 onClick={runEvaluation}
                 disabled={evalLoading || (!evalText.trim() && !evalImage)}
@@ -409,11 +409,11 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                 {evalLoading ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin"></div>
-                    A avaliar…
+                    {t("insights.evaluating")}
                   </>
                 ) : (
                   <>
-                    <Send size={13} /> Avaliar aposta
+                    <Send size={13} /> {t("insights.evaluate")}
                   </>
                 )}
               </button>
@@ -423,12 +423,12 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
               <div className="relative inline-block">
                 <img
                   src={evalImage}
-                  alt="Print da aposta"
+alt={t("insights.printAlt")}
                   className="max-h-40 rounded-sm border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 object-contain"
                 />
                 <button
                   onClick={() => setEvalImage(null)}
-                  aria-label="Remover imagem"
+aria-label={t("insights.removeImage")}
                   className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-zinc-800 text-white flex items-center justify-center border border-zinc-600 cursor-pointer"
                 >
                   <X size={13} />
@@ -443,7 +443,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
             <AiProgress
               active={evalLoading}
               steps={evalStepsFor(Boolean(evalImage))}
-              hint="A IA pesquisa no Google e calcula o Valor Esperado — pode demorar até um minuto."
+              hint={t("insights.evalHint")}
             />
           )}
 
@@ -470,7 +470,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                         <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">{bet.event}</p>
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                           {[bet.competition, bet.bookmaker].filter(Boolean).join(" · ")}
-                          {bet.type === "MULTIPLA" && " · Múltipla"}
+                          {bet.type === "MULTIPLA" && ` · ${t("filters.type.multiple")}`}
                         </p>
                         <p className="text-xs mt-1.5">
                           <span className="text-zinc-500 dark:text-zinc-400">{bet.market}: </span>
@@ -484,26 +484,26 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                           <tc.Icon size={14} /> {formatEvPct(bet.expectedValuePct)}
                         </span>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mt-1">
-                          Valor Esperado
+                          {t("insights.expectedValue")}
                         </p>
                       </div>
                     </div>
 
                     {/* Veredito */}
                     <div className={`px-4 py-2 border-b text-[11px] font-semibold ${tc.soft}`}>
-                      {bet.verdictLabel} — EV {formatEvPct(bet.expectedValuePct)} por unidade apostada
+                      {t("insights.verdictLine", { verdict: bet.verdictLabel, ev: formatEvPct(bet.expectedValuePct) })}
                     </div>
 
                     {/* Métricas */}
                     <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
-                      <Metric label="Odd oferecida" value={bet.offeredOdd.toFixed(2)} icon={Target} />
-                      <Metric label="Odd justa" value={bet.fairOdd.toFixed(2)} icon={Scale} />
-                      <Metric label="Edge" value={`${bet.edgePct >= 0 ? "+" : ""}${bet.edgePct.toFixed(1)}%`} />
-                      <Metric label="Prob. estimada" value={`${(bet.estimatedProbability * 100).toFixed(1)}%`} />
-                      <Metric label="Prob. mercado" value={`${(bet.impliedProbability * 100).toFixed(1)}%`} />
+                      <Metric label={t("insights.metric.offeredOdd")} value={bet.offeredOdd.toFixed(2)} icon={Target} />
+                      <Metric label={t("insights.metric.fairOdd")} value={bet.fairOdd.toFixed(2)} icon={Scale} />
+                      <Metric label={t("insights.metric.edge")} value={`${bet.edgePct >= 0 ? "+" : ""}${bet.edgePct.toFixed(1)}%`} />
+                      <Metric label={t("insights.metric.estProb")} value={`${(bet.estimatedProbability * 100).toFixed(1)}%`} />
+                      <Metric label={t("insights.metric.marketProb")} value={`${(bet.impliedProbability * 100).toFixed(1)}%`} />
                       <div>
                         <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                          Confiança
+                          {t("insights.confidence")}
                         </p>
                         <div className="mt-1.5 flex justify-center">
                           <ConfidenceDots level={bet.confidence} />
@@ -514,9 +514,8 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                     {halfKellyPct && (
                       <div className="px-4 pb-3 -mt-1">
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                          Stake sugerida (½ Kelly):{" "}
-                          <strong className="font-mono text-zinc-800 dark:text-zinc-100">{halfKellyPct}%</strong> do teu
-                          banco. Kelly é agressivo — usa fração e nunca apostes mais do que podes perder.
+                          {t("insights.kellyLabel")}{" "}
+                          {t("insights.kellyNote", { pct: halfKellyPct })}
                         </p>
                       </div>
                     )}
@@ -560,7 +559,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
                       {bet.legs && bet.legs.length > 0 && (
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
-                            Pernas da múltipla
+                            {t("insights.legs")}
                           </p>
                           <div className="space-y-1">
                             {bet.legs.map((leg, j) => (
@@ -594,14 +593,15 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
 // Cartão de espera com os passos da IA: o passo atual em destaque, os
 // anteriores marcados como feitos e o tempo decorrido.
 function AiProgress({ active, steps, hint }: { active: boolean; steps: LoadingStep[]; hint: string }) {
-  const { index, elapsed, label } = useLoadingSteps(active, steps);
+  const { t } = useI18n();
+  const { index, elapsed, key } = useLoadingSteps(active, steps);
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-8 flex flex-col items-center gap-4 text-center">
       <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
 
       <div>
-        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{label}</p>
+        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{key ? t(key) : ""}</p>
         <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">{hint}</p>
       </div>
 
@@ -616,14 +616,14 @@ function AiProgress({ active, steps, hint }: { active: boolean; steps: LoadingSt
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0 mx-[3px]"></span>
               )}
               <span className={done ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-200 font-medium"}>
-                {step.label}
+                {t(step.key)}
               </span>
             </li>
           );
         })}
       </ul>
 
-      <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 tabular-nums">{elapsed}s decorridos</p>
+      <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 tabular-nums">{t("insights.elapsed", { n: elapsed })}</p>
     </div>
   );
 }
