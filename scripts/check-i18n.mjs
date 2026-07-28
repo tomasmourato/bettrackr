@@ -56,6 +56,9 @@ const MIGRATED = [
   "src/mobile/screens/MobileInsights.tsx",
   "src/hooks/useLoadingSteps.ts",
   "src/lib/betEvaluation.ts",
+
+  // Merge do PR #8 — componente novo, traduzido ao integrar
+  "src/components/FilteredBetsSummary.tsx",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são

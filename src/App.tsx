@@ -96,6 +96,7 @@ export default function App({ initialData }: AppProps) {
       sport: filters.sport ?? "ALL",
       type: filters.type ?? "ALL",
       money: filters.money ?? "ALL",
+      search: "",
       timeframe: {
         timeframe: filters.timeframe ?? "ALL",
         startDate: filters.dateFrom ?? "",
@@ -425,4 +426,3 @@ export default function App({ initialData }: AppProps) {
     </I18nProvider>
   );
 }
-

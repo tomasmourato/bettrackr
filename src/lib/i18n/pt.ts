@@ -41,6 +41,7 @@ export const PT = {
   "status.pending": "Pendente",
   "status.unsettled": "Por liquidar",
   "status.unsettledLong": "Por liquidar (pendente)",
+  "status.unknown": "Desconhecido",
   "status.resolved": "Resolvidas",
 
   // ----------------------------------------------------------------
@@ -352,7 +353,7 @@ export const PT = {
   "bets.form.snr": "Stake não devolvida — SNR (ganho = (odd−1)×stake)",
   "bets.form.sr": "Stake devolvida — SR (ganho = odd×stake)",
   "bets.form.freebetDefault":
-    "Predefinido pela casa ({bookmaker}). SNR é o padrão; o Betclic usa SR.",
+    "Predefinido pela casa ({bookmaker}). SNR é o padrão da indústria; a Betclic e a Betano usam SR.",
   "bets.form.riskFreeInfo":
     "Aposta sem risco: a stake é dinheiro real e conta para o lucro como uma aposta normal. Se ganhar, o lucro é normal; se perder, perde a stake. Regista a freebet devolvida como uma aposta à parte quando a usares.",
   "bets.form.stake": "Valor da aposta (stake)",
@@ -444,6 +445,17 @@ export const PT = {
   "bets.toast.bulkRestored": { one: "{n} aposta reposta", other: "{n} apostas repostas" },
   "bets.toast.bulkDuplicated": { one: "{n} aposta duplicada", other: "{n} apostas duplicadas" },
   "bets.toast.bulkDeleted": { one: "{n} aposta apagada", other: "{n} apostas apagadas" },
+
+  // ----------------------------------------------------------------
+  // Resumo financeiro das apostas filtradas (FilteredBetsSummary)
+  // ----------------------------------------------------------------
+  "summary.aria": "Resumo financeiro das apostas filtradas",
+  "summary.totalStaked": "Total apostado",
+  "summary.totalReturned": "Total recebido",
+  "summary.netResult": "Resultado líquido",
+  "summary.betsCounted": "Apostas consideradas",
+  "summary.freebetAria": "Explicar montante de freebet",
+  "summary.freebetTooltip": "Valor utilizado em freebets",
 
   // ----------------------------------------------------------------
   // Painel (Dashboard desktop + MobileDashboard)
@@ -600,7 +612,7 @@ export const PT = {
   "ext.title": "Importar apostas",
   "ext.active": "Extensão ativa",
   "ext.desc":
-    "Com a extensão de browser instalada, importas as tuas apostas do Betclic e Betano com um clique — sem exportações manuais. Cada casa é lida da tua própria sessão.",
+    "Com a extensão de browser instalada, importas as tuas apostas da Betclic e da Betano com um clique — sem exportações manuais. Cada casa é lida da tua própria sessão.",
   "ext.searching": "A procurar a extensão…",
   "ext.account": "Conta {bookmaker}",
   "ext.importing": "A importar…",

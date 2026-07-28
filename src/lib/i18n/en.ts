@@ -35,6 +35,7 @@ export const EN: Record<TKey, Entry> = {
   "status.pending": "Pending",
   "status.unsettled": "Unsettled",
   "status.unsettledLong": "Unsettled (pending)",
+  "status.unknown": "Unknown",
   "status.resolved": "Resolved",
 
   // ----------------------------------------------------------------
@@ -346,7 +347,7 @@ export const EN: Record<TKey, Entry> = {
   "bets.form.snr": "Stake not returned — SNR (win = (odds−1)×stake)",
   "bets.form.sr": "Stake returned — SR (win = odds×stake)",
   "bets.form.freebetDefault":
-    "Preset by the bookmaker ({bookmaker}). SNR is the default; Betclic uses SR.",
+    "Preset by the bookmaker ({bookmaker}). SNR is the industry default; Betclic and Betano use SR.",
   "bets.form.riskFreeInfo":
     "Risk-free bet: the stake is real money and counts towards profit like a normal bet. If it wins, the profit is normal; if it loses, you lose the stake. Record the refunded freebet as a separate bet when you use it.",
   "bets.form.stake": "Bet amount (stake)",
@@ -438,6 +439,17 @@ export const EN: Record<TKey, Entry> = {
   "bets.toast.bulkRestored": { one: "{n} bet restored", other: "{n} bets restored" },
   "bets.toast.bulkDuplicated": { one: "{n} bet duplicated", other: "{n} bets duplicated" },
   "bets.toast.bulkDeleted": { one: "{n} bet deleted", other: "{n} bets deleted" },
+
+  // ----------------------------------------------------------------
+  // Filtered bets financial summary (FilteredBetsSummary)
+  // ----------------------------------------------------------------
+  "summary.aria": "Financial summary of the filtered bets",
+  "summary.totalStaked": "Total staked",
+  "summary.totalReturned": "Total returned",
+  "summary.netResult": "Net result",
+  "summary.betsCounted": "Bets counted",
+  "summary.freebetAria": "Explain the freebet amount",
+  "summary.freebetTooltip": "Amount used in freebets",
 
   // ----------------------------------------------------------------
   // Dashboard (desktop Dashboard + MobileDashboard)
