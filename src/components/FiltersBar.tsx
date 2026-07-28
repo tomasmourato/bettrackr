@@ -1,5 +1,6 @@
 import React from "react";
 import { Filter } from "lucide-react";
+import { useI18n } from "../lib/i18n";
 
 interface FiltersBarProps {
   activeFilterCount: number;
@@ -31,6 +32,7 @@ export default function FiltersBar({
   bordered = false,
   id,
 }: FiltersBarProps) {
+  const { t } = useI18n();
   return (
     <div
       id={id}
@@ -40,7 +42,7 @@ export default function FiltersBar({
     >
       <div className="flex min-w-fit items-center justify-between gap-3 xl:justify-start">
         <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-          <Filter size={13} /> Filtros
+          <Filter size={13} /> {t("common.filters")}
           {activeFilterCount > 0 && (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-100 px-1.5 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
               {activeFilterCount}
@@ -53,7 +55,7 @@ export default function FiltersBar({
             onClick={onClear}
             className="text-[10px] font-semibold text-zinc-400 transition-colors hover:text-emerald-600 dark:text-zinc-500 dark:hover:text-emerald-300 cursor-pointer"
           >
-            Limpar
+            {t("common.clear")}
           </button>
         )}
       </div>

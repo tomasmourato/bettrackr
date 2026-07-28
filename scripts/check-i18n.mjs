@@ -39,6 +39,14 @@ const MIGRATED = [
   "src/components/BetsManager.tsx",
   "src/mobile/screens/MobileBets.tsx",
   "src/hooks/useBetForm.ts",
+
+  // Fase 3 — Filtros, social, autenticação e ecrã de erro
+  "src/components/TimeframeFilter.tsx",
+  "src/components/FiltersBar.tsx",
+  "src/components/Social.tsx",
+  "src/mobile/screens/MobileSocial.tsx",
+  "src/components/AuthPage.tsx",
+  "src/components/ErrorBoundary.tsx",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são
@@ -108,13 +116,16 @@ for (const [key, ptEntry] of pt) {
 // 3. Regressões nos ficheiros migrados
 // ----------------------------------------------------------------
 
-// Remove comentários (o código é comentado em português de propósito) e as
-// chamadas t("...") (as chaves são ASCII, mas os argumentos podem não ser).
+// Ignora o que não é texto de interface:
+//   - comentários (o código é comentado em português de propósito);
+//   - chamadas console.* — diagnóstico para quem desenvolve, não para quem
+//     usa a app, por isso não são traduzidas (mesma categoria dos comentários).
 function stripNoise(source) {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "")
-    .replace(/\/\/.*$/gm, "");
+    .replace(/\/\/.*$/gm, "")
+    .replace(/console\.\w+\([\s\S]*?\);/g, "");
 }
 
 for (const file of MIGRATED) {

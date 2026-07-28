@@ -25,6 +25,7 @@ import {
   fetchFriendBets,
 } from "../lib/socialApi";
 import Dashboard from "./Dashboard";
+import { useI18n, type TKey } from "../lib/i18n";
 
 interface SocialProps {
   currency: string;
@@ -32,26 +33,27 @@ interface SocialProps {
 }
 
 // Etiqueta + cores para cada estado de aposta (lista read-only do amigo).
-function statusMeta(status: Bet["status"]): { label: string; className: string } {
+function statusMeta(status: Bet["status"]): { key: TKey; className: string } {
   switch (status) {
     case "GANHA":
-      return { label: "Ganha", className: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900" };
+      return { key: "status.won", className: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900" };
     case "MEIO_GANHA":
-      return { label: "Meio Ganha", className: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900" };
+      return { key: "status.halfWon", className: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900" };
     case "PERDIDA":
-      return { label: "Perdida", className: "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900" };
+      return { key: "status.lost", className: "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900" };
     case "MEIO_PERDIDA":
-      return { label: "Meio Perdida", className: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900" };
+      return { key: "status.halfLost", className: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900" };
     case "ANULADA":
-      return { label: "Anulada", className: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700" };
+      return { key: "status.void", className: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700" };
     case "CASHOUT":
-      return { label: "Cashout", className: "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-900" };
+      return { key: "status.cashout", className: "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-900" };
     default:
-      return { label: "Por Liquidar", className: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900" };
+      return { key: "status.unsettled", className: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900" };
   }
 }
 
 export default function Social({ currency, isDark }: SocialProps) {
+  const { t, formatMoney, formatSignedMoney } = useI18n();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
@@ -81,7 +83,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       setIncoming(r.incoming);
       setOutgoing(r.outgoing);
     } catch (e: any) {
-      setError(e?.message || "Erro ao carregar os dados sociais.");
+      setError(e?.message || t("social.error.load"));
     } finally {
       setLoading(false);
     }
@@ -126,20 +128,20 @@ export default function Social({ currency, isDark }: SocialProps) {
     try {
       const status = await sendFriendRequest(u.username);
       patchResult(u.id, status === "friends" ? "friends" : "outgoing");
-      flashNotice(status === "friends" ? `Agora és amigo de ${u.username}.` : `Pedido enviado a ${u.username}.`);
+      flashNotice(t(status === "friends" ? "social.nowFriends" : "social.requestSent", { username: u.username }));
       refresh();
     } catch (e: any) {
-      setError(e?.message || "Erro ao enviar o pedido.");
+      setError(e?.message || t("social.error.send"));
     }
   };
 
   const handleAccept = async (r: FriendRequest) => {
     try {
       await acceptFriendRequest(r.id);
-      flashNotice(`Aceitaste o pedido de ${r.username}.`);
+      flashNotice(t("social.accepted", { username: r.username }));
       refresh();
     } catch (e: any) {
-      setError(e?.message || "Erro ao aceitar o pedido.");
+      setError(e?.message || t("social.error.accept"));
     }
   };
 
@@ -148,7 +150,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       await removeFriendRequest(r.id);
       refresh();
     } catch (e: any) {
-      setError(e?.message || "Erro ao remover o pedido.");
+      setError(e?.message || t("social.error.removeRequest"));
     }
   };
 
@@ -158,7 +160,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       if (viewing?.id === f.id) setViewing(null);
       refresh();
     } catch (e: any) {
-      setError(e?.message || "Erro ao remover a amizade.");
+      setError(e?.message || t("social.error.removeFriend"));
     }
   };
 
@@ -171,7 +173,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       const { bets } = await fetchFriendBets(f.id);
       setFriendBets(bets);
     } catch (e: any) {
-      setViewError(e?.message || "Erro ao obter as apostas do amigo.");
+      setViewError(e?.message || t("social.error.friendBets"));
     } finally {
       setViewLoading(false);
     }
@@ -198,7 +200,7 @@ export default function Social({ currency, isDark }: SocialProps) {
               onClick={() => setViewing(null)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
             >
-              <ArrowLeft size={14} /> Voltar
+              <ArrowLeft size={14} /> {t("social.back")}
             </button>
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm uppercase">
@@ -208,7 +210,7 @@ export default function Social({ currency, isDark }: SocialProps) {
                 <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 tracking-tight font-display leading-tight">
                   {viewing.username}
                 </h2>
-                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-bold">Perfil de amigo</p>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-bold">{t("social.friendProfile")}</p>
               </div>
             </div>
           </div>
@@ -216,7 +218,7 @@ export default function Social({ currency, isDark }: SocialProps) {
             onClick={() => handleRemoveFriend(viewing)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-sm bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold transition-colors cursor-pointer"
           >
-            <UserMinus size={14} /> Remover amigo
+            <UserMinus size={14} /> {t("social.removeFriend")}
           </button>
         </div>
 
@@ -228,7 +230,7 @@ export default function Social({ currency, isDark }: SocialProps) {
 
         {viewLoading ? (
           <div className="flex items-center justify-center py-16 text-zinc-400 dark:text-zinc-500 text-xs gap-2">
-            <Loader2 size={16} className="animate-spin" /> A carregar as estatísticas de {viewing.username}…
+            <Loader2 size={16} className="animate-spin" /> {t("social.loadingStats", { username: viewing.username })}
           </div>
         ) : (
           <>
@@ -238,34 +240,34 @@ export default function Social({ currency, isDark }: SocialProps) {
             {/* Lista read-only das apostas do amigo. */}
             <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800">
               <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display mb-1">
-                Apostas de {viewing.username}
+                {t("social.friendBets", { username: viewing.username })}
               </h4>
               <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">
-                As 50 apostas mais recentes ({friendBets.length} no total)
+                {t("social.recentBets", { total: friendBets.length })}
               </p>
 
               {recentFriendBets.length === 0 ? (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 py-6 text-center">
-                  Este amigo ainda não registou apostas.
+                  {t("social.noFriendBets")}
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-zinc-100 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
-                        <th className="py-2.5">Data</th>
-                        <th className="py-2.5">Evento</th>
-                        <th className="py-2.5">Casa</th>
-                        <th className="py-2.5 text-right">Stake</th>
-                        <th className="py-2.5 text-right">Odd</th>
-                        <th className="py-2.5 text-center">Estado</th>
-                        <th className="py-2.5 text-right">Lucro</th>
+                        <th className="py-2.5">{t("bets.sort.date")}</th>
+                        <th className="py-2.5">{t("social.table.event")}</th>
+                        <th className="py-2.5">{t("bets.details.bookmaker")}</th>
+                        <th className="py-2.5 text-right">{t("bets.field.stake")}</th>
+                        <th className="py-2.5 text-right">{t("bets.field.odd")}</th>
+                        <th className="py-2.5 text-center">{t("filters.status")}</th>
+                        <th className="py-2.5 text-right">{t("bets.sort.profit")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                       {recentFriendBets.map((bet) => {
                         const meta = statusMeta(bet.status);
-                        const event = bet.selections?.[0]?.event || "Múltipla";
+                        const event = bet.selections?.[0]?.event || t("bet.multiple");
                         const extra = (bet.selections?.length || 0) > 1 ? ` +${bet.selections.length - 1}` : "";
                         return (
                           <tr key={bet.id} className="text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
@@ -275,15 +277,15 @@ export default function Social({ currency, isDark }: SocialProps) {
                             </td>
                             <td className="py-2.5">{bet.bookmaker}</td>
                             <td className="py-2.5 text-right font-mono">
-                              {safeNum(bet.stake).toLocaleString("pt-PT", { minimumFractionDigits: 2 })}{currency}
+                              {formatMoney(safeNum(bet.stake), currency)}
                               {bet.isFreebet && <span className="ml-1 text-[8px] font-bold text-amber-600 dark:text-amber-400 uppercase">FB</span>}
                             </td>
                             <td className="py-2.5 text-right font-mono">@{safeNum(bet.odd).toFixed(2)}</td>
                             <td className="py-2.5 text-center">
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-sm uppercase border ${meta.className}`}>{meta.label}</span>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-sm uppercase border ${meta.className}`}>{t(meta.key)}</span>
                             </td>
                             <td className={`py-2.5 text-right font-semibold font-mono ${safeNum(bet.netProfit) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                              {bet.status === "POR_LIQUIDAR" ? "—" : `${safeNum(bet.netProfit) >= 0 ? "+" : ""}${safeNum(bet.netProfit).toFixed(2)}${currency}`}
+                              {bet.status === "POR_LIQUIDAR" ? "—" : formatSignedMoney(safeNum(bet.netProfit), currency)}
                             </td>
                           </tr>
                         );
@@ -306,10 +308,10 @@ export default function Social({ currency, isDark }: SocialProps) {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight font-display flex items-center gap-2">
-          <Users size={20} className="text-emerald-600 dark:text-emerald-400" /> Social
+          <Users size={20} className="text-emerald-600 dark:text-emerald-400" /> {t("social.title")}
         </h2>
         <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-          Adiciona amigos para verem as estatísticas e apostas uns dos outros.
+          {t("social.subtitle")}
         </p>
       </div>
 
@@ -328,14 +330,14 @@ export default function Social({ currency, isDark }: SocialProps) {
       {/* Procurar / adicionar amigos */}
       <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800 space-y-3">
         <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-          <UserPlus size={16} className="text-emerald-600 dark:text-emerald-400" /> Adicionar amigo
+          <UserPlus size={16} className="text-emerald-600 dark:text-emerald-400" /> {t("social.addFriend")}
         </h4>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Procurar por username…"
+placeholder={t("social.searchPlaceholder")}
             className="w-full pl-9 pr-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-sm text-zinc-700 dark:text-zinc-200"
           />
         </div>
@@ -343,10 +345,10 @@ export default function Social({ currency, isDark }: SocialProps) {
         {query.trim().length >= 2 && (
           <div className="space-y-1.5">
             {searching && (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 px-1"><Loader2 size={12} className="animate-spin" /> A procurar…</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 px-1"><Loader2 size={12} className="animate-spin" /> {t("social.searching")}</p>
             )}
             {!searching && results.length === 0 && (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 px-1">Nenhum utilizador encontrado.</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 px-1">{t("social.noUsers")}</p>
             )}
             {results.map((u) => (
               <div key={u.id} className="flex items-center justify-between gap-2 p-2 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/60">
@@ -357,17 +359,17 @@ export default function Social({ currency, isDark }: SocialProps) {
                   <span className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate">{u.username}</span>
                 </div>
                 {u.relationship === "friends" ? (
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider px-2">Amigos</span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider px-2">{t("social.friends")}</span>
                 ) : u.relationship === "outgoing" ? (
-                  <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-2 flex items-center gap-1"><Clock size={11} /> Pendente</span>
+                  <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-2 flex items-center gap-1"><Clock size={11} /> {t("social.pending")}</span>
                 ) : u.relationship === "incoming" ? (
-                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider px-2">Pediu-te</span>
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider px-2">{t("social.askedYou")}</span>
                 ) : (
                   <button
                     onClick={() => handleSend(u)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
                   >
-                    <UserPlus size={13} /> Adicionar
+                    <UserPlus size={13} /> {t("social.add")}
                   </button>
                 )}
               </div>
@@ -378,26 +380,26 @@ export default function Social({ currency, isDark }: SocialProps) {
 
       {loading ? (
         <div className="flex items-center justify-center py-12 text-zinc-400 dark:text-zinc-500 text-xs gap-2">
-          <Loader2 size={16} className="animate-spin" /> A carregar…
+          <Loader2 size={16} className="animate-spin" /> {t("common.loading")}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pedidos recebidos */}
           <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800">
             <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2 mb-3">
-              <Inbox size={16} className="text-emerald-600 dark:text-emerald-400" /> Pedidos recebidos
+              <Inbox size={16} className="text-emerald-600 dark:text-emerald-400" /> {t("social.incoming")}
               {incoming.length > 0 && <span className="text-[10px] font-bold bg-emerald-600 text-white rounded-full px-1.5 py-0.5">{incoming.length}</span>}
             </h4>
             {incoming.length === 0 ? (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 py-2">Sem pedidos pendentes.</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 py-2">{t("social.noPending")}</p>
             ) : (
               <div className="space-y-2">
                 {incoming.map((r) => (
                   <div key={r.id} className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate">{r.username}</span>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <button onClick={() => handleAccept(r)} title="Aceitar" className="p-1.5 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"><Check size={14} /></button>
-                      <button onClick={() => handleRemoveRequest(r)} title="Recusar" className="p-1.5 rounded-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"><X size={14} /></button>
+                      <button onClick={() => handleAccept(r)} title={t("social.accept")} className="p-1.5 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"><Check size={14} /></button>
+                      <button onClick={() => handleRemoveRequest(r)} title={t("social.decline")} className="p-1.5 rounded-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"><X size={14} /></button>
                     </div>
                   </div>
                 ))}
@@ -406,12 +408,12 @@ export default function Social({ currency, isDark }: SocialProps) {
 
             {outgoing.length > 0 && (
               <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <h5 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Send size={11} /> Enviados</h5>
+                <h5 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Send size={11} /> {t("social.sent")}</h5>
                 <div className="space-y-2">
                   {outgoing.map((r) => (
                     <div key={r.id} className="flex items-center justify-between gap-2">
                       <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-1.5"><Clock size={11} /> {r.username}</span>
-                      <button onClick={() => handleRemoveRequest(r)} className="text-[10px] font-semibold text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 uppercase tracking-wider transition-colors cursor-pointer">Cancelar</button>
+                      <button onClick={() => handleRemoveRequest(r)} className="text-[10px] font-semibold text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 uppercase tracking-wider transition-colors cursor-pointer">{t("common.cancel")}</button>
                     </div>
                   ))}
                 </div>
@@ -422,11 +424,11 @@ export default function Social({ currency, isDark }: SocialProps) {
           {/* Amigos */}
           <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800">
             <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2 mb-3">
-              <Users size={16} className="text-emerald-600 dark:text-emerald-400" /> Amigos
+              <Users size={16} className="text-emerald-600 dark:text-emerald-400" /> {t("social.friends")}
               {friends.length > 0 && <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">({friends.length})</span>}
             </h4>
             {friends.length === 0 ? (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 py-2">Ainda não tens amigos. Procura por username acima.</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 py-2">{t("social.noFriends")}</p>
             ) : (
               <div className="space-y-1.5">
                 {friends.map((f) => (
@@ -437,12 +439,12 @@ export default function Social({ currency, isDark }: SocialProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate">{f.username}</p>
-                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Ver estatísticas e apostas →</p>
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{t("social.viewStats")}</p>
                       </div>
                     </button>
                     <button
                       onClick={() => handleRemoveFriend(f)}
-                      title="Remover amigo"
+title={t("social.removeFriend")}
                       className="p-1.5 rounded-sm text-zinc-300 dark:text-zinc-600 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
                     >
                       <UserMinus size={14} />

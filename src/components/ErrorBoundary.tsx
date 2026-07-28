@@ -1,4 +1,19 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { translate } from "../lib/i18n";
+import type { Language } from "../types";
+
+// Esta fronteira envolve a app INTEIRA, por isso fica acima do <I18nProvider>
+// e não pode usar o useI18n() (além de ser um componente de classe). Lê o
+// idioma diretamente das preferências guardadas — se falhar, cai no português.
+function storedLanguage(): Language {
+  try {
+    const raw = localStorage.getItem("g_prefs");
+    const language = raw ? JSON.parse(raw).language : null;
+    return language === "en" || language === "pt" ? language : "pt";
+  } catch {
+    return "pt";
+  }
+}
 
 // Rede de segurança de topo. Sem isto, qualquer erro em runtime ou de
 // hidratação (ex.: um gráfico que hidrata de forma diferente entre servidor e
@@ -34,21 +49,23 @@ export class ErrorBoundary extends Component<Props, State> {
     const { error } = this.state;
     if (!error) return this.props.children;
 
+    const lang = storedLanguage();
+    const t = (key: Parameters<typeof translate>[1]) => translate(lang, key);
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
         <div className="max-w-md w-full text-center">
           <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-            Algo correu mal
+            {t("error.title")}
           </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            A página não conseguiu carregar. Tenta recarregar; se persistir, o
-            detalhe abaixo ajuda-nos a corrigir.
+            {t("error.desc")}
           </p>
           <button
             onClick={this.handleReload}
             className="mt-4 inline-flex items-center rounded-sm bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
           >
-            Recarregar
+            {t("error.reload")}
           </button>
           <pre className="mt-4 max-h-40 overflow-auto rounded-sm bg-zinc-100 dark:bg-zinc-900 p-3 text-left text-[11px] text-rose-600 dark:text-rose-400 whitespace-pre-wrap break-words">
             {error.message}

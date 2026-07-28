@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { login, register } from "../lib/authApi";
 import { BrandMark } from "./BrandMark";
+import { useI18n } from "../lib/i18n";
 
 type Mode = "login" | "signup";
 
@@ -16,6 +17,7 @@ const INPUT_CLASSES =
   "w-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-sm px-3 py-3 text-base sm:py-2.5 sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors";
 
 export default function AuthPage({ onAuthenticated }: AuthPageProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -39,7 +41,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
           : await register(username, email, password);
       onAuthenticated(user);
     } catch (err: any) {
-      setError(err.message || "Ocorreu um erro. Tenta novamente.");
+      setError(err.message || t("auth.genericError"));
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
           <BrandMark size={52} />
           <div className="text-center">
             <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight font-display">BetTrackr</h1>
-            <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-[0.22em] font-mono mt-0.5">Gestão de Apostas</p>
+            <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-[0.22em] font-mono mt-0.5">{t("app.brandTagline")}</p>
           </div>
         </div>
 
@@ -82,7 +84,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
               mode === "login" ? "bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-300 shadow-xs" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
             }`}
           >
-            Entrar
+            {t("auth.login")}
           </button>
           <button
             type="button"
@@ -93,7 +95,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
               mode === "signup" ? "bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-300 shadow-xs" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
             }`}
           >
-            Criar conta
+            {t("auth.signup")}
           </button>
         </div>
 
@@ -108,12 +110,12 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
                 transition={{ duration: 0.18 }}
                 className="block overflow-hidden"
               >
-                <span className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1.5 font-mono">Username</span>
+                <span className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1.5 font-mono">{t("account.username")}</span>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="o_teu_username"
+placeholder={t("auth.usernamePlaceholder")}
                   autoComplete="username"
                   required
                   minLength={3}
@@ -124,12 +126,12 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
           </AnimatePresence>
 
           <label className="block">
-            <span className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1.5 font-mono">Email</span>
+            <span className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1.5 font-mono">{t("account.email")}</span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@exemplo.com"
+placeholder={t("auth.emailPlaceholder")}
               autoComplete="email"
               required
               className={INPUT_CLASSES}
@@ -137,7 +139,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
           </label>
 
           <label className="block">
-            <span className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1.5 font-mono">Password</span>
+            <span className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1.5 font-mono">{t("auth.password")}</span>
             <input
               type="password"
               value={password}
@@ -149,7 +151,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
               className={INPUT_CLASSES}
             />
             {mode === "signup" && (
-              <span className="block text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">Mínimo 8 caracteres.</span>
+              <span className="block text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">{t("auth.passwordHint")}</span>
             )}
           </label>
 
@@ -164,23 +166,23 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
             disabled={loading}
             className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-sm py-3 sm:py-2.5 transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
           >
-            {loading ? "Aguarda…" : mode === "login" ? "Entrar" : "Criar conta"}
+            {loading ? t("auth.loading") : mode === "login" ? t("auth.login") : t("auth.signup")}
           </button>
         </form>
 
         <p className="text-center text-xs text-zinc-500 dark:text-zinc-400 mt-5">
           {mode === "login" ? (
             <>
-              Ainda não tens conta?{" "}
+              {t("auth.noAccount")}{" "}
               <button type="button" onClick={() => switchMode("signup")} className="text-emerald-600 dark:text-emerald-400 font-semibold hover:text-emerald-700 dark:hover:text-emerald-300 cursor-pointer">
-                Regista-te
+                {t("auth.register")}
               </button>
             </>
           ) : (
             <>
-              Já tens conta?{" "}
+              {t("auth.hasAccount")}{" "}
               <button type="button" onClick={() => switchMode("login")} className="text-emerald-600 dark:text-emerald-400 font-semibold hover:text-emerald-700 dark:hover:text-emerald-300 cursor-pointer">
-                Inicia sessão
+                {t("auth.signin")}
               </button>
             </>
           )}
