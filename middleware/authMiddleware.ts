@@ -7,6 +7,13 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     username: string;
+    /**
+     * Quem pediu o token. "extension" é gravado no JWT no momento do login
+     * feito a partir da extensão; o site não envia nada. Serve para o servidor
+     * poder exigir subscrição só ao que vem da extensão, sem estragar o
+     * registo manual de apostas, que é grátis.
+     */
+    client?: string;
   };
 }
 
@@ -46,8 +53,9 @@ export function authenticatedUserFromRequest(req: Request): AuthenticatedRequest
     const payload = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] }) as {
       id: string;
       username: string;
+      client?: string;
     };
-    return { id: payload.id, username: payload.username };
+    return { id: payload.id, username: payload.username, client: payload.client };
   } catch {
     return null;
   }

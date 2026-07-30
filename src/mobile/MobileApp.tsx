@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { Moon, Sun, X } from "lucide-react";
 
 import { BrandMark } from "../components/BrandMark";
-import { NAV_ITEMS, type ShellProps, type AppTab } from "../navigation";
+import { navItemsFor, PAID_TABS, type ShellProps, type AppTab } from "../navigation";
+import { MobilePaywall } from "./components/MobileSubscription";
 import { tapHaptic } from "../lib/haptics";
 import { useNativeChrome, useAndroidBackButton, exitNativeApp } from "./lib/useNativeChrome";
 import { runTopBackHandler } from "./lib/backStack";
@@ -19,6 +20,7 @@ const MobileImport = lazy(() => import("./screens/MobileImport"));
 const MobileSettings = lazy(() => import("./screens/MobileSettings"));
 const MobileSocial = lazy(() => import("./screens/MobileSocial"));
 const MobileInsights = lazy(() => import("./screens/MobileInsights"));
+const MobileAdmin = lazy(() => import("./screens/MobileAdmin"));
 
 // Casca mobile real. Dentro do ToastProvider para os toasts (e o aviso de
 // duplo-back) funcionarem em toda a árvore.
@@ -38,6 +40,9 @@ function MobileShell(props: ShellProps) {
     onToggleTheme,
     t,
     isOnline,
+    subscription,
+    subscriptionLoading,
+    refreshSubscription,
     bets,
     isLoading,
     error,
@@ -62,6 +67,15 @@ function MobileShell(props: ShellProps) {
 
   const toast = useToast();
   const lastBackRef = useRef(0);
+
+  const navItems = navItemsFor(subscription?.role);
+
+  // Enquanto `subscription` for null ainda não se sabe se há acesso: o ecrã
+  // abre e é o 402 do servidor que trava o pedido, em vez de piscar o
+  // paywall a quem já paga.
+  const blockedByPaywall = Boolean(
+    subscription && !subscription.entitled && PAID_TABS.has(activeTab),
+  );
 
   // Status bar edge-to-edge + estilo por tema, e esconder o splash.
   useNativeChrome(isDark);
@@ -169,11 +183,21 @@ function MobileShell(props: ShellProps) {
                     <MobileBets bets={bets} currency={preferences.currency} onAddBet={onAddBet} onAddBets={onDuplicateBets} onUpdateBet={onUpdateBet} onIgnoreBet={onIgnoreBet} onDeleteBet={onDeleteBet} accounts={accounts} />
                   </PullToRefresh>
                 )}
-                {activeTab === "IMPORT" && (
+                {blockedByPaywall && subscription && (
+                  <MobilePaywall
+                    status={subscription}
+                    onRefresh={() => void refreshSubscription()}
+                    refreshing={subscriptionLoading}
+                  />
+                )}
+                {activeTab === "IMPORT" && !blockedByPaywall && (
                   <MobileImport currency={preferences.currency} onAddBet={onAddBet} />
                 )}
-                {activeTab === "INSIGHTS" && <MobileInsights onSessionExpired={onSessionExpired} />}
+                {activeTab === "INSIGHTS" && !blockedByPaywall && (
+                  <MobileInsights onSessionExpired={onSessionExpired} />
+                )}
                 {activeTab === "SOCIAL" && <MobileSocial currency={preferences.currency} isDark={isDark} />}
+                {activeTab === "ADMIN" && <MobileAdmin onAccessChanged={() => void refreshSubscription()} />}
                 {activeTab === "SETTINGS" && (
                   <MobileSettings
                     preferences={preferences}
@@ -190,6 +214,9 @@ function MobileShell(props: ShellProps) {
                     onAddAccount={onAddAccount}
                     onRenameAccount={onRenameAccount}
                     onDeleteAccount={onDeleteAccount}
+                    subscription={subscription}
+                    subscriptionLoading={subscriptionLoading}
+                    refreshSubscription={refreshSubscription}
                   />
                 )}
               </Suspense>
@@ -200,8 +227,13 @@ function MobileShell(props: ShellProps) {
 
       {/* Tab bar */}
       <nav className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-t border-zinc-200 dark:border-zinc-800/80 fixed bottom-0 inset-x-0 z-40 pb-safe">
-        <div className="grid grid-cols-6 h-16 text-[9px] font-semibold text-zinc-400 dark:text-zinc-500">
-          {NAV_ITEMS.map(({ tab, icon: Icon, footerKey }) => {
+        {/* Colunas calculadas: o separador de gestão só existe para
+            administradores, por isso o número de itens não é fixo. */}
+        <div
+          className="grid h-16 text-[9px] font-semibold text-zinc-400 dark:text-zinc-500"
+          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        >
+          {navItems.map(({ tab, icon: Icon, footerKey }) => {
             const isActive = activeTab === tab;
             return (
               <button

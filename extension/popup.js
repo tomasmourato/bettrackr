@@ -27,6 +27,28 @@ const buttons = {
   all: document.getElementById("import-all"),
 };
 const msg = document.getElementById("msg");
+const paywallBox = document.getElementById("paywall");
+const paywallText = document.getElementById("paywall-text");
+const paywallLink = document.getElementById("paywall-link");
+
+// Mostra (ou esconde) o convite a subscrever e devolve true se há acesso.
+//
+// Sem informação (sem sessão, ou o servidor não respondeu) devolve true: não
+// se bloqueia nada aqui por causa de um hiccup de rede — quem decide é o
+// servidor, que responde 402 ao import.
+function applySubscription(status, base) {
+  const info = status && status.subscription ? status.subscription : null;
+  const blocked = info != null && info.entitled === false;
+  paywallBox.hidden = !blocked;
+  if (!blocked) return true;
+
+  paywallText.textContent =
+    info.trialEndsAt && new Date(info.trialEndsAt) <= new Date()
+      ? "O período experimental terminou. A extensão faz parte do BetTrackr Pro."
+      : "A extensão faz parte do BetTrackr Pro.";
+  paywallLink.href = `${base || "https://gestordebets.vercel.app"}/settings`;
+  return false;
+}
 
 // Casas ativas escolhidas no site (via GET_STATUS). Por defeito, todas — só é
 // restringido quando o servidor devolve uma seleção. Partilhado entre o estado
@@ -78,12 +100,14 @@ async function refreshStatus() {
   setStatus(dotBetano, txtBetano, status.betano, "Betano: página detetada", "Betano: abre betano.pt");
   setStatus(dotSolverde, txtSolverde, status.solverde, "Solverde: sessão detetada", "Solverde: inicia sessão em solverde.pt");
   setStatus(dotBettrackr, txtBettrackr, status.bettrackr, "BetTrackr: sessão detetada", "BetTrackr: inicia sessão aqui");
-  buttons.betclic.disabled = !(status.betclic && status.bettrackr);
-  buttons.betano.disabled = !(status.betano && status.bettrackr);
-  buttons.solverde.disabled = !(status.solverde && status.bettrackr);
+  // Sem subscrição não vale a pena deixar carregar: o servidor recusaria.
+  const paid = applySubscription(status, status.bettrackrBase);
+  buttons.betclic.disabled = !(status.betclic && status.bettrackr && paid);
+  buttons.betano.disabled = !(status.betano && status.bettrackr && paid);
+  buttons.solverde.disabled = !(status.solverde && status.bettrackr && paid);
   // "Importar tudo" só conta as casas ativas com sessão detetada.
   const anyEnabledReady = enabledBookies.some((key) => status[key]);
-  buttons.all.disabled = !(status.bettrackr && anyEnabledReady);
+  buttons.all.disabled = !(status.bettrackr && anyEnabledReady && paid);
 
   // Login vs. sessão iniciada.
   loginForm.hidden = status.bettrackr === true;
@@ -292,7 +316,15 @@ async function importSource(source) {
   try {
     const result = await chrome.runtime.sendMessage({ type: "IMPORT", source, accountIds: selectedAccountIds() });
     if (!result || !result.ok) {
-      setMsg(result?.error || "Falha na importação.", "error");
+      // O 402 do servidor chega aqui como texto do erro; traduzi-lo para o
+      // convite a subscrever evita um "BetTrackr respondeu 402" críptico.
+      const text = String(result?.error || "");
+      if (text.includes("402") || /subscri/i.test(text)) {
+        setMsg("A extensão precisa de uma subscrição ativa do BetTrackr Pro.", "error");
+        paywallBox.hidden = false;
+      } else {
+        setMsg(text || "Falha na importação.", "error");
+      }
     } else {
       const sourceResults = result.sourceResults || { [source]: result };
       const lines = Object.entries(sourceResults).map(([name, item]) => formatSource(name, item));

@@ -28,6 +28,8 @@ import { isNativeApp } from "../../lib/apiBase";
 import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "../../lib/settingsApi";
 import { bookmakerLabel } from "../../lib/bookmakers";
 import { useI18n } from "../../lib/i18n";
+import type { BillingStatus } from "../../lib/billingApi";
+import { MobileSubscriptionCard } from "../components/MobileSubscription";
 import {
   SectionHeader,
   ListGroup,
@@ -54,6 +56,10 @@ interface MobileSettingsProps {
   onAddAccount: (bookmaker: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onRenameAccount: (id: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onDeleteAccount: (id: string) => Promise<boolean>;
+  // Subscrição (gerida no App para ser partilhada com os ecrãs pagos)
+  subscription: BillingStatus | null;
+  subscriptionLoading: boolean;
+  refreshSubscription: () => Promise<void>;
 }
 
 const inputClasses =
@@ -74,6 +80,9 @@ export default function MobileSettings({
   onAddAccount,
   onRenameAccount,
   onDeleteAccount,
+  subscription,
+  subscriptionLoading,
+  refreshSubscription,
 }: MobileSettingsProps) {
   const { t } = useI18n();
   const toast = useToast();
@@ -219,6 +228,14 @@ export default function MobileSettings({
 
   return (
     <div className="space-y-1 pb-4">
+      {/* Subscrição — decide o acesso à IA e à extensão */}
+      <SectionHeader>{t("billing.title")}</SectionHeader>
+      <MobileSubscriptionCard
+        status={subscription}
+        loading={subscriptionLoading}
+        onRefresh={refreshSubscription}
+      />
+
       {/* Preferências gerais */}
       <SectionHeader>{t("settings.general.title")}</SectionHeader>
       <MobileCard className="space-y-4">

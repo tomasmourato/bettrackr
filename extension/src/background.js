@@ -558,6 +558,30 @@ async function fetchEnabledBookmakers(cfg) {
   }
 }
 
+// Estado da subscrição do utilizador (/api/billing/status). A extensão é uma
+// funcionalidade paga: sem acesso, o popup explica-o em vez de deixar carregar
+// num botão que o servidor vai recusar com 402.
+// Numa falha de rede devolve null = "não sei", e nada é bloqueado no popup —
+// quem manda é sempre o servidor no momento do import.
+async function fetchSubscription(cfg) {
+  if (!cfg.bettrackrToken) return null;
+  try {
+    const res = await fetch(`${cfg.bettrackrBase}/api/billing/status`, {
+      headers: { Authorization: `Bearer ${cfg.bettrackrToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!data || typeof data.entitled !== "boolean") return null;
+    return {
+      entitled: data.entitled,
+      source: data.source || "none",
+      trialEndsAt: data.trialEndsAt || null,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 // Função executada DENTRO da página betclic.pt: lê o username do estado SSR
 // embebido no documento (<script id="ng-state" type="application/json"> com
 // ...,"username":"ronkzinho","identity":{...}). É a fonte mais fiável — sem
@@ -912,12 +936,13 @@ async function extensionStatus() {
   // corra em paralelo com as sondas de sessão (Betano/Solverde), não em série.
   const stored = await chrome.storage.local.get(["betclicToken", "bettrackrToken", "bettrackrBase", "bettrackrUser", "autoImport", "updateOnlyImport"]);
   const bettrackrBase = stored.bettrackrBase || DEFAULT_BETTRACKR_BASE;
-  const [tabs, solverde, enabledBookmakers] = await Promise.all([
+  const [tabs, solverde, enabledBookmakers, subscription] = await Promise.all([
     chrome.tabs.query({ url: ["https://www.betano.pt/*", "https://betano.pt/*"] }),
     solverdeStatus(),
     // Casas ativas escolhidas no site, para o popup só mostrar essas. Sem sessão
     // BetTrackr assume-se todas (o popup mostra na mesma o pedido de login).
     fetchEnabledBookmakers({ bettrackrToken: stored.bettrackrToken || null, bettrackrBase }),
+    fetchSubscription({ bettrackrToken: stored.bettrackrToken || null, bettrackrBase }),
   ]);
   return {
     betclic: Boolean(stored.betclicToken),
@@ -932,6 +957,7 @@ async function extensionStatus() {
     autoImport: stored.autoImport === true,
     updateOnly: stored.updateOnlyImport === true,
     enabledBookmakers,
+    subscription,
   };
 }
 
@@ -942,10 +968,12 @@ async function extensionStatus() {
 // ============================================================
 async function bettrackrLogin(email, password, base) {
   const origin = base || DEFAULT_BETTRACKR_BASE;
+  // O "client" fica gravado no token: é assim que o servidor sabe que um
+  // pedido veio da extensão (funcionalidade paga) e não do site.
   const res = await fetch(`${origin}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, client: "extension" }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.token) {

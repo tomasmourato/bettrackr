@@ -5,12 +5,16 @@ import {
     AuthenticatedRequest,
     authenticateToken,
 } from "../middleware/authMiddleware.js";
+import { requireSubscriptionForExtension } from "../middleware/accessMiddleware.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
 
 const router = Router();
 
 // Todas as rotas de bets exigem autenticação
 router.use(authenticateToken);
+// A extensão é funcionalidade paga; o registo manual de apostas não. Só os
+// pedidos feitos com um token da extensão passam pelo portão da subscrição.
+router.use(requireSubscriptionForExtension);
 
 // Colunas devolvidas ao frontend — lista única partilhada com o SSR (server.ts).
 const BET_COLUMNS = BET_SELECT_COLUMNS;

@@ -18,6 +18,8 @@ import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import BetclicImport from "./BetclicImport";
 import BookieAccountsCard from "./BookieAccountsCard";
 import EnabledBookmakersCard from "./EnabledBookmakersCard";
+import SubscriptionCard from "./SubscriptionCard";
+import type { BillingStatus } from "../lib/billingApi";
 import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "../lib/settingsApi";
 import { useI18n } from "../lib/i18n";
 import { exportBetsCSV, exportBackupJSON, importBetsFromFile } from "../lib/dataTransfer";
@@ -39,6 +41,10 @@ interface SettingsProps {
   onAddAccount: (bookmaker: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onRenameAccount: (id: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onDeleteAccount: (id: string) => Promise<boolean>;
+  // Subscrição (gerida no App para ser partilhada com os ecrãs pagos)
+  subscription: BillingStatus | null;
+  subscriptionLoading: boolean;
+  refreshSubscription: () => Promise<void>;
 }
 
 export default function Settings({
@@ -55,7 +61,10 @@ export default function Settings({
   clearAccountsError,
   onAddAccount,
   onRenameAccount,
-  onDeleteAccount
+  onDeleteAccount,
+  subscription,
+  subscriptionLoading,
+  refreshSubscription
 }: SettingsProps) {
 
   const { t } = useI18n();
@@ -185,6 +194,13 @@ export default function Settings({
         
         {/* Left column: Preferences & App Tuning */}
         <div className="space-y-6 lg:col-span-2">
+
+          {/* Subscrição — é o que decide o acesso à IA e à extensão */}
+          <SubscriptionCard
+            status={subscription}
+            loading={subscriptionLoading}
+            onRefresh={refreshSubscription}
+          />
 
           {/* Escolha das casas de apostas ativas — primeiro, define o que aparece no resto */}
           <EnabledBookmakersCard

@@ -13,6 +13,7 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
+import { requireSubscription } from "../middleware/accessMiddleware.js";
 import { getGeminiClient, extractJson } from "../lib/gemini.js";
 
 const router = Router();
@@ -503,7 +504,11 @@ router.get("/cron", async (req, res) => {
   }
 });
 
+// Daqui para baixo é tudo funcionalidade paga: primeiro identifica-se quem
+// pede, depois confirma-se que tem subscrição (ou período experimental).
+// O /cron fica acima de propósito — não tem utilizador nem subscrição.
 router.use(authenticateToken);
+router.use(requireSubscription);
 
 // ============================================================
 // GET /api/insights -> dicas de hoje (lê a cache; gera se o cron não correu)

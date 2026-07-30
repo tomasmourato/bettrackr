@@ -60,9 +60,19 @@ function validatePassword(password: unknown): string | null {
   return null;
 }
 
-function signToken(user: { id: string; username: string }): string {
+// A extensão identifica-se no login ({ client: "extension" }) e isso fica
+// gravado no token. É assim que o servidor sabe distinguir um pedido da
+// extensão (funcionalidade paga) de um pedido do site (registo manual de
+// apostas, que é grátis) sem confiar num header que qualquer um troca.
+const KNOWN_CLIENTS = ["extension"] as const;
+
+function cleanClient(raw: unknown): string | undefined {
+  return typeof raw === "string" && (KNOWN_CLIENTS as readonly string[]).includes(raw) ? raw : undefined;
+}
+
+function signToken(user: { id: string; username: string }, client?: string): string {
   return jwt.sign(
-    { id: user.id, username: user.username },
+    { id: user.id, username: user.username, ...(client ? { client } : {}) },
     getJwtSecret(),
     { expiresIn: TOKEN_EXPIRY }
   );
@@ -157,7 +167,7 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    const token = signToken(user);
+    const token = signToken(user, cleanClient(req.body?.client));
     setSessionCookie(res, token);
 
     res.json({

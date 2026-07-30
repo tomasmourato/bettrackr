@@ -15,6 +15,7 @@ import { useAuditLog } from "./hooks/useAuditLog";
 import { useBets } from "./hooks/useBets";
 import { useAccounts } from "./hooks/useAccounts";
 import { useLanguageSync } from "./hooks/useLanguageSync";
+import { useSubscription } from "./hooks/useSubscription";
 import { I18nProvider, translate, type TFn } from "./lib/i18n";
 import { updateLanguage } from "./lib/settingsApi";
 import { useMobileUI } from "./lib/platform";
@@ -151,6 +152,14 @@ export default function App({ initialData }: AppProps) {
     handleSessionExpired,
     initialData?.authenticated ? initialData.bets : undefined
   );
+
+  // Subscrição: decide o que os ecrãs pagos mostram e se o separador de
+  // gestão aparece. O acesso real é validado no servidor a cada pedido.
+  const {
+    status: subscription,
+    isLoading: subscriptionLoading,
+    refresh: refreshSubscription,
+  } = useSubscription(authed, handleSessionExpired);
 
   // Contas por casa de apostas (partilhadas por Configurações, filtros e extensão)
   const {
@@ -378,9 +387,16 @@ export default function App({ initialData }: AppProps) {
   // logo após montar (routeAnimationsReady vira true no primeiro effect).
   const isMobileUI = initialData && !routeAnimationsReady ? false : isMobileUIRaw;
 
+  // O separador de gestão existe no URL, mas só é servido a administradores.
+  // Enquanto a subscrição ainda não respondeu não se decide nada: mandar um
+  // administrador para o painel só porque a resposta demorou seria pior do
+  // que esperar um instante.
+  const effectiveTab: AppTab =
+    activeTab === "ADMIN" && subscription && subscription.role !== "admin" ? "DASHBOARD" : activeTab;
+
   // Contrato partilhado injetado no shell escolhido.
   const shellProps: ShellProps = {
-    activeTab,
+    activeTab: effectiveTab,
     locationSearch,
     routeAnimationsReady,
     navigateToTab,
@@ -396,6 +412,9 @@ export default function App({ initialData }: AppProps) {
     onToggleTheme: handleToggleTheme,
     t,
     isOnline,
+    subscription,
+    subscriptionLoading,
+    refreshSubscription,
     bets,
     isLoading,
     error,

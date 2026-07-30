@@ -43,6 +43,21 @@ export function formatSignedMoney(lang: Language, value: number, currency: strin
   return `${sign}${formatMoney(lang, value, currency)}`;
 }
 
+// Preço da subscrição. Ao contrário de formatMoney(), aqui a moeda é mesmo um
+// código ISO vindo do Stripe ("eur"), por isso vale a pena deixar o Intl
+// colocar o símbolo no sítio certo de cada idioma ("3,99 €" vs "€3.99").
+export function formatPrice(lang: Language, cents: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat(localeFor(lang), {
+      style: "currency",
+      currency: currencyCode.toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    // Código de moeda desconhecido — melhor mostrar o número do que rebentar.
+    return `${formatNumber(lang, cents / 100, { minimumFractionDigits: 2 })} ${currencyCode.toUpperCase()}`;
+  }
+}
+
 export function formatDate(
   lang: Language,
   value: Date | string | number,

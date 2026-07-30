@@ -13,11 +13,14 @@ import socialRoutes from "./routes/socialRoutes.js";
 import accountsRoutes from "./routes/accountsRoutes.js";
 import insightsRoutes from "./routes/insightsRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import billingRoutes, { stripeWebhook } from "./routes/billingRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import pool from "./db/pool.js";
 import {
   authenticateToken,
   AuthenticatedRequest,
 } from "./middleware/authMiddleware.js";
+import { requireSubscription } from "./middleware/accessMiddleware.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 
 // O .env.local sobrepõe-se ao .env; um .env.<branch>.local sobrepõe-se aos
@@ -55,6 +58,11 @@ const extensionZipPath = path.join(process.cwd(), "dist", "bettrackr-extension.z
 // Atrás do proxy da Vercel, o IP real do cliente vem no X-Forwarded-For.
 // Sem isto o rate limiting veria o IP do proxy para todos os pedidos.
 app.set("trust proxy", 1);
+
+// O webhook do Stripe tem de vir ANTES do express.json(): a assinatura é
+// calculada sobre os bytes exatos do corpo, e um JSON já parseado e
+// re-serializado deixa de bater certo.
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
 
 // A Vercel não aceita payloads acima de 4.5mb.
 app.use(express.json({ limit: "4mb" }));
@@ -121,6 +129,8 @@ app.get("/api/health", async (_req, res) => {
     DATABASE_URL: Boolean(process.env.DATABASE_URL),
     JWT_SECRET: Boolean(process.env.JWT_SECRET),
     GEMINI_API_KEY: Boolean(process.env.GEMINI_API_KEY),
+    STRIPE_SECRET_KEY: Boolean(process.env.STRIPE_SECRET_KEY),
+    STRIPE_WEBHOOK_SECRET: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
   };
 
   let database: { ok: boolean; error?: string } = { ok: false };
@@ -140,6 +150,9 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/auth", rateLimit({ windowMs: 10 * 60 * 1000, max: 30 }));
 app.use("/api/parse-screenshot", rateLimit({ windowMs: 10 * 60 * 1000, max: 30 }));
 app.use("/api/insights", rateLimit({ windowMs: 10 * 60 * 1000, max: 30 }));
+// Criar sessões de pagamento é caro do lado do Stripe; o /status é lido em
+// cada arranque da app, por isso o limite é folgado.
+app.use("/api/billing", rateLimit({ windowMs: 10 * 60 * 1000, max: 60 }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bets", betsRoutes);
@@ -147,6 +160,8 @@ app.use("/api/social", socialRoutes);
 app.use("/api/accounts", accountsRoutes);
 app.use("/api/insights", insightsRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/billing", billingRoutes);
+app.use("/api/admin", adminRoutes);
 
 let aiClient: GoogleGenAI | null = null;
 function getAiClient(): GoogleGenAI {
@@ -161,8 +176,9 @@ function getAiClient(): GoogleGenAI {
 }
 
 // Extrai os dados de um boletim de apostas a partir de um screenshot.
-// Protegida por autenticação para não expor a quota do Gemini.
-app.post("/api/parse-screenshot", authenticateToken, async (req: AuthenticatedRequest, res) => {
+// Protegida por autenticação (não expor a quota do Gemini) e por subscrição
+// (é uma das funcionalidades pagas).
+app.post("/api/parse-screenshot", authenticateToken, requireSubscription, async (req: AuthenticatedRequest, res) => {
   try {
     const { imageBase64 } = req.body ?? {};
 

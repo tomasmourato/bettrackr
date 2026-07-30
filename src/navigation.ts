@@ -10,6 +10,7 @@ import {
   Layers,
   Sparkles,
   Settings as SettingsIcon,
+  ShieldCheck,
   Users,
   Lightbulb,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
 import type { Bet, Preferences, BookieAccount, AuditLog } from "./types";
 import type { DashboardBetsFilters } from "./components/Dashboard";
 import type { getStoredUser } from "./lib/authApi";
+import type { BillingStatus } from "./lib/billingApi";
 import type { TFn, TKey } from "./lib/i18n";
 
 export type AppTab =
@@ -25,7 +27,8 @@ export type AppTab =
   | "IMPORT"
   | "INSIGHTS"
   | "SOCIAL"
-  | "SETTINGS";
+  | "SETTINGS"
+  | "ADMIN";
 
 export const TAB_PATHS: Record<AppTab, string> = {
   DASHBOARD: "/dashboard",
@@ -34,7 +37,13 @@ export const TAB_PATHS: Record<AppTab, string> = {
   INSIGHTS: "/insights",
   SOCIAL: "/social",
   SETTINGS: "/settings",
+  ADMIN: "/admin",
 };
+
+// Separadores que exigem subscrição. O bloqueio a sério é do servidor (402);
+// esta lista é só para os shells saberem quando mostrar o convite a subscrever
+// em vez do ecrã.
+export const PAID_TABS: ReadonlySet<AppTab> = new Set<AppTab>(["IMPORT", "INSIGHTS"]);
 
 export const tabFromPath = (pathname: string): AppTab => {
   const normalizedPath = pathname.replace(/\/+$/, "") || "/";
@@ -63,6 +72,22 @@ export const NAV_ITEMS: NavItem[] = [
   { tab: "SOCIAL", icon: Users, navKey: "nav.social", footerKey: "footer.social" },
   { tab: "SETTINGS", icon: SettingsIcon, navKey: "nav.settings", footerKey: "footer.settings" },
 ];
+
+const ADMIN_NAV_ITEM: NavItem = {
+  tab: "ADMIN",
+  icon: ShieldCheck,
+  navKey: "nav.admin",
+  footerKey: "footer.admin",
+};
+
+/**
+ * Separadores a mostrar a este utilizador. O painel de gestão só aparece a
+ * quem é administrador — as rotas /api/admin respondem 403 a toda a gente,
+ * por isso esconder aqui é comodidade e não segurança.
+ */
+export function navItemsFor(role: "user" | "admin" | undefined): NavItem[] {
+  return role === "admin" ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+}
 
 export type StoredUser = ReturnType<typeof getStoredUser>;
 
@@ -99,6 +124,12 @@ export interface ShellProps {
 
   // Estado de rede
   isOnline: boolean;
+
+  // Subscrição — null enquanto não se sabe (a carregar ou sem resposta).
+  // Os ecrãs pagos tratam null como "ainda não sei" e não mostram o paywall.
+  subscription: BillingStatus | null;
+  subscriptionLoading: boolean;
+  refreshSubscription: () => Promise<void>;
 
   // Apostas
   bets: Bet[];

@@ -3,8 +3,9 @@ import { motion } from "motion/react";
 import { Moon, Sun, X } from "lucide-react";
 
 import { BrandMark } from "./components/BrandMark";
-import { NAV_ITEMS, type ShellProps } from "./navigation";
+import { navItemsFor, PAID_TABS, type ShellProps } from "./navigation";
 import AccountPanel from "./components/AccountPanel";
+import PaywallNotice from "./components/PaywallNotice";
 
 // Os separadores carregam sob demanda (React.lazy): o shell pinta sem
 // descarregar/parsear o Recharts (~390KB) nem o resto.
@@ -14,6 +15,7 @@ const ScreenshotImporter = lazy(() => import("./components/ScreenshotImporter"))
 const Settings = lazy(() => import("./components/Settings"));
 const Social = lazy(() => import("./components/Social"));
 const AIInsights = lazy(() => import("./components/AIInsights"));
+const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
 
 // Shell desktop: navegação fixa à esquerda (sidebar) + topbar + tab bar de
 // recurso em ecrãs estreitos. Toda a lógica vive no App.tsx; aqui só a
@@ -35,6 +37,9 @@ export default function DesktopApp({
   onToggleTheme,
   t,
   isOnline,
+  subscription,
+  subscriptionLoading,
+  refreshSubscription,
   bets,
   isLoading,
   error,
@@ -55,7 +60,15 @@ export default function DesktopApp({
   onDeleteAccount,
   auditLogs,
 }: ShellProps) {
-  const activeNavItem = NAV_ITEMS.find((item) => item.tab === activeTab);
+  const navItems = navItemsFor(subscription?.role);
+  const activeNavItem = navItems.find((item) => item.tab === activeTab);
+
+  // Um separador pago mostra o convite a subscrever em vez do ecrã. Enquanto
+  // `subscription` for null ainda não se sabe nada — nesse caso o ecrã abre
+  // normalmente e é o 402 do servidor que trava o que interessa.
+  const blockedByPaywall = Boolean(
+    subscription && !subscription.entitled && PAID_TABS.has(activeTab),
+  );
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 antialiased selection:bg-emerald-500/90 selection:text-zinc-950" id="main-container">
@@ -75,7 +88,7 @@ export default function DesktopApp({
         {/* Navegação */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
           <p className="px-2 pb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-600 font-mono">Menu</p>
-          {NAV_ITEMS.map(({ tab, icon: Icon, navKey }) => {
+          {navItems.map(({ tab, icon: Icon, navKey }) => {
             const isActive = activeTab === tab;
             return (
               <button
@@ -218,17 +231,27 @@ export default function DesktopApp({
                     accounts={accounts}
                   />
                 )}
-                {activeTab === "IMPORT" && (
+                {blockedByPaywall && subscription && (
+                  <PaywallNotice
+                    status={subscription}
+                    onRefresh={() => void refreshSubscription()}
+                    refreshing={subscriptionLoading}
+                  />
+                )}
+                {activeTab === "IMPORT" && !blockedByPaywall && (
                   <ScreenshotImporter
                     currency={preferences.currency}
                     onAddBet={onAddBet}
                   />
                 )}
-                {activeTab === "INSIGHTS" && (
+                {activeTab === "INSIGHTS" && !blockedByPaywall && (
                   <AIInsights onSessionExpired={onSessionExpired} />
                 )}
                 {activeTab === "SOCIAL" && (
                   <Social currency={preferences.currency} isDark={isDark} />
+                )}
+                {activeTab === "ADMIN" && (
+                  <AdminDashboard onAccessChanged={() => void refreshSubscription()} />
                 )}
                 {activeTab === "SETTINGS" && (
                   <Settings
@@ -246,6 +269,9 @@ export default function DesktopApp({
                     onAddAccount={onAddAccount}
                     onRenameAccount={onRenameAccount}
                     onDeleteAccount={onDeleteAccount}
+                    subscription={subscription}
+                    subscriptionLoading={subscriptionLoading}
+                    refreshSubscription={refreshSubscription}
                   />
                 )}
                 </Suspense>
@@ -255,8 +281,13 @@ export default function DesktopApp({
 
         {/* Tab bar (mobile) — indicador de secção ativa na margem superior */}
         <footer className="md:hidden bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-t border-zinc-200 dark:border-zinc-800/80 fixed bottom-0 inset-x-0 z-40">
-          <div className="grid grid-cols-6 h-16 text-[9px] font-semibold text-zinc-400 dark:text-zinc-500">
-            {NAV_ITEMS.map(({ tab, icon: Icon, footerKey }) => {
+          {/* Colunas calculadas: o separador de gestão só existe para
+              administradores, por isso o número de itens não é fixo. */}
+          <div
+            className="grid h-16 text-[9px] font-semibold text-zinc-400 dark:text-zinc-500"
+            style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+          >
+            {navItems.map(({ tab, icon: Icon, footerKey }) => {
               const isActive = activeTab === tab;
               return (
                 <button

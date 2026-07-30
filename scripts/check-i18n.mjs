@@ -59,6 +59,17 @@ const MIGRATED = [
 
   // Merge do PR #8 — componente novo, traduzido ao integrar
   "src/components/FilteredBetsSummary.tsx",
+
+  // Subscrição e painel de gestão — nascidos já traduzidos
+  "src/components/SubscriptionCard.tsx",
+  "src/components/PaywallNotice.tsx",
+  "src/components/AdminDashboard.tsx",
+  "src/mobile/components/MobileSubscription.tsx",
+  "src/mobile/screens/MobileAdmin.tsx",
+  "src/lib/subscriptionDisplay.ts",
+  "src/lib/adminDisplay.ts",
+  "src/hooks/useBillingActions.ts",
+  "src/hooks/useAdminPanel.ts",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são
