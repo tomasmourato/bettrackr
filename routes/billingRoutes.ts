@@ -339,6 +339,15 @@ router.post("/checkout", async (req: AuthenticatedRequest, res) => {
                 currency: PLAN.currency,
                 unit_amount: PLAN.priceCents,
                 recurring: { interval: PLAN.interval },
+                // Os 3,99 € JÁ INCLUEM imposto. Sem isto o Stripe trata o
+                // valor como líquido e soma o IVA por cima — um cliente
+                // português via 4,91 € num sítio onde a app anuncia 3,99 €.
+                //
+                // Efeito colateral aceite: o que recebemos passa a depender do
+                // país (23% em Portugal deixa 3,24 € líquidos; um país com
+                // taxa menor deixa mais). É o normal em preços ao consumidor
+                // na UE, onde o preço mostrado tem de ser o preço final.
+                tax_behavior: "inclusive",
                 product_data: {
                   name: "BetTrackr Pro",
                   description: "Funcionalidades de IA e extensão de browser.",
