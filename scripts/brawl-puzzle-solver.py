@@ -239,10 +239,16 @@ def neighbours(blank):
 
 
 def solvable(start, goal):
-    """Um 15-puzzle so e resoluvel se a paridade da permutacao igualar a
-    paridade da distancia do buraco ate a sua casa final."""
-    order = {v: i for i, v in enumerate(v for v in goal if v is not None)}
-    perm = [order[v] for v in start if v is not None]
+    """Cada jogada troca o buraco com uma vizinha: inverte a paridade da
+    permutacao e muda a distancia do buraco em 1. Logo (inversoes + distancia do
+    buraco) tem paridade constante, e no objectivo vale zero.
+
+    A permutacao tem de incluir o buraco. Contar so as 15 pecas da a paridade
+    errada sempre que o buraco muda de casa - metade dos casos - e ai o
+    resolvedor ou rejeita um puzzle bom ou persegue um objectivo inalcancavel.
+    """
+    order = {v: i for i, v in enumerate(goal)}   # o buraco (None) tambem conta
+    perm = [order[v] for v in start]
     inv = sum(1 for i in range(len(perm)) for j in range(i + 1, len(perm))
               if perm[i] > perm[j])
     sb, gb = start.index(None), goal.index(None)

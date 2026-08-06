@@ -1,0 +1,1414 @@
+<title>Resolver o Quebra-Cabeça — Fuga da Pirâmide</title>
+
+<style>
+  /* ---------------------------------------------------------------
+     Paleta tirada do próprio puzzle: pedra rosa-poeira do portão,
+     câmara ameixa escura, e a luz âmbar das tochas — que aqui serve
+     uma coisa só, marcar a peça que se toca a seguir.
+     --------------------------------------------------------------- */
+  :root {
+    color-scheme: light dark;
+    --chamber: #241628;
+    --sandstone: #e2b0ab;
+    --torch: #e07a1f;
+    --lapis: #2f7c8f;
+
+    --bg: #efe6e7;
+    --bg-panel: #fbf6f6;
+    --bg-sunk: #ded0d2;
+    --ink: #2a1d28;
+    --ink-soft: #6e5c6b;
+    --ink-faint: #9a8894;
+    --rule: #d9c8ca;
+    --accent: var(--torch);
+    --accent-ink: #8a4506;
+    --good: #1f6273;
+
+    --step: clamp(0.9rem, 0.55rem + 1.4vw, 1.2rem);
+    --display: "Bahnschrift", "DIN Alternate", "Arial Narrow", system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --data: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1020;
+      --bg-panel: #251a2c;
+      --bg-sunk: #140c19;
+      --ink: #f2e4e6;
+      --ink-soft: #b79fae;
+      --ink-faint: #8a7086;
+      --rule: #3b2a42;
+      --accent: #f2a13f;
+      --accent-ink: #f7c184;
+      --good: #6fc3d4;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #efe6e7; --bg-panel: #fbf6f6; --bg-sunk: #ded0d2;
+    --ink: #2a1d28; --ink-soft: #6e5c6b; --ink-faint: #9a8894;
+    --rule: #d9c8ca; --accent: var(--torch); --accent-ink: #8a4506; --good: #1f6273;
+  }
+  :root[data-theme="dark"] {
+    --bg: #1a1020; --bg-panel: #251a2c; --bg-sunk: #140c19;
+    --ink: #f2e4e6; --ink-soft: #b79fae; --ink-faint: #8a7086;
+    --rule: #3b2a42; --accent: #f2a13f; --accent-ink: #f7c184; --good: #6fc3d4;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: var(--step);
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 1.25rem 1rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(1.4rem, 1rem + 2.6vw, 2rem);
+    line-height: 1.05;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0;
+  }
+  header p { margin: 0.5rem 0 0; color: var(--ink-soft); }
+  .eyebrow {
+    font-family: var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-faint);
+    margin: 0 0 0.4rem;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem;
+  }
+
+  /* --- carregar --- */
+  .load { display: flex; flex-direction: column; gap: 0.75rem; }
+  .drop {
+    border: 1.5px dashed var(--rule);
+    border-radius: 4px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--ink-soft);
+    background: var(--bg-panel);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg-panel)); }
+  button {
+    font-family: var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--bg-panel);
+    background: var(--ink);
+    border: 0;
+    border-radius: 3px;
+    padding: 0.85rem 1.25rem;
+    cursor: pointer;
+    min-height: 3rem;
+  }
+  button.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  button.primary { background: var(--accent); color: #2a1508; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid var(--lapis);
+    outline-offset: 2px;
+  }
+  .row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .row > * { flex: 1 1 8rem; }
+
+  /* --- resumo --- */
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.75rem; }
+  .fact { border-left: 2px solid var(--rule); padding-left: 0.6rem; }
+  .fact b {
+    display: block;
+    font-family: var(--data);
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .fact span { font-size: 0.75rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .chip {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+  }
+  .chip.ok { color: var(--good); }
+  .chip.warn { color: var(--accent-ink); }
+
+  /* --- tabuleiro --- */
+  .board-wrap {
+    background: var(--chamber);
+    border-radius: 6px;
+    padding: 0.6rem;
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.55);
+  }
+  canvas#board { width: 100%; height: auto; display: block; touch-action: manipulation; cursor: pointer; }
+  .instruction {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-family: var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 1.15rem;
+    font-weight: 800;
+  }
+  .instruction .n {
+    font-family: var(--data);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+    font-size: 0.9rem;
+    letter-spacing: 0;
+  }
+  .instruction .cell { color: var(--accent-ink); }
+  .queue {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+    font-family: var(--data);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .queue b {
+    background: var(--accent); color: #2a1508;
+    padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 700;
+  }
+  .queue span { color: var(--ink-soft); padding: 0.1rem 0.3rem; }
+  .queue em { color: var(--ink-faint); font-style: normal; }
+  .bar { height: 3px; background: var(--bg-sunk); border-radius: 999px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.2s; }
+
+  /* --- alvo --- */
+  .target { display: flex; gap: 1rem; align-items: flex-start; }
+  .target canvas { width: 9rem; height: auto; border-radius: 3px; background: var(--chamber); }
+  .target p { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+  /* --- lista --- */
+  details summary {
+    cursor: pointer;
+    font-family: var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .list {
+    margin-top: 0.75rem;
+    max-height: 15rem;
+    overflow: auto;
+    font-family: var(--data);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .list ol { margin: 0; padding-left: 2.6rem; }
+  .list li { padding: 0.1rem 0; }
+  .list li.done { color: var(--ink-faint); }
+  .list li.now { color: var(--accent-ink); font-weight: 700; }
+
+  label.field { display: block; font-size: 0.8rem; color: var(--ink-soft); margin-top: 0.75rem; }
+  select {
+    font: inherit; font-size: 0.9rem; margin-top: 0.25rem;
+    padding: 0.4rem; width: 100%;
+    background: var(--bg-panel); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 3px;
+  }
+
+  .note { font-size: 0.85rem; color: var(--ink-soft); }
+  .note strong { color: var(--ink); }
+  .error { color: var(--accent-ink); }
+  footer { border-top: 1px solid var(--rule); padding-top: 1rem; }
+  .hidden { display: none !important; }
+  .spin { display: inline-block; width: 0.9em; height: 0.9em; border: 2px solid var(--rule); border-top-color: var(--accent); border-radius: 50%; animation: sp 0.7s linear infinite; vertical-align: -0.1em; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Missão Fuga da Pirâmide</p>
+    <h1>Resolver o quebra-cabeça</h1>
+    <p>Tira um screenshot do puzzle no telemóvel e carrega-o aqui. Esta página lê
+      a grelha, descobre a imagem original e diz-te em que peça tocar, uma a uma.</p>
+  </header>
+
+  <section class="panel load" id="loader">
+    <div class="drop" id="drop">
+      <p style="margin:0 0 0.75rem">Arrasta o screenshot para aqui, cola com <b>Ctrl+V</b>,
+        ou escolhe o ficheiro.</p>
+      <button id="pick" class="primary" type="button">Escolher screenshot</button>
+      <input type="file" id="file" accept="image/*" class="hidden">
+    </div>
+    <label class="field">Tamanho da grelha
+      <select id="gridsize">
+        <option value="0">Detectar automaticamente</option>
+        <option value="3">3 × 3</option>
+        <option value="4">4 × 4</option>
+        <option value="5">5 × 5</option>
+      </select>
+    </label>
+    <p class="note" id="status"></p>
+  </section>
+
+  <section id="result" class="hidden" style="display:flex;flex-direction:column;gap:1.5rem">
+    <div class="panel">
+      <p class="eyebrow">O plano</p>
+      <div class="facts">
+        <div class="fact"><b id="f-moves">—</b><span>jogadas</span></div>
+        <div class="fact"><b id="f-grid">—</b><span>grelha lida</span></div>
+        <div class="fact"><b id="f-left">—</b><span>a faltar</span></div>
+      </div>
+      <p style="margin:0.9rem 0 0"><span id="f-opt" class="chip"></span> <span id="f-conf" class="chip"></span></p>
+    </div>
+
+    <div>
+      <div class="instruction">
+        <span class="n" id="counter"></span>
+        <span id="verb">toca em</span>
+        <span class="cell" id="which"></span>
+      </div>
+      <p class="note" style="margin:0.15rem 0 0.5rem" id="dirtext"></p>
+      <div class="queue" id="queue" aria-label="jogadas seguintes"></div>
+      <div class="board-wrap"><canvas id="board"></canvas></div>
+      <div class="bar" style="margin-top:0.6rem"><i id="prog"></i></div>
+      <div class="row" style="margin-top:0.75rem">
+        <button id="back" class="ghost" type="button">Voltar</button>
+        <button id="next" class="primary" type="button">Próxima</button>
+      </div>
+      <p class="note" style="margin-top:0.5rem">Podes fazer as jogadas em lote: a
+        fila acima mostra as seguintes, por isso não precisas de voltar aqui a
+        cada toque. Depois avança o contador o mesmo número de vezes.</p>
+      <p class="note">As posições são <strong>casas do
+        tabuleiro</strong>, não peças: «L2C3» é sempre a casa da linha 2, coluna 3,
+        seja qual for a peça que lá esteja nesse momento.</p>
+    </div>
+
+    <div class="panel target">
+      <canvas id="goal"></canvas>
+      <div>
+        <p class="eyebrow" style="margin-bottom:0.3rem">Confere isto primeiro</p>
+        <p>É a imagem que vais formar, montada com as tuas próprias peças. Se não
+          parecer uma imagem coerente, a leitura falhou — carrega outro screenshot
+          antes de gastar jogadas.</p>
+      </div>
+    </div>
+
+    <details class="panel">
+      <summary>Ver a lista completa</summary>
+      <div class="list" id="list"></div>
+    </details>
+
+    <div class="row">
+      <button id="again" class="ghost" type="button">Carregar outro screenshot</button>
+    </div>
+  </section>
+
+  <footer class="note">
+    <p><strong>Se tocares na peça errada</strong>, o plano deixa de servir: tira
+      um screenshot novo e volta a carregá-lo. A página recalcula a partir do
+      estado em que o puzzle estiver.</p>
+    <p><strong>Toca tu nas peças.</strong> Consultar a solução é como usar uma
+      calculadora — não mexe no jogo. Software que toque no ecrã por ti viola os
+      Termos de Serviço da Supercell e é isso que arrisca a conta.</p>
+    <p>Tudo corre no teu dispositivo: o screenshot não é enviado para nenhum servidor.</p>
+  </footer>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Resolvedor do quebra-cabeca deslizante do Brawl Stars.
+// Porte directo de scripts/brawl-puzzle-solver.py. Sem dependencias: recebe
+// pixeis RGBA e devolve a imagem original + a sequencia de jogadas.
+// ---------------------------------------------------------------------------
+
+// Margens de analise, em fraccao do lado da peca (o mesmo screenshot pode vir
+// de ecras muito diferentes, por isso nada aqui e em pixeis fixos).
+const INSET_FRAC = 0.022;   // rebordo claro da peca, a ignorar
+const CORNER_FRAC = 0.085;  // pontas arredondadas, a ignorar nas costuras
+const inset = (tile) => Math.max(2, Math.round(tile * INSET_FRAC));
+const corner = (side) => Math.max(5, Math.round(side * CORNER_FRAC));
+
+// --- utilitarios -----------------------------------------------------------
+
+
+
+
+// --- 1. localizar a grelha -------------------------------------------------
+
+/** Media de profile em [a,b) via somas acumuladas. */
+function windowMean(prefix, a, b) {
+  const lo = Math.max(0, Math.min(prefix.length - 2, Math.floor(a)));
+  const hi = Math.max(lo + 1, Math.min(prefix.length - 1, Math.ceil(b)));
+  return (prefix[hi] - prefix[lo]) / (hi - lo);
+}
+
+/**
+ * Encontra (origem, passo) num eixo procurando a periodicidade das goteiras:
+ * N faixas claras separadas por N-1 linhas escuras. Pontua cada (passo, fase)
+ * pelo contraste entre o centro das pecas e as fronteiras, e fica com o
+ * maximo. E robusto ao que um limiar de brilho falha - uma peca escura, ou a
+ * casa vazia a partir uma faixa em duas.
+ */
+function findAxis(prefix, lo, hi, N, guess) {
+  let best = null;
+  // afinacao: procura so perto da estimativa que veio das manchas
+  const pMin = guess * 0.88, pMax = guess * 1.12;
+  for (let pitch = pMin; pitch <= pMax; pitch += 0.1) {
+    const need = N * pitch;
+    const phLo = Math.max(0, lo - guess * 0.5);
+    const phHi = Math.min(prefix.length - 1 - need, lo + guess * 0.5);
+    for (let phase = phLo; phase <= phHi; phase += 0.25) {
+      let tileSum = 0, edgeSum = 0;
+      for (let k = 0; k < N; k++) {
+        const a = phase + k * pitch;
+        tileSum += windowMean(prefix, a + pitch * 0.25, a + pitch * 0.75);
+      }
+      for (let k = 1; k < N; k++) {
+        const b = phase + k * pitch;
+        edgeSum += windowMean(prefix, b - pitch * 0.02, b + pitch * 0.02);
+      }
+      const score = tileSum / N - edgeSum / (N - 1);
+      if (!best || score > best.score) best = { score, pitch, phase };
+    }
+  }
+  if (!best) throw new Error("nao consegui medir a grelha");
+  return best;
+}
+
+/** Largura da goteira: a partir de cada fronteira interna, alarga enquanto o
+ * brilho ficar abaixo do meio caminho entre peca e goteira. */
+function gutterWidth(prefix, phase, pitch, N) {
+  const widths = [];
+  for (let k = 1; k < N; k++) {
+    const b = phase + k * pitch;
+    const dark = windowMean(prefix, b - pitch * 0.02, b + pitch * 0.02);
+    const bright = (windowMean(prefix, b - pitch * 0.45, b - pitch * 0.15)
+      + windowMean(prefix, b + pitch * 0.15, b + pitch * 0.45)) / 2;
+    const mid = (dark + bright) / 2;
+    if (!(bright > dark)) continue;
+    let lo = b, hi = b;
+    const limit = pitch * 0.25;
+    while (b - lo < limit && windowMean(prefix, lo - 1, lo) < mid) lo--;
+    while (hi - b < limit && windowMean(prefix, hi, hi + 1) < mid) hi++;
+    widths.push(hi - lo);
+  }
+  if (!widths.length) return Math.max(2, pitch * 0.04);
+  widths.sort((a, b) => a - b);
+  return widths[widths.length >> 1];
+}
+
+
+/**
+ * Procura a grelha em todo o ecra: o (tamanho, passo, fase) que melhor explica
+ * a imagem como N*N casas claras separadas por goteiras escuras nos dois eixos.
+ *
+ * Nao delimita a zona por brilho primeiro - as paredes do cenario sao tao
+ * claras como as pecas e arrastavam a zona toda. O que distingue a grelha nao e
+ * ser clara, e ter goteiras escuras regulares em ambas as direccoes: as listras
+ * do chao tem periodicidade num eixo so, e a parede nao tem nenhuma.
+ */
+function fitLattice(small, sw, sh, wantN) {
+  // imagem integral: media de qualquer rectangulo em tempo constante
+  const ii = new Float64Array((sw + 1) * (sh + 1));
+  for (let y = 0; y < sh; y++)
+    for (let x = 0; x < sw; x++)
+      ii[(y + 1) * (sw + 1) + x + 1] = small[y * sw + x]
+        + ii[y * (sw + 1) + x + 1] + ii[(y + 1) * (sw + 1) + x] - ii[y * (sw + 1) + x];
+  const rectMean = (x0, y0, x1, y1) => {
+    const a = Math.max(0, Math.min(sw, Math.round(x0))), b = Math.max(0, Math.min(sw, Math.round(x1)));
+    const c = Math.max(0, Math.min(sh, Math.round(y0))), d = Math.max(0, Math.min(sh, Math.round(y1)));
+    if (b <= a || d <= c) return null;
+    const sum = ii[d * (sw + 1) + b] - ii[c * (sw + 1) + b] - ii[d * (sw + 1) + a] + ii[c * (sw + 1) + a];
+    return sum / ((b - a) * (d - c));
+  };
+  const median = (arr) => {
+    const s = [...arr].sort((x, y) => x - y);
+    return s[s.length >> 1];
+  };
+
+  /**
+   * Uma goteira nao e so "escuro": e uma linha ESCURA E FINA - escura em
+   * relacao ao que esta logo ao lado. Medir so a escuridao fazia a grelha
+   * crescer para o cenario, onde a moldura larga do painel passava por goteira,
+   * e deixava vencer grelhas grandes assentes em sombras. O contraste com a
+   * vizinhanca imediata distingue as duas coisas.
+   */
+  const lineContrast = (at, pitch, vertical, lo, hi) => {
+    const line = Math.max(0.6, pitch * 0.03);
+    const near = pitch * 0.09, far = pitch * 0.19;
+    const dark = vertical
+      ? rectMean(at - line, lo, at + line, hi)
+      : rectMean(lo, at - line, hi, at + line);
+    const sides = vertical
+      ? [rectMean(at - far, lo, at - near, hi), rectMean(at + near, lo, at + far, hi)]
+      : [rectMean(lo, at - far, hi, at - near), rectMean(lo, at + near, hi, at + far)];
+    const ok = sides.filter((v) => v !== null);
+    if (dark === null || !ok.length) return null;
+    return ok.reduce((s, v) => s + v, 0) / ok.length - dark;
+  };
+
+  // fases candidatas eixo a eixo (procurar o par seria quadratico); guardamos
+  // as 3 melhores de cada, que a melhor as vezes e uma sombra do cenario
+  const phaseCands = (pitch, N, vertical, extent) => {
+    const out = [];
+    const limit = (vertical ? sw : sh) - N * pitch;
+    for (let ph = 0; ph <= limit; ph += 2) {
+      let sum = 0, ok = true;
+      for (let k = 1; k < N && ok; k++) {
+        const v = lineContrast(ph + k * pitch, pitch, vertical, extent.lo, extent.hi);
+        if (v === null) ok = false; else sum += v;
+      }
+      if (ok) out.push([sum, ph]);
+    }
+    out.sort((x, y) => y[0] - x[0]);
+    return out.slice(0, 3).map(([, ph]) => ph);
+  };
+
+  let best = null;
+  const short = Math.min(sw, sh);
+  for (let N = wantN || 3; N <= (wantN || 6); N++) {
+    // a grelha pode ocupar de ~28% a 100% do lado curto do ecra; o passo fino
+    // vem depois, do afinamento a resolucao inteira
+    for (let pitch = (short * 0.28) / N; pitch <= short / N; pitch += 1) {
+      const need = N * pitch;
+      if (need > sw || need > sh) continue;
+      const xs = phaseCands(pitch, N, true, { lo: (sh - need) / 2, hi: (sh + need) / 2 });
+      const ys = phaseCands(pitch, N, false, { lo: (sw - need) / 2, hi: (sw + need) / 2 });
+      for (const px of xs)
+        for (const py of ys) {
+          const lines = [];
+          for (let k = 1; k < N; k++) {
+            lines.push(lineContrast(px + k * pitch, pitch, true, py, py + need));
+            lines.push(lineContrast(py + k * pitch, pitch, false, px, px + need));
+          }
+          if (lines.some((v) => v === null)) continue;
+          const sorted = [...lines].sort((x, y) => x - y);
+          const med = sorted[sorted.length >> 1];
+          if (med <= 1) continue;
+          // TODAS as goteiras tem de existir: se uma falha, a grelha nao e esta
+          if (sorted[0] < med * 0.35) continue;
+
+          /**
+           * Falta desfazer uma ambiguidade: a moldura exterior do painel
+           * tambem parece goteira, por isso a grelha inteira podia deslizar uma
+           * casa e continuar a ver N-1 linhas escuras. O que denuncia o
+           * deslize sao as casas - uma casa fora da grelha nao tem goteiras
+           * dos quatro lados, tem cenario liso.
+           */
+          const edgeThr = med * 0.3;
+          let goodCells = 0;
+          for (let r = 0; r < N; r++)
+            for (let c = 0; c < N; c++) {
+              const x = px + c * pitch, y = py + r * pitch;
+              const e = [
+                lineContrast(x, pitch, true, y, y + pitch),
+                lineContrast(x + pitch, pitch, true, y, y + pitch),
+                lineContrast(y, pitch, false, x, x + pitch),
+                lineContrast(y + pitch, pitch, false, x, x + pitch),
+              ];
+              if (e.filter((v) => v !== null && v > edgeThr).length >= 3) goodCells++;
+            }
+          if (goodCells < N * N - 1) continue;
+
+          /**
+           * Fica a MAIOR grelha valida, nao a de melhor contraste. Qualquer
+           * sub-grelha de uma grelha real tambem e uma grelha perfeita - as
+           * goteiras dela sao verdadeiras e as casas tambem - por isso uma 3x3
+           * dentro da 4x4 passava todos os testes. O que distingue a verdadeira
+           * e nao se poder estender mais: fora dela nao ha goteiras, e e isso
+           * que o teste casa a casa acima garante.
+           */
+          const score = lines.reduce((s, v) => s + v, 0) / lines.length;
+          if (!best || N > best.N || (N === best.N && score > best.score)) {
+            best = { score, N, pitch, px, py };
+          }
+        }
+    }
+  }
+  if (!best) throw new Error("nao encontrei a grelha do puzzle na imagem");
+  return best;
+}
+
+function findGrid(gray, w, h, wantN = null) {
+  const scale = Math.max(1, Math.round(Math.min(w, h) / 480));
+  const sw = Math.floor(w / scale), sh = Math.floor(h / scale);
+  const small = new Float64Array(sw * sh);
+  for (let y = 0; y < sh; y++)
+    for (let x = 0; x < sw; x++) {
+      let acc = 0;
+      for (let dy = 0; dy < scale; dy++)
+        for (let dx = 0; dx < scale; dx++) acc += gray[(y * scale + dy) * w + x * scale + dx];
+      small[y * sw + x] = acc / (scale * scale);
+    }
+
+  const fit = fitLattice(small, sw, sh, wantN);
+  const N = fit.N;
+  const guess = fit.pitch * scale;
+
+  // perfil de brilho de um eixo, medido so na extensao do outro
+  const profileX = (y0, y1) => {
+    const p = new Float64Array(w + 1);
+    for (let x = 0; x < w; x++) {
+      let acc = 0;
+      for (let y = y0; y < y1; y++) acc += gray[y * w + x];
+      p[x + 1] = p[x] + acc / (y1 - y0);
+    }
+    return p;
+  };
+  const profileY = (x0, x1) => {
+    const p = new Float64Array(h + 1);
+    for (let y = 0; y < h; y++) {
+      let acc = 0;
+      for (let x = x0; x < x1; x++) acc += gray[y * w + x];
+      p[y + 1] = p[y] + acc / (x1 - x0);
+    }
+    return p;
+  };
+
+  // Afinamento a resolucao inteira: a rede grosseira acerta na casa certa mas
+  // erra fraccoes de pixel no passo, e ao fim de N casas isso desalinha o corte.
+  const clampX = (v) => Math.max(0, Math.min(w - 1, Math.round(v)));
+  const clampY = (v) => Math.max(0, Math.min(h - 1, Math.round(v)));
+  let box = {
+    x0: fit.px * scale, x1: (fit.px + N * fit.pitch) * scale,
+    y0: fit.py * scale, y1: (fit.py + N * fit.pitch) * scale,
+  };
+  let ax, ay, px, py;
+  for (let pass = 0; pass < 2; pass++) {
+    px = profileX(clampY(box.y0), Math.max(clampY(box.y0) + 1, clampY(box.y1)));
+    ax = findAxis(px, box.x0, box.x1, N, guess);
+    box = { ...box, x0: ax.phase, x1: ax.phase + N * ax.pitch };
+    py = profileY(clampX(box.x0), Math.max(clampX(box.x0) + 1, clampX(box.x1)));
+    ay = findAxis(py, box.y0, box.y1, N, guess);
+    box = { ...box, y0: ay.phase, y1: ay.phase + N * ay.pitch };
+  }
+
+  const pitch = (ax.pitch + ay.pitch) / 2;
+  const gut = Math.max(gutterWidth(px, ax.phase, ax.pitch, N),
+    gutterWidth(py, ay.phase, ay.pitch, N));
+  return {
+    N,
+    x0: ax.phase + gut / 2,
+    y0: ay.phase + gut / 2,
+    pitch,
+    tile: Math.max(pitch * 0.5, pitch - gut),
+  };
+}
+
+// --- 2. cortar as pecas ----------------------------------------------------
+
+/** Corta as N*N celulas (interior da peca, sem o rebordo claro). */
+function cutTiles(rgba, w, h, geom, N) {
+  const ins = inset(geom.tile);
+  const side = Math.round(geom.tile) - 2 * ins;
+  if (side < 24) throw new Error("pecas demasiado pequenas para analisar");
+  const tiles = [];
+  for (let pos = 0; pos < N * N; pos++) {
+    const r = Math.floor(pos / N), c = pos % N;
+    const left = Math.round(geom.x0 + c * geom.pitch) + ins;
+    const top = Math.round(geom.y0 + r * geom.pitch) + ins;
+    const t = new Float64Array(side * side * 3);
+    for (let y = 0; y < side; y++) {
+      const sy = Math.min(h - 1, Math.max(0, top + y));
+      for (let x = 0; x < side; x++) {
+        const sx = Math.min(w - 1, Math.max(0, left + x));
+        const s = (sy * w + sx) * 4, d = (y * side + x) * 3;
+        t[d] = rgba[s]; t[d + 1] = rgba[s + 1]; t[d + 2] = rgba[s + 2];
+      }
+    }
+    tiles.push({ data: t, side });
+  }
+  return tiles;
+}
+
+/** A celula vazia mostra o fundo escuro do portao: e a mais escura e a de
+ * menor variacao interna. */
+function detectBlank(tiles) {
+  let best = 0, bestScore = Infinity;
+  tiles.forEach((t, i) => {
+    let sum = 0, sum2 = 0;
+    for (let k = 0; k < t.data.length; k++) { sum += t.data[k]; sum2 += t.data[k] * t.data[k]; }
+    const mean = sum / t.data.length;
+    const score = mean + Math.sqrt(Math.max(sum2 / t.data.length - mean * mean, 0));
+    if (score < bestScore) { bestScore = score; best = i; }
+  });
+  return best;
+}
+
+// --- 3. descobrir a imagem original (edge-matching com MGC) ----------------
+
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m;
+  const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  if (!isFinite(det) || Math.abs(det) < 1e-9) return null;
+  const s = 1 / det;
+  return [
+    (e * i - f * h) * s, (c * h - b * i) * s, (b * f - c * e) * s,
+    (f * g - d * i) * s, (a * i - c * g) * s, (c * d - a * f) * s,
+    (d * h - e * g) * s, (b * g - a * h) * s, (a * e - b * d) * s,
+  ];
+}
+
+/**
+ * Metade da MGC: modela o gradiente esperado no bordo direito de A e mede
+ * quao improvavel e o gradiente que a costura A|B produz.
+ * `flip` percorre os bordos espelhados (para o termo simetrico) e `swap` troca
+ * linhas/colunas (para as costuras verticais).
+ */
+function mgcHalf(A, B, flip, swap) {
+  const s = A.side;
+  const at = (t, i, j, ch) => {
+    let y = swap ? j : i, x = swap ? i : j;
+    if (flip) { if (swap) y = s - 1 - y; else x = s - 1 - x; }
+    return t.data[(y * s + x) * 3 + ch];
+  };
+  const K = corner(s);
+  const n = s - 2 * K;
+  const exp = new Float64Array(n * 3);
+  const mu = [0, 0, 0];
+  for (let k = 0; k < n; k++) {
+    const i = K + k;
+    for (let ch = 0; ch < 3; ch++) {
+      const v = at(A, i, s - 1, ch) - at(A, i, s - 2, ch);
+      exp[k * 3 + ch] = v;
+      mu[ch] += v / n;
+    }
+  }
+  const cov = new Float64Array(9);
+  for (let k = 0; k < n; k++)
+    for (let p = 0; p < 3; p++)
+      for (let q = 0; q < 3; q++)
+        cov[p * 3 + q] += ((exp[k * 3 + p] - mu[p]) * (exp[k * 3 + q] - mu[q])) / (n - 1);
+  for (let p = 0; p < 3; p++) cov[p * 3 + p] += 1; // regulariza (cov singular)
+  const iv = inv3(Array.from(cov));
+  if (!iv) return 1e6;
+
+  let total = 0;
+  for (let k = 0; k < n; k++) {
+    const i = K + k;
+    const d = [0, 0, 0];
+    for (let ch = 0; ch < 3; ch++) d[ch] = at(B, i, 0, ch) - at(A, i, s - 1, ch) - mu[ch];
+    let m = 0;
+    for (let p = 0; p < 3; p++)
+      for (let q = 0; q < 3; q++) m += d[p] * iv[p * 3 + q] * d[q];
+    total += Math.sqrt(Math.max(m, 0));
+  }
+  return total / n;
+}
+
+/** MGC simetrica. swap=false: A a esquerda de B. swap=true: A acima de B. */
+function mgc(A, B, swap) {
+  return mgcHalf(A, B, false, swap) + mgcHalf(B, A, true, swap);
+}
+
+/**
+ * Arrumacao que minimiza o custo total das costuras, em beam search por ordem
+ * raster. O buraco pode cair em qualquer casa (o jogo esconde uma peca da
+ * imagem original). Devolve {layout, cost}: layout[pos] = indice da celula
+ * actual que pertence a pos, ou -1 para o buraco.
+ */
+/** Copia `placed` com uma casa acrescentada no fim. */
+function appended(placed, pos, value) {
+  const out = new Int8Array(pos + 1);
+  out.set(placed);
+  out[pos] = value;
+  return out;
+}
+
+function solveLayout(tiles, blank, N, beamWidth = 150) {
+  const pieces = [];
+  for (let i = 0; i < N * N; i++) if (i !== blank) pieces.push(i);
+  const n = pieces.length;
+
+  const rawR = new Float64Array(n * n).fill(Infinity);
+  const rawD = new Float64Array(n * n).fill(Infinity);
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      rawR[i * n + j] = mgc(tiles[pieces[i]], tiles[pieces[j]], false);
+      rawD[i * n + j] = mgc(tiles[pieces[i]], tiles[pieces[j]], true);
+    }
+
+  /**
+   * Custo absoluto engana: uma peca de ceu liso casa "bem" com meio mundo.
+   * O que distingue o par certo e ser muito melhor que a alternativa seguinte,
+   * por isso dividimos cada custo pelo melhor concorrente na mesma linha e na
+   * mesma coluna. Assim um par unico fica << 1 e um par plausivel mas banal
+   * fica ~1.
+   */
+  const normalize = (raw) => {
+    const out = new Float64Array(n * n).fill(Infinity);
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++) {
+        if (i === j) continue;
+        let rowAlt = Infinity, colAlt = Infinity;
+        for (let k = 0; k < n; k++) {
+          if (k !== j && k !== i && raw[i * n + k] < rowAlt) rowAlt = raw[i * n + k];
+          if (k !== i && k !== j && raw[k * n + j] < colAlt) colAlt = raw[k * n + j];
+        }
+        const eps = 1e-6;
+        out[i * n + j] = raw[i * n + j] / (rowAlt + eps) + raw[i * n + j] / (colAlt + eps);
+      }
+    return out;
+  };
+  const right = normalize(rawR);
+  const below = normalize(rawD);
+
+  const total = N * N;
+
+  /**
+   * Custo medio por costura, nao o total.
+   *
+   * As costuras que tocam o buraco nao se podem medir, e se as tratarmos como
+   * gratis o buraco instala-se onde houver a pior costura, para a esconder.
+   * Dividir pelo numero de costuras medidas equivale a cobrar-lhes o custo
+   * medio, e ai as posicoes possiveis do buraco ficam comparaveis entre si.
+   */
+  const meanSeam = (arr) => {
+    let sum = 0, seams = 0;
+    for (let pos = 0; pos < total; pos++) {
+      const p = arr[pos];
+      if (p < 0) continue;
+      const r = Math.floor(pos / N), c = pos % N;
+      if (c > 0 && arr[pos - 1] >= 0) { sum += right[arr[pos - 1] * n + p]; seams++; }
+      if (r > 0 && arr[pos - N] >= 0) { sum += below[arr[pos - N] * n + p]; seams++; }
+    }
+    return seams ? sum / seams : Infinity;
+  };
+
+  /**
+   * Onde fica a casa vazia da imagem original e a decisao mais fragil de todas:
+   * uma coluna inteira pode rodar uma casa e o buraco absorve a diferenca, sem
+   * nenhuma costura obviamente errada. Por isso nao a deixamos ao acaso da
+   * procura - fixamos o buraco em cada uma das N*N casas, montamos as pecas
+   * para cada hipotese, e comparamos.
+   */
+  const assemble = (hole) => {
+    let states = [{ cost: 0, placed: new Int8Array(0) }];
+    for (let pos = 0; pos < total; pos++) {
+      const r = Math.floor(pos / N), c = pos % N;
+      const next = [];
+      for (const st of states) {
+        const used = new Uint8Array(n);
+        for (const p of st.placed) if (p >= 0) used[p] = 1;
+        const left = c > 0 ? st.placed[pos - 1] : -2;
+        const up = r > 0 ? st.placed[pos - N] : -2;
+        if (pos === hole) {
+          next.push({ cost: st.cost, placed: appended(st.placed, pos, -1) });
+          continue;
+        }
+        for (let p = 0; p < n; p++) {
+          if (used[p]) continue;
+          let extra = 0;
+          if (left >= 0) extra += right[left * n + p];
+          if (up >= 0) extra += below[up * n + p];
+          next.push({ cost: st.cost + extra, placed: appended(st.placed, pos, p) });
+        }
+      }
+      next.sort((x, y) => x.cost - y.cost);
+      states = next.slice(0, beamWidth);
+      if (!states.length) return null;
+    }
+
+    // refinamento: o beam decide as primeiras casas com poucas restricoes a
+    // vista, e pode fixar cedo uma escolha errada
+    const slots = Int8Array.from(states[0].placed);
+    const swap = (i, j) => { const t = slots[i]; slots[i] = slots[j]; slots[j] = t; };
+    let cost = meanSeam(slots);
+    for (let sweep = 0; sweep < 60; sweep++) {
+      let improved = false;
+      for (let i = 0; i < total; i++)
+        for (let j = i + 1; j < total; j++) {
+          if (i === hole || j === hole) continue;
+          swap(i, j);
+          const c2 = meanSeam(slots);
+          if (c2 < cost - 1e-9) { cost = c2; improved = true; } else swap(i, j);
+        }
+      // trocas de tres: saem de minimos locais onde nenhuma troca de par ajuda
+      for (let i = 0; i < total; i++)
+        for (let j = 0; j < total; j++)
+          for (let k = 0; k < total; k++) {
+            if (i === j || j === k || i === k) continue;
+            if (i === hole || j === hole || k === hole) continue;
+            swap(i, j); swap(j, k);
+            const c2 = meanSeam(slots);
+            if (c2 < cost - 1e-9) { cost = c2; improved = true; }
+            else { swap(j, k); swap(i, j); }
+          }
+      if (!improved) break;
+    }
+    return { slots, cost };
+  };
+
+  let bestFit = null;
+  for (let hole = 0; hole < total; hole++) {
+    const r = assemble(hole);
+    if (r && (!bestFit || r.cost < bestFit.cost)) bestFit = r;
+  }
+  if (!bestFit) throw new Error("nao consegui reconstruir a imagem");
+  const slots = bestFit.slots;
+  const cost = bestFit.cost;
+
+  const layout = Array.from(slots, (p) => (p < 0 ? -1 : pieces[p]));
+  return { layout, cost, costPerSeam: cost };
+}
+
+// --- 4. resolver o puzzle deslizante ---------------------------------------
+
+function makeHeuristic(goalOf, N) {
+  // Manhattan + linear conflict (admissivel). Chamada milhoes de vezes pelo
+  // IDA*, por isso nao aloca nada: os buffers sao reutilizados e o grupo de
+  // cada linha/coluna sai ja ordenado da propria varredura.
+  const goalRow = new Int8Array(N * N), goalCol = new Int8Array(N * N);
+  for (const v in goalOf) {
+    goalRow[v] = Math.floor(goalOf[v] / N);
+    goalCol[v] = goalOf[v] % N;
+  }
+  const buf = new Int8Array(N);
+
+  return function h(state) {
+    let out = 0;
+    for (let pos = 0; pos < state.length; pos++) {
+      const v = state[pos];
+      if (v < 0) continue;
+      out += Math.abs(Math.floor(pos / N) - goalRow[v]) + Math.abs((pos % N) - goalCol[v]);
+    }
+    // conflitos lineares: duas pecas na sua linha/coluna final mas em ordem
+    // trocada - uma delas tem de sair e voltar (2 jogadas extra)
+    for (let r = 0; r < N; r++) {
+      let k = 0;
+      for (let c = 0; c < N; c++) {
+        const v = state[r * N + c];
+        if (v >= 0 && goalRow[v] === r) buf[k++] = goalCol[v];
+      }
+      for (let i = 0; i < k; i++)
+        for (let j = i + 1; j < k; j++) if (buf[i] > buf[j]) out += 2;
+    }
+    for (let c = 0; c < N; c++) {
+      let k = 0;
+      for (let r = 0; r < N; r++) {
+        const v = state[r * N + c];
+        if (v >= 0 && goalCol[v] === c) buf[k++] = goalRow[v];
+      }
+      for (let i = 0; i < k; i++)
+        for (let j = i + 1; j < k; j++) if (buf[i] > buf[j]) out += 2;
+    }
+    return out;
+  };
+}
+
+/** Vizinhos do buraco: [posicao da peca que se move, direccao do movimento]. */
+function neighbours(blank, N) {
+  const r = Math.floor(blank / N), c = blank % N, out = [];
+  if (r > 0) out.push([blank - N, "baixo"]);
+  if (r < N - 1) out.push([blank + N, "cima"]);
+  if (c > 0) out.push([blank - 1, "direita"]);
+  if (c < N - 1) out.push([blank + 1, "esquerda"]);
+  return out;
+}
+
+/**
+ * Cada jogada troca o buraco com uma vizinha: inverte a paridade da permutacao
+ * e muda a distancia do buraco em 1. Logo (inversoes + distancia do buraco) tem
+ * paridade constante, e no objectivo vale zero.
+ *
+ * A permutacao tem de incluir o buraco: contar so as 15 pecas da a paridade
+ * errada sempre que o buraco muda de casa.
+ */
+function solvable(start, goal, N) {
+  const order = new Map();
+  goal.forEach((v, i) => order.set(v, i));   // o buraco (-1) tambem conta
+  const seq = Array.from(start, (v) => order.get(v));
+  let inv = 0;
+  for (let i = 0; i < seq.length; i++)
+    for (let j = i + 1; j < seq.length; j++) if (seq[i] > seq[j]) inv++;
+  const sb = start.indexOf(-1), gb = goal.indexOf(-1);
+  const dist = Math.abs(Math.floor(sb / N) - Math.floor(gb / N)) + Math.abs((sb % N) - (gb % N));
+  return inv % 2 === dist % 2;
+}
+
+/**
+ * IDA*. Com weight = 1 devolve a solucao minima. Com weight > 1 corta mais
+ * cedo: encontra uma solucao muito mais depressa, no maximo `weight` vezes
+ * mais longa que a minima. Devolve null se estourar o orcamento.
+ */
+function idaStar(start, goal, N, weight, budget, deadline) {
+  const goalOf = [];
+  goal.forEach((v, i) => { if (v >= 0) goalOf[v] = i; });
+  const h = makeHeuristic(goalOf, N);
+  const state = Int8Array.from(start);
+  const path = [];
+  let nodes = 0, aborted = false;
+
+  function dfs(blank, g, hv, bound, prev) {
+    if (g + weight * hv > bound) return g + weight * hv;
+    if (hv === 0) return true;
+    if ((++nodes & 0xfff) === 0 && (nodes > budget || Date.now() > deadline)) {
+      aborted = true;
+      return Infinity;
+    }
+    let best = Infinity;
+    const scored = [];
+    for (const [src, dir] of neighbours(blank, N)) {
+      if (src === prev) continue; // nao desfazer a jogada anterior
+      state[blank] = state[src]; state[src] = -1;
+      scored.push([h(state), src, dir]);
+      state[src] = state[blank]; state[blank] = -1;
+    }
+    scored.sort((a, b) => a[0] - b[0]);
+    for (const [ch, src, dir] of scored) {
+      state[blank] = state[src]; state[src] = -1;
+      path.push([src, dir]);
+      const t = dfs(src, g + 1, ch, bound, blank);
+      if (t === true) return true;
+      if (aborted) return Infinity;
+      if (t < best) best = t;
+      path.pop();
+      state[src] = state[blank]; state[blank] = -1;
+    }
+    return best;
+  }
+
+  let bound = weight * h(state);
+  while (bound < 400) {
+    const t = dfs(state.indexOf(-1), 0, h(state), bound, -1);
+    if (t === true) return { moves: path.slice(), optimal: weight === 1, nodes };
+    if (aborted || t === Infinity) return null;
+    // Com peso, os f sao fraccionarios e o limite seguinte pode subir uma
+    // ninharia - a busca repetia a mesma arvore em vez de avancar. Forcamos um
+    // passo minimo (no 15-puzzle o f admissivel sobe de 2 em 2).
+    bound = weight === 1 ? t : Math.max(t, bound + 2);
+  }
+  return null;
+}
+
+/** Rede de seguranca: greedy best-first. Rapido, solucao valida mas nao minima. */
+function greedySearch(start, goal, N, cap = 400000) {
+  const goalOf = [];
+  goal.forEach((v, i) => { if (v >= 0) goalOf[v] = i; });
+  const h = makeHeuristic(goalOf, N);
+  const key = (s) => String.fromCharCode(...s.map((v) => v + 2));
+  const seen = new Map([[key(start), null]]);
+  // min-heap simples por h
+  const heap = [[h(start), Int8Array.from(start)]];
+  const push = (item) => {
+    heap.push(item);
+    let i = heap.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (heap[p][0] <= heap[i][0]) break;
+      [heap[p], heap[i]] = [heap[i], heap[p]]; i = p;
+    }
+  };
+  const pop = () => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]]; i = m;
+      }
+    }
+    return top;
+  };
+
+  while (heap.length && seen.size < cap) {
+    const [, state] = pop();
+    if (h(state) === 0) {
+      // reconstroi o caminho
+      const moves = [];
+      let k = key(state);
+      while (seen.get(k)) {
+        const [prevKey, src, dir] = seen.get(k);
+        moves.push([src, dir]);
+        k = prevKey;
+      }
+      moves.reverse();
+      return { moves, optimal: false, nodes: seen.size };
+    }
+    const blank = state.indexOf(-1);
+    const k0 = key(state);
+    for (const [src, dir] of neighbours(blank, N)) {
+      const nx = Int8Array.from(state);
+      nx[blank] = nx[src]; nx[src] = -1;
+      const nk = key(nx);
+      if (seen.has(nk)) continue;
+      seen.set(nk, [k0, src, dir]);
+      push([h(nx), nx]);
+    }
+  }
+  return null;
+}
+
+/**
+ * Procura em patamares, para nao bloquear um telemovel num embaralhamento
+ * dificil: primeiro a solucao minima; se estourar o tempo, solucoes cada vez
+ * menos apertadas; em ultimo recurso greedy best-first, que devolve sempre
+ * algo valido.
+ */
+function solvePuzzle(start, goal, N, timeBudgetMs = 10000) {
+  const tiers = [
+    { weight: 1, ms: timeBudgetMs * 0.45 },   // minima, se der
+    { weight: 1.5, ms: timeBudgetMs * 0.3 },
+    { weight: 2.5, ms: timeBudgetMs * 0.25 },
+  ];
+  for (const { weight, ms } of tiers) {
+    const r = idaStar(start, goal, N, weight, 4e7, Date.now() + ms);
+    if (r) return r;
+  }
+  const approx = greedySearch(start, goal, N, 1500000);
+  if (approx) return approx;
+  throw new Error("nao consegui resolver este embaralhamento no tempo disponivel");
+}
+
+// --- pipeline completo -----------------------------------------------------
+
+function solveScreenshot(rgba, w, h, wantN = null, override = null) {
+  const gray = new Float64Array(w * h);
+  for (let i = 0, p = 0; i < gray.length; i++, p += 4)
+    gray[i] = (rgba[p] * 299 + rgba[p + 1] * 587 + rgba[p + 2] * 114) / 1000;
+
+  const geom = override || findGrid(gray, w, h, wantN);
+  const N = geom.N || wantN || 4;
+  const tiles = cutTiles(rgba, w, h, geom, N);
+  const blank = detectBlank(tiles);
+  const { layout, cost, costPerSeam } = solveLayout(tiles, blank, N);
+
+  const start = Int8Array.from({ length: N * N }, (_, i) => (i === blank ? -1 : i));
+  const goal = Int8Array.from(layout);
+  if (!solvable(start, goal, N)) {
+    const err = new Error("a reconstrucao nao fecha");
+    err.code = "UNSOLVABLE";
+    err.detail = { geom, blank, layout, costPerSeam };
+    throw err;
+  }
+  const { moves, optimal, nodes } = solvePuzzle(start, goal, N);
+  return { geom, N, tiles, blank, layout, cost, costPerSeam, moves, optimal, nodes };
+}
+
+// ---------------------------------------------------------------------------
+// Interface
+// ---------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const state = { img: null, sol: null, step: 0, board: null };
+
+const DIRS = {
+  cima: { dx: 0, dy: -1, texto: "a peça sobe" },
+  baixo: { dx: 0, dy: 1, texto: "a peça desce" },
+  esquerda: { dx: -1, dy: 0, texto: "a peça vai para a esquerda" },
+  direita: { dx: 1, dy: 0, texto: "a peça vai para a direita" },
+};
+const cellName = (pos, N) => `L${Math.floor(pos / N) + 1}C${(pos % N) + 1}`;
+
+function setStatus(html, isError) {
+  const el = $("status");
+  el.innerHTML = html;
+  el.classList.toggle("error", !!isError);
+}
+
+// --- carregar a imagem -----------------------------------------------------
+$("pick").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) load(e.target.files[0]);
+});
+$("again").addEventListener("click", () => {
+  $("result").classList.add("hidden");
+  $("loader").classList.remove("hidden");
+  setStatus("");
+  $("file").value = "";
+});
+const drop = $("drop");
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => {
+  e.preventDefault(); drop.classList.add("over");
+}));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, () => drop.classList.remove("over")));
+drop.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) load(f);
+});
+window.addEventListener("paste", (e) => {
+  for (const item of e.clipboardData.files || []) { load(item); return; }
+});
+
+function load(file) {
+  if (!file.type.startsWith("image/")) {
+    setStatus("Isso não é uma imagem. Carrega um screenshot do jogo.", true);
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => { URL.revokeObjectURL(url); run(img); };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    setStatus("Não consegui abrir essa imagem. Tenta um PNG ou JPEG.", true);
+  };
+  img.src = url;
+}
+
+async function run(img) {
+  setStatus('<span class="spin"></span> A ler a grelha e a procurar a sequência mais curta…');
+  // deixa o navegador pintar o aviso antes de bloquear a pensar
+  await new Promise((r) => setTimeout(r, 40));
+
+  const cv = document.createElement("canvas");
+  cv.width = img.naturalWidth;
+  cv.height = img.naturalHeight;
+  const cx = cv.getContext("2d", { willReadFrequently: true });
+  cx.drawImage(img, 0, 0);
+  const data = cx.getImageData(0, 0, cv.width, cv.height).data;
+
+  const wantN = Number($("gridsize").value) || null;
+  let sol;
+  try {
+    sol = solveScreenshot(data, cv.width, cv.height, wantN);
+  } catch (err) {
+    const dica = err && err.code === "UNSOLVABLE"
+      ? "Li a grelha mas a imagem que reconstruí não podia sair de um puzzle real, "
+        + "por isso alguma peça ficou mal identificada. Tenta um screenshot mais "
+        + "nítido, sem o dedo à frente e sem animação a meio."
+      : "Não encontrei a grelha do puzzle. Certifica-te de que o screenshot mostra "
+        + "o puzzle inteiro e sem cortes; se tiveres escolhido o tamanho da grelha "
+        + "à mão, tenta a detecção automática.";
+    setStatus(`<strong>${err.message}.</strong> ${dica}`, true);
+    return;
+  }
+
+  state.img = img;
+  state.sol = sol;
+  state.step = 0;
+  setStatus("");
+  $("loader").classList.add("hidden");
+  $("result").classList.remove("hidden");
+  showFacts();
+  drawGoal();
+  buildList();
+  render();
+}
+
+// --- resumo ----------------------------------------------------------------
+function showFacts() {
+  const { moves, optimal, N, costPerSeam } = state.sol;
+  $("f-moves").textContent = moves.length;
+  $("f-grid").textContent = `${N}×${N}`;
+  const opt = $("f-opt");
+  opt.textContent = optimal ? "sequência mínima" : "válida, não a mais curta";
+  opt.className = "chip " + (optimal ? "ok" : "warn");
+  const conf = $("f-conf");
+  const nitida = costPerSeam <= 1.4;
+  conf.textContent = nitida ? "leitura nítida"
+    : costPerSeam <= 2 ? "leitura razoável" : "leitura duvidosa";
+  conf.className = "chip " + (nitida ? "ok" : "warn");
+}
+
+// --- desenhar --------------------------------------------------------------
+function tileRect(src) {
+  const { geom, N } = state.sol;
+  const r = Math.floor(src / N), c = src % N;
+  return [geom.x0 + c * geom.pitch, geom.y0 + r * geom.pitch, geom.tile, geom.tile];
+}
+
+function roundRect(ctx, x, y, w, h, rad) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, rad);
+  else ctx.rect(x, y, w, h);
+  return ctx;
+}
+
+/** Pinta um arranjo (posição -> peça de origem) num canvas. */
+function paint(canvas, arrangement, cssSize, highlight) {
+  const { N } = state.sol;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const size = Math.round(cssSize * dpr);
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const gap = Math.max(2, size * 0.008);
+  const cell = (size - gap * (N + 1)) / N;
+  const rad = cell * 0.09;
+
+  ctx.clearRect(0, 0, size, size);
+  for (let pos = 0; pos < N * N; pos++) {
+    const x = gap + (pos % N) * (cell + gap);
+    const y = gap + Math.floor(pos / N) * (cell + gap);
+    const src = arrangement[pos];
+    ctx.save();
+    if (src === null || src === undefined || src < 0) {
+      roundRect(ctx, x, y, cell, cell, rad);
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fill();
+      ctx.restore();
+      continue;
+    }
+    roundRect(ctx, x, y, cell, cell, rad);
+    ctx.clip();
+    const [sx, sy, sw, sh] = tileRect(src);
+    ctx.drawImage(state.img, sx, sy, sw, sh, x, y, cell, cell);
+    ctx.restore();
+  }
+
+  if (highlight === null || highlight === undefined) return;
+  // anel âmbar na peça a tocar, e uma seta para onde ela desliza
+  const hx = gap + (highlight.pos % N) * (cell + gap);
+  const hy = gap + Math.floor(highlight.pos / N) * (cell + gap);
+  ctx.save();
+  ctx.lineWidth = Math.max(3, cell * 0.055);
+  ctx.strokeStyle = "#f2a13f";
+  ctx.shadowColor = "rgba(242,161,63,0.8)";
+  ctx.shadowBlur = cell * 0.28;
+  roundRect(ctx, hx + ctx.lineWidth / 2, hy + ctx.lineWidth / 2,
+    cell - ctx.lineWidth, cell - ctx.lineWidth, rad);
+  ctx.stroke();
+  ctx.restore();
+
+  const d = DIRS[highlight.dir];
+  if (!d) return;
+  const cxp = hx + cell / 2 + d.dx * cell * 0.62;
+  const cyp = hy + cell / 2 + d.dy * cell * 0.62;
+  const a = cell * 0.17;
+  ctx.save();
+  ctx.translate(cxp, cyp);
+  ctx.rotate(Math.atan2(d.dy, d.dx));
+  ctx.beginPath();
+  ctx.moveTo(a, 0);
+  ctx.lineTo(-a * 0.7, a * 0.75);
+  ctx.lineTo(-a * 0.7, -a * 0.75);
+  ctx.closePath();
+  ctx.fillStyle = "#f2a13f";
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 6;
+  ctx.fill();
+  ctx.restore();
+}
+
+function boardAt(step) {
+  const { N, blank, moves } = state.sol;
+  const arr = [];
+  for (let i = 0; i < N * N; i++) arr.push(i === blank ? -1 : i);
+  for (let k = 0; k < step; k++) {
+    const src = moves[k][0];
+    const hole = arr.indexOf(-1);
+    arr[hole] = arr[src];
+    arr[src] = -1;
+  }
+  return arr;
+}
+
+function render() {
+  const { moves, N } = state.sol;
+  const done = state.step >= moves.length;
+  const arr = boardAt(state.step);
+  const width = Math.min($("board").parentElement.clientWidth - 12, 420);
+  paint($("board"), arr, width,
+    done ? null : { pos: moves[state.step][0], dir: moves[state.step][1] });
+
+  $("counter").textContent = done ? "" : `${state.step + 1}/${moves.length}`;
+  $("which").textContent = done ? "" : cellName(moves[state.step][0], N);
+  $("f-left").textContent = moves.length - state.step;
+  $("prog").style.width = `${(state.step / moves.length) * 100}%`;
+  $("verb").textContent = done ? "Está resolvido ✓" : "toca em";
+  $("dirtext").textContent = done
+    ? "A imagem está completa. Boa."
+    : DIRS[moves[state.step][1]].texto + " para o espaço vazio.";
+  const q = $("queue");
+  q.innerHTML = "";
+  if (!done) {
+    for (let k = state.step; k < Math.min(state.step + 5, moves.length); k++) {
+      const el = document.createElement(k === state.step ? "b" : "span");
+      el.textContent = cellName(moves[k][0], N);
+      q.appendChild(el);
+      if (k < Math.min(state.step + 5, moves.length) - 1) {
+        const sep = document.createElement("em");
+        sep.textContent = "›";
+        q.appendChild(sep);
+      }
+    }
+  }
+  $("back").disabled = state.step === 0;
+  $("next").disabled = done;
+  for (const li of $("list").querySelectorAll("li")) {
+    const i = Number(li.dataset.i);
+    li.className = i < state.step ? "done" : i === state.step ? "now" : "";
+  }
+  const now = $("list").querySelector("li.now");
+  if (now) now.scrollIntoView({ block: "nearest" });
+}
+
+function drawGoal() {
+  paint($("goal"), state.sol.layout, 200, null);
+}
+
+function buildList() {
+  const { moves, N } = state.sol;
+  const ol = document.createElement("ol");
+  moves.forEach(([src, dir], i) => {
+    const li = document.createElement("li");
+    li.dataset.i = i;
+    li.textContent = `${cellName(src, N)} — ${DIRS[dir].texto}`;
+    ol.appendChild(li);
+  });
+  const box = $("list");
+  box.innerHTML = "";
+  box.appendChild(ol);
+}
+
+// --- avançar ---------------------------------------------------------------
+$("next").addEventListener("click", () => {
+  if (state.step < state.sol.moves.length) { state.step++; render(); }
+});
+$("back").addEventListener("click", () => {
+  if (state.step > 0) { state.step--; render(); }
+});
+$("board").addEventListener("click", (e) => {
+  const { moves, N } = state.sol || {};
+  if (!moves || state.step >= moves.length) return;
+  // tocar na própria peça marcada conta como "feito"
+  const rect = e.currentTarget.getBoundingClientRect();
+  const c = Math.floor(((e.clientX - rect.left) / rect.width) * N);
+  const r = Math.floor(((e.clientY - rect.top) / rect.height) * N);
+  if (r * N + c === moves[state.step][0]) { state.step++; render(); }
+});
+window.addEventListener("keydown", (e) => {
+  if (!state.sol) return;
+  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); $("next").click(); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); $("back").click(); }
+});
+window.addEventListener("resize", () => { if (state.sol) render(); });
+</script>
