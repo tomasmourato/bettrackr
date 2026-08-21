@@ -5,7 +5,7 @@ import { INITIAL_BETS, safeNum } from "./utils";
 
 import type { DashboardBetsFilters } from "./components/Dashboard";
 import type { AppTab, ShellProps } from "./navigation";
-import { TAB_PATHS, tabFromPath } from "./navigation";
+import { canSeeAdmin, TAB_PATHS, tabFromPath } from "./navigation";
 import { serializeFilters } from "./lib/filterParams";
 import AuthPage from "./components/AuthPage";
 import { isAuthenticated, logout, getStoredUser, restoreBrowserSession } from "./lib/authApi";
@@ -387,12 +387,12 @@ export default function App({ initialData }: AppProps) {
   // logo após montar (routeAnimationsReady vira true no primeiro effect).
   const isMobileUI = initialData && !routeAnimationsReady ? false : isMobileUIRaw;
 
-  // O separador de gestão existe no URL, mas só é servido a administradores.
-  // Enquanto a subscrição ainda não respondeu não se decide nada: mandar um
-  // administrador para o painel só porque a resposta demorou seria pior do
-  // que esperar um instante.
+  // O separador de gestão existe no URL, mas só é servido a quem tem acesso
+  // ao painel (ver canSeeAdmin). Enquanto a subscrição ainda não respondeu
+  // não se decide nada: expulsar um administrador do painel só porque a
+  // resposta demorou seria pior do que esperar um instante.
   const effectiveTab: AppTab =
-    activeTab === "ADMIN" && subscription && subscription.role !== "admin" ? "DASHBOARD" : activeTab;
+    activeTab === "ADMIN" && subscription && !canSeeAdmin(subscription.role) ? "DASHBOARD" : activeTab;
 
   // Contrato partilhado injetado no shell escolhido.
   const shellProps: ShellProps = {

@@ -80,13 +80,23 @@ const ADMIN_NAV_ITEM: NavItem = {
   footerKey: "footer.admin",
 };
 
+export type UserRole = "user" | "admin" | "founder";
+
 /**
- * Separadores a mostrar a este utilizador. O painel de gestão só aparece a
- * quem é administrador — as rotas /api/admin respondem 403 a toda a gente,
- * por isso esconder aqui é comodidade e não segurança.
+ * Quem vê o painel de gestão. Vive aqui sozinha porque a pergunta é feita em
+ * dois sítios — a lista de separadores e o guarda do separador ativo no
+ * App.tsx — e responder a cada um por si já deixou o fundador de fora uma vez.
+ *
+ * Esconder o separador é comodidade e não segurança: as rotas /api/admin
+ * respondem 403 a quem não tem o papel, venha o pedido de onde vier.
  */
-export function navItemsFor(role: "user" | "admin" | "founder" | undefined): NavItem[] {
-  return role === "admin" || role === "founder" ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+export function canSeeAdmin(role: UserRole | undefined): boolean {
+  return role === "admin" || role === "founder";
+}
+
+/** Separadores a mostrar a este utilizador. */
+export function navItemsFor(role: UserRole | undefined): NavItem[] {
+  return canSeeAdmin(role) ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
 }
 
 export type StoredUser = ReturnType<typeof getStoredUser>;
