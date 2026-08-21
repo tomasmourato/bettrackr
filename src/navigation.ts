@@ -85,8 +85,8 @@ const ADMIN_NAV_ITEM: NavItem = {
  * quem é administrador — as rotas /api/admin respondem 403 a toda a gente,
  * por isso esconder aqui é comodidade e não segurança.
  */
-export function navItemsFor(role: "user" | "admin" | undefined): NavItem[] {
-  return role === "admin" ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+export function navItemsFor(role: "user" | "admin" | "founder" | undefined): NavItem[] {
+  return role === "admin" || role === "founder" ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
 }
 
 export type StoredUser = ReturnType<typeof getStoredUser>;

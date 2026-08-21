@@ -11,6 +11,7 @@ import pool from "../db/pool.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import { requireAdmin, AccessRequest } from "../middleware/accessMiddleware.js";
 import { accessFromRow, ENTITLED_SQL, PLAN, SUBSCRIPTION_COLUMNS } from "../lib/entitlements.js";
+import { cancelStripeSubscription, isStripeConfigured } from "./billingRoutes.js";
 
 const router = Router();
 router.use(authenticateToken);
@@ -55,8 +56,12 @@ async function audit(
   }
 }
 
-async function countAdmins(): Promise<number> {
-  const result = await pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'admin'");
+// Conta quem tem acesso ao painel — administradores E fundadores. É este
+// número que impede a app de ficar sem ninguém que lá entre.
+async function countStaff(): Promise<number> {
+  const result = await pool.query(
+    "SELECT COUNT(*)::int AS total FROM users WHERE role IN ('admin', 'founder')",
+  );
   return result.rows[0]?.total ?? 0;
 }
 
@@ -102,7 +107,7 @@ router.get("/overview", async (_req: AccessRequest, res) => {
     const result = await pool.query(
       `SELECT
          COUNT(*)::int AS users,
-         COUNT(*) FILTER (WHERE u.role = 'admin')::int AS admins,
+         COUNT(*) FILTER (WHERE u.role IN ('admin', 'founder'))::int AS admins,
          COUNT(*) FILTER (WHERE u.created_at > NOW() - INTERVAL '30 days')::int AS new_users_30d,
          COUNT(*) FILTER (WHERE ${ENTITLED_SQL})::int AS entitled,
          COUNT(*) FILTER (WHERE s.status IN ('active', 'trialing') AND s.source = 'stripe')::int AS paying,
@@ -167,7 +172,7 @@ router.get("/users", async (req: AccessRequest, res) => {
       where.push("s.status IS NULL AND u.trial_ends_at IS NOT NULL AND u.trial_ends_at > NOW()");
       break;
     case "admins":
-      where.push("u.role = 'admin'");
+      where.push("u.role IN ('admin', 'founder')");
       break;
     default:
       break;
@@ -239,6 +244,9 @@ router.patch("/users/:id/role", async (req: AccessRequest, res) => {
     res.status(400).json({ error: "Identificador inválido." });
     return;
   }
+  // 'founder' não é atribuível por aqui de propósito: se a API o soubesse
+  // dar, também lho saberia tirar, e a proteção deixava de valer. Cria-se com
+  // o scripts/make-admin.mjs.
   if (role !== "user" && role !== "admin") {
     res.status(400).json({ error: "role tem de ser 'user' ou 'admin'." });
     return;
@@ -255,9 +263,15 @@ router.patch("/users/:id/role", async (req: AccessRequest, res) => {
       res.status(404).json({ error: "Utilizador não encontrado." });
       return;
     }
-    // Sem administradores ninguém volta a entrar no painel — nem para se
-    // promover de novo.
-    if (current.rows[0].role === "admin" && role === "user" && (await countAdmins()) <= 1) {
+    // O cargo de fundador é intocável pela API — é isso que impede um
+    // administrador promovido de se virar contra quem o promoveu.
+    if (current.rows[0].role === "founder") {
+      res.status(409).json({ error: "O cargo de fundador não pode ser alterado a partir do painel." });
+      return;
+    }
+    // Sem ninguém com acesso ao painel, ninguém volta lá a entrar — nem para
+    // se promover de novo.
+    if (current.rows[0].role === "admin" && role === "user" && (await countStaff()) <= 1) {
       res.status(409).json({ error: "Tem de existir pelo menos um administrador." });
       return;
     }
@@ -410,9 +424,14 @@ router.put("/users/:id/subscription", async (req: AccessRequest, res) => {
 });
 
 // ============================================================
-// DELETE /api/admin/users/:id/subscription -> revoga o acesso manual
-// Não toca no Stripe: uma subscrição paga cancela-se no Stripe, senão o
-// utilizador continuava a ser cobrado sem ter acesso.
+// DELETE /api/admin/users/:id/subscription -> retira o acesso à conta
+//
+// Serve para os dois tipos de subscrição. Numa oferta manual basta marcar a
+// linha como cancelada; numa do Stripe cancela-se TAMBÉM lá, senão ficava a
+// pior das combinações: o utilizador sem acesso e a ser cobrado à mesma.
+//
+// Cancelar não devolve dinheiro — reembolsos fazem-se no Stripe, e reembolsar
+// uma cobrança não cancela a subscrição (são coisas independentes).
 // ============================================================
 router.delete("/users/:id/subscription", async (req: AccessRequest, res) => {
   const targetId = req.params.id;
@@ -423,7 +442,7 @@ router.delete("/users/:id/subscription", async (req: AccessRequest, res) => {
 
   try {
     const current = await pool.query(
-      `SELECT u.username, s.source
+      `SELECT u.username, s.source, s.stripe_subscription_id
          FROM users u LEFT JOIN subscriptions s ON s.user_id = u.id
         WHERE u.id = $1`,
       [targetId],
@@ -432,24 +451,36 @@ router.delete("/users/:id/subscription", async (req: AccessRequest, res) => {
       res.status(404).json({ error: "Utilizador não encontrado." });
       return;
     }
-    if (!current.rows[0].source) {
+    const { username, source, stripe_subscription_id: stripeId } = current.rows[0];
+    if (!source) {
       res.status(404).json({ error: "Esta conta não tem subscrição." });
       return;
     }
-    if (current.rows[0].source === "stripe") {
-      res.status(409).json({
-        error: "Subscrição do Stripe: cancela-a no Stripe para o utilizador deixar de ser cobrado.",
-      });
-      return;
+
+    if (source === "stripe" && stripeId) {
+      if (!isStripeConfigured()) {
+        res.status(409).json({
+          error: "Sem ligação ao Stripe não é possível parar a cobrança. Cancela a subscrição no Stripe.",
+        });
+        return;
+      }
+      const cancelled = await cancelStripeSubscription(stripeId);
+      if (!cancelled) {
+        // Não se mexe na base de dados: dizer "cancelada" aqui enquanto o
+        // Stripe continua a cobrar seria pior do que falhar.
+        res.status(502).json({ error: "Não foi possível cancelar a subscrição no Stripe. Tenta novamente." });
+        return;
+      }
     }
 
     await pool.query(
       `UPDATE subscriptions
-          SET status = 'canceled', current_period_end = NOW(), updated_at = NOW()
+          SET status = 'canceled', cancel_at_period_end = FALSE,
+              current_period_end = NOW(), updated_at = NOW()
         WHERE user_id = $1`,
       [targetId],
     );
-    await audit(req.user!, "subscription.revoke", { id: targetId, username: current.rows[0].username });
+    await audit(req.user!, "subscription.revoke", { id: targetId, username }, { source });
 
     const row = await loadUserRow(targetId);
     res.json({ success: true, user: row ? presentUser(row) : null });
@@ -479,7 +510,11 @@ router.delete("/users/:id", async (req: AccessRequest, res) => {
       res.status(404).json({ error: "Utilizador não encontrado." });
       return;
     }
-    if (current.rows[0].role === "admin" && (await countAdmins()) <= 1) {
+    if (current.rows[0].role === "founder") {
+      res.status(409).json({ error: "A conta de fundador não pode ser apagada a partir do painel." });
+      return;
+    }
+    if (current.rows[0].role === "admin" && (await countStaff()) <= 1) {
       res.status(409).json({ error: "Tem de existir pelo menos um administrador." });
       return;
     }

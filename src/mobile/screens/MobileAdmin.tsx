@@ -9,7 +9,7 @@ import { Gift, Hourglass, Loader2, RefreshCw, Search, ShieldCheck, ShieldOff, Tr
 
 import { useAdminPanel } from "../../hooks/useAdminPanel";
 import type { AdminUser } from "../../lib/adminApi";
-import { ACCESS_KEY, accessTone, auditLine, FILTERS } from "../../lib/adminDisplay";
+import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../../lib/adminDisplay";
 import { formatPrice, useI18n } from "../../lib/i18n";
 import { BottomSheet, FilterChips, ListGroup, ListItem, MobileCard, Pressable, SectionHeader } from "../ui";
 
@@ -26,7 +26,7 @@ const PRIMARY =
 const DANGER =
   "w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-rose-600 text-white text-sm font-semibold disabled:opacity-60";
 
-type Sheet = "actions" | "grant" | "trial" | "delete";
+type Sheet = "actions" | "grant" | "trial" | "revoke" | "delete";
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
@@ -150,7 +150,7 @@ export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
                 <span
                   className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider font-mono ${TONE[accessTone(user)]}`}
                 >
-                  {t(ACCESS_KEY[user.accessSource])}
+                  {isProtected(user) ? t("admin.role.founder") : t(ACCESS_KEY[user.accessSource])}
                 </span>
               }
             />
@@ -211,22 +211,24 @@ export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
       >
         <ListGroup>
           <ListItem icon={Gift} title={t("admin.action.grant")} onClick={() => setSheet("grant")} chevron />
-          {selected?.subscription?.source === "manual" && (
-            <ListItem
-              title={t("admin.action.revoke")}
-              onClick={() => void panel.revoke(selected).then(close)}
-            />
+          {selected?.subscription && selected.subscription.status !== "canceled" && (
+            <ListItem title={t("admin.action.revoke")} onClick={() => setSheet("revoke")} chevron />
           )}
           <ListItem icon={Hourglass} title={t("admin.action.trial")} onClick={() => setSheet("trial")} chevron />
-          <ListItem
-            icon={selected?.role === "admin" ? ShieldOff : ShieldCheck}
-            title={selected?.role === "admin" ? t("admin.action.demote") : t("admin.action.promote")}
-            onClick={() => {
-              if (!selected) return;
-              void (selected.role === "admin" ? panel.demote(selected) : panel.promote(selected)).then(close);
-            }}
-          />
-          <ListItem icon={Trash2} title={t("admin.action.delete")} destructive onClick={() => setSheet("delete")} />
+          {/* Num fundador estas duas não aparecem — o servidor recusa-as na
+              mesma, mas mostrá-las só convidava ao erro. */}
+          {selected && !isProtected(selected) && (
+            <>
+              <ListItem
+                icon={selected.role === "admin" ? ShieldOff : ShieldCheck}
+                title={selected.role === "admin" ? t("admin.action.demote") : t("admin.action.promote")}
+                onClick={() => {
+                  void (selected.role === "admin" ? panel.demote(selected) : panel.promote(selected)).then(close);
+                }}
+              />
+              <ListItem icon={Trash2} title={t("admin.action.delete")} destructive onClick={() => setSheet("delete")} />
+            </>
+          )}
         </ListGroup>
         {busy && (
           <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500 font-mono flex items-center gap-2">
@@ -292,6 +294,32 @@ export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
             className={PRIMARY}
           >
             {busy ? t("admin.saving") : t("admin.trial.submit")}
+          </Pressable>
+        </div>
+      </BottomSheet>
+
+      {/* Retirar a subscrição */}
+      <BottomSheet
+        open={sheet === "revoke" && selected !== null}
+        onClose={() => setSheet("actions")}
+        title={selected ? t("admin.revoke.title", { user: selected.username ?? selected.email }) : ""}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">
+            {selected?.subscription?.source === "stripe"
+              ? t("admin.revoke.bodyPaid")
+              : t("admin.revoke.bodyManual")}
+          </p>
+          <Pressable
+            as="button"
+            disabled={busy}
+            onClick={() => {
+              if (!selected) return;
+              void panel.revoke(selected).then(close);
+            }}
+            className={DANGER}
+          >
+            {busy ? t("admin.saving") : t("admin.action.revoke")}
           </Pressable>
         </div>
       </BottomSheet>

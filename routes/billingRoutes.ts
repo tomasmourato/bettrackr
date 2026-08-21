@@ -166,6 +166,31 @@ async function userIdForSubscription(subscription: Stripe.Subscription): Promise
   return byCustomer.rows[0]?.id ?? null;
 }
 
+/**
+ * Cancela já uma subscrição no Stripe. Usado pelo painel de gestão.
+ *
+ * Devolve true se a subscrição ficou cancelada — incluindo quando já lá não
+ * estava. Um administrador que carrega em "revogar" quer o resultado (deixar
+ * de cobrar), e uma subscrição que entretanto desapareceu do Stripe já está
+ * nesse estado; falhar aí só deixaria a base de dados presa a dizer "ativa".
+ *
+ * Nota: cancelar NÃO devolve dinheiro. Reembolsos fazem-se no Stripe.
+ */
+export async function cancelStripeSubscription(subscriptionId: string): Promise<boolean> {
+  try {
+    await getStripe().subscriptions.cancel(subscriptionId);
+    return true;
+  } catch (error: any) {
+    const code = error?.code ?? error?.raw?.code;
+    if (code === "resource_missing" || /No such subscription/i.test(error?.message ?? "")) {
+      console.warn("[billing] subscrição já não existe no Stripe:", subscriptionId);
+      return true;
+    }
+    console.error("[billing] falha ao cancelar no Stripe:", error?.message);
+    return false;
+  }
+}
+
 /** Garante que o utilizador tem um cliente no Stripe e devolve o respetivo id. */
 async function ensureCustomer(userId: string): Promise<string> {
   const result = await pool.query(

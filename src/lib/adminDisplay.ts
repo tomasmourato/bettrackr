@@ -44,6 +44,11 @@ export function auditLine(entry: AdminAuditEntry, t: TFn): string {
   return t(AUDIT_KEYS[entry.action] ?? "admin.audit.action.unknown", vars);
 }
 
+/** O cargo de fundador é intocável pela API — o painel também não o oferece. */
+export function isProtected(user: AdminUser): boolean {
+  return user.role === "founder";
+}
+
 export function accessTone(user: AdminUser): "ok" | "warn" | "off" {
   if (!user.entitled) return "off";
   return user.accessSource === "trial" ? "warn" : "ok";

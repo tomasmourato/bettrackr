@@ -18,7 +18,7 @@ import {
 
 import { useAdminPanel } from "../hooks/useAdminPanel";
 import type { AdminUser } from "../lib/adminApi";
-import { ACCESS_KEY, accessTone, auditLine, FILTERS } from "../lib/adminDisplay";
+import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../lib/adminDisplay";
 import { formatPrice, useI18n } from "../lib/i18n";
 
 const TONE: Record<"ok" | "warn" | "off", string> = {
@@ -53,6 +53,7 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
   const [granting, setGranting] = useState<AdminUser | null>(null);
   const [trialing, setTrialing] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
+  const [revoking, setRevoking] = useState<AdminUser | null>(null);
 
   const { overview } = panel;
   const firstOnPage = panel.total === 0 ? 0 : (panel.page - 1) * panel.pageSize + 1;
@@ -156,12 +157,13 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
                       </td>
                       <td className="py-3 pr-3 whitespace-nowrap">
                         {/* Um administrador já aparece como "Administrador" no
-                            crachá de acesso — repetir o papel ao lado só
-                            punha a mesma palavra duas vezes seguidas. */}
+                            crachá de acesso — repetir o papel ao lado só punha
+                            a mesma palavra duas vezes. O fundador é a exceção:
+                            aí o papel diz algo que o acesso não diz. */}
                         <span
                           className={`px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider font-mono ${TONE[accessTone(user)]}`}
                         >
-                          {t(ACCESS_KEY[user.accessSource])}
+                          {isProtected(user) ? t("admin.role.founder") : t(ACCESS_KEY[user.accessSource])}
                         </span>
                       </td>
                       <td className="py-3 text-right">
@@ -173,9 +175,9 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
                           >
                             <Gift size={12} /> {t("admin.action.grant")}
                           </button>
-                          {user.subscription && user.subscription.source === "manual" && (
+                          {user.subscription && user.subscription.status !== "canceled" && (
                             <button
-                              onClick={() => void panel.revoke(user)}
+                              onClick={() => setRevoking(user)}
                               disabled={busy}
                               className={`${GHOST_BUTTON} text-[11px]`}
                             >
@@ -189,21 +191,28 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
                           >
                             <Hourglass size={12} /> {t("admin.action.trial")}
                           </button>
-                          <button
-                            onClick={() => void (user.role === "admin" ? panel.demote(user) : panel.promote(user))}
-                            disabled={busy}
-                            className={`${GHOST_BUTTON} text-[11px]`}
-                          >
-                            {user.role === "admin" ? <ShieldOff size={12} /> : <ShieldCheck size={12} />}
-                            {user.role === "admin" ? t("admin.action.demote") : t("admin.action.promote")}
-                          </button>
-                          <button
-                            onClick={() => setDeleting(user)}
-                            disabled={busy}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Trash2 size={12} /> {t("admin.action.delete")}
-                          </button>
+                          {/* Num fundador estes dois botões não existem: o
+                              servidor recusa-os na mesma (409), mas mostrá-los
+                              só convidava ao erro. */}
+                          {!isProtected(user) && (
+                            <>
+                              <button
+                                onClick={() => void (user.role === "admin" ? panel.demote(user) : panel.promote(user))}
+                                disabled={busy}
+                                className={`${GHOST_BUTTON} text-[11px]`}
+                              >
+                                {user.role === "admin" ? <ShieldOff size={12} /> : <ShieldCheck size={12} />}
+                                {user.role === "admin" ? t("admin.action.demote") : t("admin.action.promote")}
+                              </button>
+                              <button
+                                onClick={() => setDeleting(user)}
+                                disabled={busy}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Trash2 size={12} /> {t("admin.action.delete")}
+                              </button>
+                            </>
+                          )}
                           {busy && <Loader2 size={13} className="animate-spin text-zinc-400 self-center" />}
                         </div>
                       </td>
@@ -276,6 +285,16 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
           onSubmit={async (days) => {
             const ok = await panel.setTrial(trialing, days);
             if (ok) setTrialing(null);
+          }}
+        />
+      )}
+      {revoking && (
+        <RevokeDialog
+          user={revoking}
+          onClose={() => setRevoking(null)}
+          onConfirm={async () => {
+            const ok = await panel.revoke(revoking);
+            if (ok) setRevoking(null);
           }}
         />
       )}
@@ -433,6 +452,45 @@ function DeleteDialog({
           className={DANGER}
         >
           {saving ? t("admin.saving") : t("admin.delete.confirm")}
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
+function RevokeDialog({
+  user,
+  onClose,
+  onConfirm,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [saving, setSaving] = useState(false);
+  const paid = user.subscription?.source === "stripe";
+
+  return (
+    <Dialog title={t("admin.revoke.title", { user: user.username ?? user.email })}>
+      {/* Numa subscrição paga isto mexe no Stripe, por isso o aviso é outro. */}
+      <p className="text-xs text-zinc-600 dark:text-zinc-300">
+        {paid ? t("admin.revoke.bodyPaid") : t("admin.revoke.bodyManual")}
+      </p>
+      <div className="flex justify-end gap-2">
+        <button onClick={onClose} className={`${GHOST_BUTTON} text-xs`}>
+          {t("admin.cancel")}
+        </button>
+        <button
+          disabled={saving}
+          onClick={async () => {
+            setSaving(true);
+            await onConfirm();
+            setSaving(false);
+          }}
+          className={DANGER}
+        >
+          {saving ? t("admin.saving") : t("admin.action.revoke")}
         </button>
       </div>
     </Dialog>

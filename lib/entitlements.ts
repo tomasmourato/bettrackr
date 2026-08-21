@@ -30,7 +30,16 @@ export const SUBSCRIPTION_REQUIRED = "SUBSCRIPTION_REQUIRED";
 // isso damos alguns dias antes de fechar a porta.
 const PAST_DUE_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 
-export type Role = "user" | "admin";
+export type Role = "user" | "admin" | "founder";
+
+// Papéis com acesso ao painel de gestão (e às funcionalidades pagas). O
+// 'founder' é um 'admin' que a API não consegue despromover nem apagar — ver
+// routes/adminRoutes.ts e a migração 017.
+export const STAFF_ROLES: readonly Role[] = ["admin", "founder"];
+
+export function isStaff(role: unknown): boolean {
+  return role === "admin" || role === "founder";
+}
 export type AccessSource = "admin" | "subscription" | "trial" | "none";
 
 export interface SubscriptionSnapshot {
@@ -120,7 +129,7 @@ export const SUBSCRIPTION_COLUMNS = `
  * tolerância são o PAST_DUE_GRACE_MS.
  */
 export const ENTITLED_SQL = `(
-  u.role = 'admin'
+  u.role IN ('admin', 'founder')
   OR (u.trial_ends_at IS NOT NULL AND u.trial_ends_at > NOW())
   OR (
     s.status IN ('active', 'trialing')
@@ -135,14 +144,14 @@ export const ENTITLED_SQL = `(
 
 /** Constrói o estado de acesso a partir de uma linha já lida (users + subscriptions). */
 export function accessFromRow(row: any, now = new Date()): AccessState {
-  const role: Role = row.role === "admin" ? "admin" : "user";
+  const role: Role = row.role === "founder" ? "founder" : row.role === "admin" ? "admin" : "user";
   const subscription = snapshotFromRow(row);
   const trialEnd = asDate(row.trial_ends_at);
   const trialActive = !!trialEnd && trialEnd.getTime() > now.getTime();
   const subscriptionActive = !!subscription && subscriptionGrantsAccess(subscription, now);
 
   const source: AccessSource =
-    role === "admin" ? "admin" : subscriptionActive ? "subscription" : trialActive ? "trial" : "none";
+    isStaff(role) ? "admin" : subscriptionActive ? "subscription" : trialActive ? "trial" : "none";
 
   return {
     userId: row.id,

@@ -7,7 +7,7 @@
 
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "./authMiddleware.js";
-import { AccessState, loadAccess, PLAN, SUBSCRIPTION_REQUIRED } from "../lib/entitlements.js";
+import { AccessState, isStaff, loadAccess, PLAN, SUBSCRIPTION_REQUIRED } from "../lib/entitlements.js";
 
 export interface AccessRequest extends AuthenticatedRequest {
   access?: AccessState;
@@ -82,7 +82,8 @@ export async function requireSubscriptionForExtension(
 }
 
 /**
- * Só deixa passar administradores. Devolve 403 e não 404: quem chega aqui já
+ * Só deixa passar administradores (inclui os fundadores). Devolve 403 e não
+ * 404: quem chega aqui já
  * está autenticado, e esconder a existência da rota não acrescenta nada
  * (o painel de gestão nem sequer é mostrado a quem não é administrador).
  */
@@ -98,7 +99,7 @@ export async function requireAdmin(
 
   try {
     const access = await loadAccess(req.user.id);
-    if (!access || access.role !== "admin") {
+    if (!access || !isStaff(access.role)) {
       res.status(403).json({ error: "Acesso reservado a administradores." });
       return;
     }

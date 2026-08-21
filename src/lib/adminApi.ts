@@ -18,7 +18,7 @@ export interface AdminUser {
   id: string;
   username: string | null;
   email: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "founder";
   language: string | null;
   createdAt: string;
   betsCount: number;

@@ -44,10 +44,10 @@ export function describeSubscription(
   const periodEnd = subscription?.currentPeriodEnd ?? null;
   const endLabel = periodEnd ? formatDate(lang, periodEnd, DATE_FORMAT) : null;
 
-  // Um administrador entra sempre; mostrar-lhe "sem subscrição" só confundia.
+  // Quem é da casa entra sempre; mostrar-lhe "sem subscrição" só confundia.
   if (status.source === "admin") {
     return {
-      stateKey: "billing.state.admin",
+      stateKey: status.role === "founder" ? "billing.state.founder" : "billing.state.admin",
       tone: "ok",
       detail: null,
       warning: null,

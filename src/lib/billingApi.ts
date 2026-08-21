@@ -25,7 +25,7 @@ export interface SubscriptionSnapshot {
 export interface BillingStatus {
   entitled: boolean;
   source: AccessSource;
-  role: "user" | "admin";
+  role: "user" | "admin" | "founder";
   trialEndsAt: string | null;
   trialActive: boolean;
   subscription: SubscriptionSnapshot | null;

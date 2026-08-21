@@ -19,9 +19,10 @@ CREATE TABLE IF NOT EXISTS users (
   enabled_bookmakers TEXT[],
   -- Idioma da interface; NULL = nunca configurado -> o cliente decide. Ver 013.
   language TEXT CONSTRAINT users_language_check CHECK (language IS NULL OR language IN ('pt', 'en')),
-  -- Papel: 'admin' dá acesso ao painel de gestão e dispensa subscrição. Ver 015.
+  -- Papel: 'admin' dá acesso ao painel de gestão e dispensa subscrição; o
+  -- 'founder' é um 'admin' que a API não despromove nem apaga. Ver 015 e 017.
   role TEXT NOT NULL DEFAULT 'user'
-    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin')),
+    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin', 'founder')),
   -- Fim do período experimental das funcionalidades pagas; NULL = sem período,
   -- que é como as contas novas nascem. Sem DEFAULT de propósito: os 14 dias
   -- foram só para quem já tinha conta ao lançar a subscrição (ver 015 e 016).
