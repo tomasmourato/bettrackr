@@ -82,6 +82,39 @@ export async function requireSubscriptionForExtension(
 }
 
 /**
+ * Só deixa passar o fundador.
+ *
+ * Existe separado do requireAdmin porque nem tudo o que o painel faz deve
+ * caber a um administrador promovido. Ver as apostas de qualquer membro é
+ * disso o exemplo: são dados privados de quem nunca pediu para os partilhar,
+ * e a diferença entre "gerir contas" e "ler o que as pessoas apostam" é
+ * grande de mais para ficar no mesmo cargo.
+ */
+export async function requireFounder(
+  req: AccessRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (!req.user?.id) {
+    res.status(401).json({ error: "Autenticação necessária." });
+    return;
+  }
+
+  try {
+    const access = await loadAccess(req.user.id);
+    if (!access || access.role !== "founder") {
+      res.status(403).json({ error: "Acesso reservado ao fundador." });
+      return;
+    }
+    req.access = access;
+    next();
+  } catch (error) {
+    console.error("Erro ao validar o fundador:", error);
+    res.status(500).json({ error: "Erro ao validar o acesso." });
+  }
+}
+
+/**
  * Só deixa passar administradores (inclui os fundadores). Devolve 403 e não
  * 404: quem chega aqui já
  * está autenticado, e esconder a existência da rota não acrescenta nada

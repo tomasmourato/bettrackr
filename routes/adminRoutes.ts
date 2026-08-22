@@ -9,7 +9,8 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
-import { requireAdmin, AccessRequest } from "../middleware/accessMiddleware.js";
+import { requireAdmin, requireFounder, AccessRequest } from "../middleware/accessMiddleware.js";
+import { BET_SELECT_COLUMNS } from "../db/betColumns.js";
 import { accessFromRow, ENTITLED_SQL, PLAN, SUBSCRIPTION_COLUMNS } from "../lib/entitlements.js";
 import { cancelStripeSubscription, isStripeConfigured } from "./billingRoutes.js";
 
@@ -559,6 +560,50 @@ router.get("/audit", async (req: AccessRequest, res) => {
   } catch (error) {
     console.error("[admin] erro ao ler a auditoria:", error);
     res.status(500).json({ error: "Erro ao obter o registo de auditoria." });
+  }
+});
+
+// ============================================================
+// GET /api/admin/users/:id/bets -> perfil de um membro (só o fundador)
+//
+// A mesma vista que o social dá de um amigo, mas para qualquer conta e sem
+// precisar de amizade. Fica atrás do requireFounder e não do requireAdmin de
+// proposito: gerir contas e ler as apostas de toda a gente são poderes
+// diferentes, e o segundo não acompanha uma promoção a administrador.
+//
+// Devolve as apostas ignoradas de fora, como o social faz: quem as marcou
+// assim tirou-as das suas contas, e um perfil que as mostrasse dava números
+// que nao batem certo com os que o proprio utilizador ve.
+// ============================================================
+router.get("/users/:id/bets", requireFounder, async (req: AccessRequest, res) => {
+  const targetId = req.params.id;
+  if (!isUuid(targetId)) {
+    res.status(400).json({ error: "Identificador inválido." });
+    return;
+  }
+
+  try {
+    const user = await pool.query(
+      "SELECT id, username, email, created_at FROM users WHERE id = $1",
+      [targetId],
+    );
+    if (user.rows.length === 0) {
+      res.status(404).json({ error: "Utilizador não encontrado." });
+      return;
+    }
+
+    const bets = await pool.query(
+      `SELECT ${BET_SELECT_COLUMNS}
+         FROM bets
+        WHERE user_id = $1 AND is_ignored = FALSE
+        ORDER BY date_time DESC NULLS LAST, created_at DESC`,
+      [targetId],
+    );
+
+    res.json({ user: user.rows[0], bets: bets.rows });
+  } catch (error) {
+    console.error("[admin] erro ao obter as apostas do membro:", error);
+    res.status(500).json({ error: "Erro ao obter as apostas do membro." });
   }
 });
 

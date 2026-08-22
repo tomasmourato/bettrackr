@@ -14,11 +14,15 @@ import {
   ShieldOff,
   Trash2,
   X,
+  Eye,
 } from "lucide-react";
 
 import { useAdminPanel } from "../hooks/useAdminPanel";
 import type { AdminUser } from "../lib/adminApi";
 import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../lib/adminDisplay";
+import { fetchMemberBets } from "../lib/adminApi";
+import MemberProfile from "./MemberProfile";
+import type { Bet } from "../types";
 import { formatPrice, useI18n } from "../lib/i18n";
 
 const TONE: Record<"ok" | "warn" | "off", string> = {
@@ -45,9 +49,13 @@ function Metric({ label, value }: { label: string; value: string }) {
 interface AdminDashboardProps {
   /** Relê a subscrição do próprio utilizador depois de uma alteração. */
   onAccessChanged: () => void;
+  /** Papel de quem está a ver — o perfil de membro é só para o fundador. */
+  viewerRole: "user" | "admin" | "founder" | undefined;
+  currency: string;
+  isDark: boolean;
 }
 
-export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps) {
+export default function AdminDashboard({ onAccessChanged, viewerRole, currency, isDark }: AdminDashboardProps) {
   const { t, lang, formatNumber, formatDate } = useI18n();
   const panel = useAdminPanel(onAccessChanged);
   const [granting, setGranting] = useState<AdminUser | null>(null);
@@ -55,9 +63,50 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
   const [revoking, setRevoking] = useState<AdminUser | null>(null);
 
+  // Perfil de um membro. Só o fundador o abre; o servidor recusa aos outros
+  // na mesma (requireFounder), isto é só para não mostrar um botão que falha.
+  const canSeeProfiles = viewerRole === "founder";
+  const [profileOf, setProfileOf] = useState<AdminUser | null>(null);
+  const [profileBets, setProfileBets] = useState<Bet[]>([]);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const openProfile = async (user: AdminUser) => {
+    setProfileOf(user);
+    setProfileBets([]);
+    setProfileError(null);
+    setProfileLoading(true);
+    try {
+      const { bets } = await fetchMemberBets(user.id);
+      setProfileBets(bets);
+    } catch (err: any) {
+      setProfileError(err?.message || t("admin.profile.error"));
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   const { overview } = panel;
   const firstOnPage = panel.total === 0 ? 0 : (panel.page - 1) * panel.pageSize + 1;
   const lastOnPage = Math.min(panel.page * panel.pageSize, panel.total);
+
+  // ====================================================
+  // VISTA: perfil de um membro (a mesma que o social dá de um amigo)
+  // ====================================================
+  if (profileOf) {
+    return (
+      <MemberProfile
+        username={profileOf.username ?? profileOf.email}
+        subtitle={t("admin.profile.subtitle")}
+        bets={profileBets}
+        currency={currency}
+        isDark={isDark}
+        loading={profileLoading}
+        error={profileError}
+        onBack={() => setProfileOf(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5" id="admin-tab">
@@ -168,6 +217,15 @@ export default function AdminDashboard({ onAccessChanged }: AdminDashboardProps)
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex flex-wrap justify-end gap-1.5">
+                          {canSeeProfiles && (
+                            <button
+                              onClick={() => void openProfile(user)}
+                              disabled={busy}
+                              className={`${GHOST_BUTTON} text-[11px]`}
+                            >
+                              <Eye size={12} /> {t("admin.profile.open")}
+                            </button>
+                          )}
                           <button
                             onClick={() => setGranting(user)}
                             disabled={busy}

@@ -983,6 +983,10 @@ export const EN: Record<TKey, Entry> = {
   "admin.access.trial": "Trial",
   "admin.access.none": "No access",
   "admin.role.founder": "Founder",
+  // A member's profile seen from the panel (founder only).
+  "admin.profile.open": "View profile",
+  "admin.profile.subtitle": "Member",
+  "admin.profile.error": "Could not open this member's profile.",
   "admin.action.promote": "Make admin",
   "admin.action.demote": "Remove admin",
   "admin.action.grant": "Grant subscription",

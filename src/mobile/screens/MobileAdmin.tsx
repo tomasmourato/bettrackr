@@ -5,13 +5,15 @@
 // ações em vez de mostrar seis botões numa linha.
 
 import { useState } from "react";
-import { Gift, Hourglass, Loader2, RefreshCw, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { Eye, Gift, Hourglass, Loader2, RefreshCw, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 
 import { useAdminPanel } from "../../hooks/useAdminPanel";
-import type { AdminUser } from "../../lib/adminApi";
+import { fetchMemberBets, type AdminUser } from "../../lib/adminApi";
+import type { Bet } from "../../types";
+import MobileMemberProfile from "../components/MobileMemberProfile";
 import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../../lib/adminDisplay";
 import { formatPrice, useI18n } from "../../lib/i18n";
-import { BottomSheet, FilterChips, ListGroup, ListItem, MobileCard, Pressable, SectionHeader } from "../ui";
+import { BottomSheet, FilterChips, ListGroup, ListItem, MobileCard, Pressable, SectionHeader, SheetPage } from "../ui";
 
 const TONE: Record<"ok" | "warn" | "off", string> = {
   ok: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
@@ -42,9 +44,13 @@ function Metric({ label, value }: { label: string; value: string }) {
 interface MobileAdminProps {
   /** Relê a subscrição do próprio utilizador depois de uma alteração. */
   onAccessChanged: () => void;
+  /** Papel de quem está a ver — o perfil de membro é só para o fundador. */
+  viewerRole: "user" | "admin" | "founder" | undefined;
+  currency: string;
+  isDark: boolean;
 }
 
-export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
+export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isDark }: MobileAdminProps) {
   const { t, lang, formatNumber, formatDate } = useI18n();
   const panel = useAdminPanel(onAccessChanged);
   const [selected, setSelected] = useState<AdminUser | null>(null);
@@ -52,6 +58,33 @@ export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
   const [months, setMonths] = useState("1");
   const [note, setNote] = useState("");
   const [days, setDays] = useState("14");
+
+  // Perfil de um membro. Só o fundador o abre; o servidor recusa aos outros na
+  // mesma (requireFounder), isto é só para não mostrar uma opção que falha.
+  const canSeeProfiles = viewerRole === "founder";
+  const [profileOf, setProfileOf] = useState<AdminUser | null>(null);
+  const [profileBets, setProfileBets] = useState<Bet[]>([]);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const openProfile = async (user: AdminUser) => {
+    // Fecha a folha de ações primeiro: a página do perfil vem por cima e duas
+    // camadas abertas ao mesmo tempo deixam o botão de voltar ambíguo.
+    setSheet(null);
+    setProfileOf(user);
+    setProfileBets([]);
+    setProfileError(null);
+    setProfileLoading(true);
+    try {
+      const { bets } = await fetchMemberBets(user.id);
+      setProfileBets(bets);
+    } catch (err: any) {
+      setProfileError(err?.message || t("admin.profile.error"));
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const { overview } = panel;
   const busy = selected ? panel.busyUserId === selected.id : false;
@@ -210,6 +243,14 @@ export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
         title={selected?.username ?? selected?.email}
       >
         <ListGroup>
+          {canSeeProfiles && selected && (
+            <ListItem
+              icon={Eye}
+              title={t("admin.profile.open")}
+              onClick={() => void openProfile(selected)}
+              chevron
+            />
+          )}
           <ListItem icon={Gift} title={t("admin.action.grant")} onClick={() => setSheet("grant")} chevron />
           {selected?.subscription && selected.subscription.status !== "canceled" && (
             <ListItem title={t("admin.action.revoke")} onClick={() => setSheet("revoke")} chevron />
@@ -345,6 +386,27 @@ export default function MobileAdmin({ onAccessChanged }: MobileAdminProps) {
           </Pressable>
         </div>
       </BottomSheet>
+      {/* Perfil de um membro — a mesma vista que o social dá de um amigo. */}
+      <SheetPage
+        open={!!profileOf}
+        onClose={() => setProfileOf(null)}
+        title={profileOf ? profileOf.username ?? profileOf.email : ""}
+      >
+        {profileOf && (
+          profileError ? (
+            <p className="text-xs text-rose-600 dark:text-rose-400 text-center py-8">{profileError}</p>
+          ) : (
+            <MobileMemberProfile
+              username={profileOf.username ?? profileOf.email}
+              bets={profileBets}
+              currency={currency}
+              isDark={isDark}
+              loading={profileLoading}
+            />
+          )
+        )}
+      </SheetPage>
+
     </div>
   );
 }

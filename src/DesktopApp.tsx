@@ -251,7 +251,12 @@ export default function DesktopApp({
                   <Social currency={preferences.currency} isDark={isDark} />
                 )}
                 {activeTab === "ADMIN" && (
-                  <AdminDashboard onAccessChanged={() => void refreshSubscription()} />
+                  <AdminDashboard
+                    onAccessChanged={() => void refreshSubscription()}
+                    viewerRole={subscription?.role}
+                    currency={preferences.currency}
+                    isDark={isDark}
+                  />
                 )}
                 {activeTab === "SETTINGS" && (
                   <Settings

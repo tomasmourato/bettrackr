@@ -4,10 +4,9 @@
 // com o dashboard mobile (read-only) + apostas recentes em cards. Reutiliza
 // integralmente src/lib/socialApi (mesma semântica do Social desktop).
 
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Check, X, UserPlus, UserMinus, Clock, Loader2 } from "lucide-react";
 import { Bet, Friend, FriendRequest, UserSearchResult } from "../../types";
-import { safeNum } from "../../utils";
 import {
   searchUsers,
   listFriends,
@@ -19,33 +18,13 @@ import {
   fetchFriendBets,
 } from "../../lib/socialApi";
 import { SectionHeader, ListGroup, ListItem, MobileCard, SheetPage, BottomSheet, Pressable, useToast } from "../ui";
-import { useI18n, type TKey } from "../../lib/i18n";
+import { useI18n } from "../../lib/i18n";
 
-const MobileDashboard = lazy(() => import("./MobileDashboard"));
+import MobileMemberProfile from "../components/MobileMemberProfile";
 
 interface MobileSocialProps {
   currency: string;
   isDark: boolean;
-}
-
-// Etiqueta + cores por estado (igual ao statusMeta do Social desktop).
-function statusMeta(status: Bet["status"]): { key: TKey; className: string } {
-  switch (status) {
-    case "GANHA":
-      return { key: "status.won", className: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900" };
-    case "MEIO_GANHA":
-      return { key: "status.halfWon", className: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900" };
-    case "PERDIDA":
-      return { key: "status.lost", className: "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900" };
-    case "MEIO_PERDIDA":
-      return { key: "status.halfLost", className: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900" };
-    case "ANULADA":
-      return { key: "status.void", className: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700" };
-    case "CASHOUT":
-      return { key: "status.cashout", className: "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-900" };
-    default:
-      return { key: "status.unsettled", className: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900" };
-  }
 }
 
 function Avatar({ username, size = "w-9 h-9 text-sm" }: { username: string; size?: string }) {
@@ -57,7 +36,7 @@ function Avatar({ username, size = "w-9 h-9 text-sm" }: { username: string; size
 }
 
 export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
-  const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
+  const { t, formatDate } = useI18n();
   const toast = useToast();
 
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -172,16 +151,6 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       setViewLoading(false);
     }
   };
-
-  const recentFriendBets = useMemo(
-    () =>
-      [...friendBets]
-        .sort((a, b) => new Date(b.dateTime.replace(" ", "T")).getTime() - new Date(a.dateTime.replace(" ", "T")).getTime())
-        .slice(0, 50),
-    [friendBets],
-  );
-
-  const money = (n: number) => formatMoney(safeNum(n), currency);
 
   return (
     <div className="space-y-3">
@@ -330,60 +299,13 @@ subtitle={t("social.waitingReply")}
         }
       >
         {viewing && (
-          <div className="space-y-4">
-            {viewLoading ? (
-              <div className="flex items-center justify-center gap-2 py-16 text-xs text-zinc-400 dark:text-zinc-500">
-                <Loader2 size={16} className="animate-spin" /> {t("social.loadingStats", { username: viewing.username })}
-              </div>
-            ) : (
-              <>
-                {/* Estatísticas read-only (sem drill-down). */}
-                <Suspense fallback={<div className="py-8 text-center text-xs text-zinc-400">{t("common.loading")}</div>}>
-                  <MobileDashboard bets={friendBets} currency={currency} isDark={isDark} />
-                </Suspense>
-
-                <SectionHeader>{t("social.recentBetsMobile", { total: friendBets.length })}</SectionHeader>
-                {recentFriendBets.length === 0 ? (
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-4">
-                    {t("social.noFriendBets")}
-                  </p>
-                ) : (
-                  <MobileCard className="!p-0 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {recentFriendBets.map((bet) => {
-                      const meta = statusMeta(bet.status);
-                      const event = bet.selections?.[0]?.event || t("bet.multiple");
-                      const extra = (bet.selections?.length || 0) > 1 ? ` +${bet.selections.length - 1}` : "";
-                      return (
-                        <div key={bet.id} className="px-4 py-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                                {event}
-                                {extra && <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{extra}</span>}
-                              </p>
-                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono mt-0.5">
-                                {bet.dateTime?.slice(0, 16)} · {bet.bookmaker}
-                              </p>
-                            </div>
-                            <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${meta.className}`}>
-                              {t(meta.key)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                            <span>{t("bets.field.stake")} {money(safeNum(bet.stake))}</span>
-                            <span>{t("bets.field.odd")} {safeNum(bet.odd).toFixed(2)}</span>
-                            <span className={`ml-auto font-bold ${bet.status === "POR_LIQUIDAR" ? "" : safeNum(bet.netProfit) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                              {bet.status === "POR_LIQUIDAR" ? "—" : formatSignedMoney(safeNum(bet.netProfit), currency)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </MobileCard>
-                )}
-              </>
-            )}
-          </div>
+          <MobileMemberProfile
+            username={viewing.username}
+            bets={friendBets}
+            currency={currency}
+            isDark={isDark}
+            loading={viewLoading}
+          />
         )}
       </SheetPage>
 

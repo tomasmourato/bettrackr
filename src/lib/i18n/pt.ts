@@ -990,6 +990,10 @@ export const PT = {
   "admin.access.trial": "Experiência",
   "admin.access.none": "Sem acesso",
   "admin.role.founder": "Fundador",
+  // Perfil de um membro visto do painel (só o fundador).
+  "admin.profile.open": "Ver perfil",
+  "admin.profile.subtitle": "Membro",
+  "admin.profile.error": "Não foi possível abrir o perfil deste membro.",
   "admin.action.promote": "Tornar administrador",
   "admin.action.demote": "Retirar administrador",
   "admin.action.grant": "Oferecer subscrição",

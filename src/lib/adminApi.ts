@@ -4,6 +4,8 @@
 
 import { authFetch, parseJsonResponse } from "./authApi";
 import type { SubscriptionSnapshot } from "./billingApi";
+import { mapBetFromApi } from "./betsApi";
+import type { Bet } from "../types";
 
 export type AdminUserFilter =
   | "all"
@@ -96,6 +98,26 @@ function post<T>(path: string, method: string, body?: unknown): Promise<T> {
 
 export function setUserRole(id: string, role: "user" | "admin"): Promise<{ user: AdminUser | null }> {
   return post(`/api/admin/users/${id}/role`, "PATCH", { role });
+}
+
+// ------------------------------------------------------------
+// Perfil de um membro: as apostas dele, para o fundador ver as mesmas
+// estatísticas que o social dá de um amigo. Só o fundador — o servidor
+// responde 403 a um administrador (ver requireFounder).
+// ------------------------------------------------------------
+export interface MemberProfileData {
+  user: { id: string; username: string | null; email: string; created_at: string };
+  bets: Bet[];
+}
+
+export async function fetchMemberBets(id: string): Promise<MemberProfileData> {
+  const res = await authFetch(`/api/admin/users/${id}/bets`);
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data?.error || "Erro ao obter o perfil do membro.");
+  return {
+    user: data.user,
+    bets: (data.bets as any[]).map(mapBetFromApi),
+  };
 }
 
 /** days = 0 termina o período experimental já. */

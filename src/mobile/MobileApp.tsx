@@ -197,7 +197,14 @@ function MobileShell(props: ShellProps) {
                   <MobileInsights onSessionExpired={onSessionExpired} />
                 )}
                 {activeTab === "SOCIAL" && <MobileSocial currency={preferences.currency} isDark={isDark} />}
-                {activeTab === "ADMIN" && <MobileAdmin onAccessChanged={() => void refreshSubscription()} />}
+                {activeTab === "ADMIN" && (
+                  <MobileAdmin
+                    onAccessChanged={() => void refreshSubscription()}
+                    viewerRole={subscription?.role}
+                    currency={preferences.currency}
+                    isDark={isDark}
+                  />
+                )}
                 {activeTab === "SETTINGS" && (
                   <MobileSettings
                     preferences={preferences}
