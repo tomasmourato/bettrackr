@@ -30,6 +30,7 @@ const msg = document.getElementById("msg");
 const paywallBox = document.getElementById("paywall");
 const paywallText = document.getElementById("paywall-text");
 const paywallLink = document.getElementById("paywall-link");
+const paywallRefresh = document.getElementById("paywall-refresh");
 
 // Mostra (ou esconde) o convite a subscrever e devolve true se há acesso.
 //
@@ -44,8 +45,8 @@ function applySubscription(status, base) {
 
   paywallText.textContent =
     info.trialEndsAt && new Date(info.trialEndsAt) <= new Date()
-      ? "O período experimental terminou. A extensão faz parte do BetTrackr Pro."
-      : "A extensão faz parte do BetTrackr Pro.";
+      ? "O período experimental terminou — a extensão precisa de uma subscrição ativa."
+      : "A extensão precisa de uma subscrição ativa.";
   paywallLink.href = `${base || "https://gestordebets.vercel.app"}/settings`;
   return false;
 }
@@ -387,6 +388,20 @@ updateOnlyToggle.addEventListener("change", async () => {
       : "Modo normal: as importações voltam a criar apostas novas.",
     null
   );
+});
+
+// "Já subscrevi": quem acabou de pagar no site não devia ter de fechar e
+// reabrir o popup para o aviso desaparecer.
+paywallRefresh.addEventListener("click", async () => {
+  const original = paywallRefresh.textContent;
+  paywallRefresh.disabled = true;
+  paywallRefresh.textContent = "A verificar…";
+  try {
+    await refreshStatus();
+  } finally {
+    paywallRefresh.disabled = false;
+    paywallRefresh.textContent = original;
+  }
 });
 
 chrome.runtime.onMessage.addListener((message) => {

@@ -32,16 +32,18 @@
     }
   }
 
+  // O token do site vai para o service worker, que o troca por um token de
+  // extensão antes de o guardar (ver storeBettrackrSession no background.js).
+  // Escrever aqui o token cru — como se fazia antes — deixava a extensão com
+  // uma sessão que o servidor não distingue da web, e a importação, que é
+  // paga, passava sem subscrição.
   async function syncSession() {
     const session = currentSession();
-    if (session) {
-      await chrome.storage.local.set({
-        bettrackrToken: session.token,
-        bettrackrBase: session.baseUrl,
-        bettrackrUserId: session.expectedUserId || null,
-      });
-    } else {
-      await chrome.storage.local.remove(["bettrackrToken", "bettrackrUserId"]);
+    try {
+      await chrome.runtime.sendMessage({ type: "BETTRACKR_SESSION", session });
+    } catch (_) {
+      // Service worker a dormir ou extensão a recarregar: fica sem sessão em
+      // vez de ficar com uma que não presta. A próxima visita volta a tentar.
     }
     return session;
   }

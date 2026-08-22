@@ -105,6 +105,28 @@ async function exchangeForExtensionToken(baseUrl, token) {
   return data.token;
 }
 
+/**
+ * Guarda a sessao do BetTrackr, sempre trocada por um token de extensao.
+ *
+ * E o unico sitio onde uma sessao captada da app entra no storage. O content
+ * script deixou de la escrever: fazia-o com o token cru do site, que o
+ * servidor nao distingue de um pedido da web, e assim a importacao paga
+ * passava sem subscricao sempre que nao houvesse um separador da app aberto.
+ */
+async function storeBettrackrSession(session) {
+  if (!session || !session.token) {
+    await chrome.storage.local.remove(["bettrackrToken", "bettrackrUserId"]);
+    return null;
+  }
+  const token = await exchangeForExtensionToken(session.baseUrl, session.token);
+  await chrome.storage.local.set({
+    bettrackrToken: token,
+    bettrackrBase: session.baseUrl,
+    bettrackrUserId: session.expectedUserId || null,
+  });
+  return token;
+}
+
 async function configForImport(sessionSnapshot) {
   const suppliedSnapshot = sessionSnapshot !== undefined && sessionSnapshot !== null;
   const session = validSessionSnapshot(sessionSnapshot) || await sessionFromOpenBettrackrTab();
@@ -116,16 +138,7 @@ async function configForImport(sessionSnapshot) {
     if (!session.expectedUserId) {
       throw new Error("Não foi possível identificar o utilizador atual. Termina sessão e volta a entrar na app.");
     }
-    // O token que a app deixa no localStorage é o do site e não se distingue
-    // de um pedido do site. Trocamo-lo por um que se identifica como extensão,
-    // senão a importação (que é paga) passava sem subscrição. Ver o comentário
-    // da rota em routes/authRoutes.ts.
-    const scoped = await exchangeForExtensionToken(session.baseUrl, session.token);
-    await chrome.storage.local.set({
-      bettrackrToken: scoped,
-      bettrackrBase: session.baseUrl,
-      bettrackrUserId: session.expectedUserId,
-    });
+    await storeBettrackrSession(session);
   }
 
   return getConfig();
@@ -1074,6 +1087,14 @@ async function maybeAutoImport(source) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // A app do BetTrackr diz-nos qual e a sessao atual; a troca por token de
+  // extensao acontece no storeBettrackrSession, nunca do lado da pagina.
+  if (msg && msg.type === "BETTRACKR_SESSION") {
+    storeBettrackrSession(msg.session || null)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: err && err.message ? err.message : String(err) }));
+    return true;
+  }
   if (msg && msg.type === "BETANO_SESSION") {
     const tokens = msg.tokens;
     if (tokens && tokens.token1 && tokens.token2) {

@@ -242,19 +242,102 @@ li { margin: 4px 0; }
 
 /* Aviso de subscrição — a extensão é uma funcionalidade paga. Âmbar em vez
    de vermelho: não é um erro, é um convite. */
+/* Aviso de subscrição — acompanha o PaywallNotice da web para quem salta
+   entre os dois não sentir que mudou de produto. */
 .paywall {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 12px;
   margin-bottom: 14px;
   font-size: 12px;
-  color: #fcd34d;
+  color: var(--text-dim);
 }
-.paywall p { margin: 0 0 8px; }
-.paywall a {
+.paywall p { margin: 0; }
+.paywall-head {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-bottom: 11px;
+}
+.paywall-lock {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   color: var(--accent-bright);
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paywall-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.paywall-label {
+  margin: 0 0 6px !important;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.paywall-list {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.paywall-list li {
+  position: relative;
+  padding-left: 16px;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.paywall-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+.paywall-free {
+  margin: 0 0 11px !important;
+  color: var(--text-faint);
+}
+/* Empilhados: lado a lado, num popup de 300px, o "Já subscrevi" (que nao
+   quebra linha) roubava a largura ao botao principal e deixava-o a 81px. */
+.paywall-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.paywall-actions a {
+  text-align: center;
+  background: var(--accent);
+  color: #052e21;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 4px;
   text-decoration: none;
 }
-.paywall a:hover { text-decoration: underline; }
+.paywall-actions a:hover { background: var(--accent-bright); }
+.paywall-actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.paywall-actions button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+.paywall-actions button:disabled { opacity: 0.6; cursor: default; }
