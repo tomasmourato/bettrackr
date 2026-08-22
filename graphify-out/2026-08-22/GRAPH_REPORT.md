@@ -1,16 +1,16 @@
-# Graph Report - gestão-de-apostas  (2026-08-21)
+# Graph Report - gestão-de-apostas  (2026-08-22)
 
 ## Corpus Check
-- 209 files · ~220,825 words
+- 211 files · ~222,809 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1392 nodes · 2931 edges · 169 communities (91 shown, 78 thin omitted)
+- 1404 nodes · 2967 edges · 166 communities (88 shown, 78 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 43 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `09ebbc7b`
+- Built from commit: `33137576`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -44,7 +44,7 @@
 - content-bettrackr.js
 - migrate.mjs
 - server.ts
-- Bet
+- MobileInsights.tsx
 - users
 - content-betclic.js
 - check-i18n.mjs
@@ -104,7 +104,7 @@
 - bundle-app.mjs
 - gen-icons.mjs
 - ExampleInstrumentedTest.java
-- BetclicImport.tsx
+- adm-zip
 - authMiddleware.ts
 - betsRoutes.ts
 - MainActivity.java
@@ -114,28 +114,25 @@
 - AGENTS.md
 - tailwindcss
 - BetsManager.tsx
-- esbuild
-- useI18n
+- MobileSettings.tsx
 - @tailwindcss/vite
 - @types/jsonwebtoken
 - tsx
-- Gallery.tsx
+- MobileAdmin.tsx
 - @types/node
 - typescript
 - vite-plugin-pwa
 - @vitejs/plugin-react
 - App.tsx
-- MobileSettings.tsx
 - bookie_accounts
-- Toast.tsx
+- haptics.ts
 - daily_insights
 - MobileDashboard.tsx
 - Task 5 report — integrated selection rail
 - Task 4 Verification Report — 2026-07-24
 - scripts
-- MobileAdmin.tsx
+- useI18n
 - File Structure
-- longPress.ts
 - vercel.json
 - Filtered Bets Financial Summary Design
 - Bets Selection Interactions Design
@@ -163,15 +160,15 @@
 - task-4-brief.md
 
 ## God Nodes (most connected - your core abstractions)
-1. `useI18n()` - 67 edges
-2. `authFetch()` - 47 edges
-3. `parseJsonResponse()` - 46 edges
+1. `useI18n()` - 71 edges
+2. `authFetch()` - 48 edges
+3. `parseJsonResponse()` - 47 edges
 4. `isNativeApp()` - 36 edges
 5. `Bet` - 36 edges
 6. `safeNum()` - 25 edges
 7. `BookieAccount` - 23 edges
-8. `App()` - 19 edges
-9. `TKey` - 18 edges
+8. `App()` - 20 edges
+9. `TKey` - 19 edges
 10. `useToast()` - 18 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -190,25 +187,25 @@
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Cashout End-to-End Delivery** — plan_cashout_first_class_outcome, plan_extension_cashout_import, plan_dashboard_result_distribution_fix, plan_cashout_end_to_end_slice [EXTRACTED 1.00]
 - **Bookmaker-Aware Freebet Model** — plan_structured_bookmaker_registry, plan_freebet_types, plan_snr_freebet, plan_sr_freebet, plan_bookmaker_freebet_defaults [EXTRACTED 1.00]
+- **Cashout End-to-End Delivery** — plan_cashout_first_class_outcome, plan_extension_cashout_import, plan_dashboard_result_distribution_fix, plan_cashout_end_to_end_slice [EXTRACTED 1.00]
 - **Extension Import Pipeline** — extension_readme_session_capture, extension_readme_bet_reading, extension_readme_bookie_mappers, extension_readme_deduplication_updates, extension_readme_bettrackr_api_delivery [EXTRACTED 1.00]
 - **Sports Betting Tracking Motif** — public_pwa_192x192_betting_slip, public_pwa_192x192_soccer_ball, public_pwa_192x192_performance_bar_chart [INFERRED 0.85]
 - **Sports Analytics Branding** — public_pwa_512x512_bettrackr_pwa_icon, public_pwa_512x512_football, public_pwa_512x512_performance_analytics, public_pwa_512x512_upward_trend, public_pwa_512x512_betting_ticket [INFERRED 0.95]
 
-## Communities (169 total, 78 thin omitted)
+## Communities (166 total, 78 thin omitted)
 
 ### Community 0 - "types.ts"
-Cohesion: 0.13
-Nodes (28): FilteredBetsSummary(), FreebetAsterisk(), money(), ScreenshotImporter(), FormSelection, nowLocal(), useBetForm(), AVAILABLE_BOOKMAKERS (+20 more)
+Cohesion: 0.06
+Nodes (71): BetclicImport(), BetclicImportProps, EXTENSION_BOOKIE_KEYS, EXTENSION_BOOKIES, importSummary(), InstallSteps(), loadAccountChoices(), BetsManagerProps (+63 more)
 
 ### Community 1 - "background.js"
 Cohesion: 0.09
 Nodes (36): accountsForBookmaker(), betanoRequestId(), betanoTokenWaiters, BETTRACKR_APP_URLS, configForImport(), detectBookmakerUsernames(), ensureBetanoHistoryTab(), extensionStatus() (+28 more)
 
 ### Community 2 - "authFetch"
-Cohesion: 0.06
-Nodes (82): AIInsights(), AIInsightsProps, AiProgress(), ConfidenceDots(), InsightsResponse, Pick, toneClasses(), Social() (+74 more)
+Cohesion: 0.11
+Nodes (50): Social(), SocialProps, statusMeta(), useAccounts(), useBets(), useLanguageSync(), ApiAccountRow, createAccount() (+42 more)
 
 ### Community 3 - "dependencies"
 Cohesion: 0.04
@@ -216,7 +213,7 @@ Nodes (47): bcryptjs, @capacitor/android, @capacitor/app, @capacitor/camera, @ca
 
 ### Community 4 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): @capacitor/cli, devDependencies, adm-zip, @capacitor/cli, @types/express, @types/pg, @types/react, @types/react-dom (+5 more)
+Nodes (13): @capacitor/cli, esbuild, devDependencies, @capacitor/cli, esbuild, @types/express, @types/pg, @types/react (+5 more)
 
 ### Community 5 - "insightsRoutes.ts"
 Cohesion: 0.14
@@ -239,12 +236,12 @@ Cohesion: 0.06
 Nodes (41): accountBox, accountChoices, accountHints, accountOptionsByKey, accountsBox, accountSelects, accountUser, applyDetectedUsernames() (+33 more)
 
 ### Community 15 - "index.ts"
-Cohesion: 0.13
-Nodes (19): haptics(), ImpactWeight, NotificationKind, selectionHaptic(), tapHaptic(), ChipGroupProps, FAB(), FABProps (+11 more)
+Cohesion: 0.21
+Nodes (11): tapHaptic(), ChipGroup(), ChipGroupProps, FAB(), FABProps, ChipOption, FilterChips(), FilterChipsProps (+3 more)
 
 ### Community 16 - "MobileBets.tsx"
-Cohesion: 0.11
-Nodes (18): BetSelectionAction, betSelectionReducer(), BetSelectionState, INITIAL_BET_SELECTION_STATE, MobileBets, BULK_MONEY_OPTIONS, BULK_STATUS_OPTIONS, formatDay() (+10 more)
+Cohesion: 0.12
+Nodes (14): money(), BULK_MONEY_OPTIONS, BULK_STATUS_OPTIONS, formatDay(), KeyOption, MobileBets(), MONEY_OPTIONS, SORT_OPTIONS (+6 more)
 
 ### Community 18 - "inject-betano.js"
 Cohesion: 0.31
@@ -286,9 +283,9 @@ Nodes (4): dir, files, isLocalDb, pool
 Cohesion: 0.10
 Nodes (13): connect(), getPool(), query(), Bucket, rateLimit(), router, router, router (+5 more)
 
-### Community 29 - "Bet"
-Cohesion: 0.17
-Nodes (19): BetsManagerProps, BookieAccountsCard(), BookieAccountsCardProps, DashboardBetsFilters, DashboardProps, FilteredBetsSummaryProps, ScreenshotImporterProps, SettingsProps (+11 more)
+### Community 29 - "MobileInsights.tsx"
+Cohesion: 0.10
+Nodes (31): AIInsights(), AIInsightsProps, AiProgress(), ConfidenceDots(), InsightsResponse, Pick, toneClasses(), AIInsights (+23 more)
 
 ### Community 30 - "users"
 Cohesion: 0.20
@@ -315,12 +312,12 @@ Cohesion: 0.33
 Nodes (11): flattenSelections(), formatDateTime(), isCashoutStatus(), mapSolverdeBet(), mapSolverdeBets(), mapStatus(), normalize(), num() (+3 more)
 
 ### Community 85 - "MobileApp.tsx"
-Cohesion: 0.19
-Nodes (11): MobileApp, runTopBackHandler(), exitNativeApp(), setThemeColorMeta(), useAndroidBackButton(), useNativeChrome(), MobileAdmin, MobileImport (+3 more)
+Cohesion: 0.22
+Nodes (9): MobileApp, runTopBackHandler(), exitNativeApp(), MobileBets, MobileDashboard, MobileImport, MobileSettings, MobileShell() (+1 more)
 
 ### Community 86 - "index.tsx"
-Cohesion: 0.10
-Nodes (29): AccountPanelProps, ErrorBoundary, Props, State, storedLanguage(), EN, buildValue(), DICTS (+21 more)
+Cohesion: 0.11
+Nodes (28): ErrorBoundary, Props, State, storedLanguage(), EN, buildValue(), DICTS, I18nContext (+20 more)
 
 ### Community 87 - "billingRoutes.ts"
 Cohesion: 0.25
@@ -337,10 +334,6 @@ Nodes (3): base, master, repoRoot
 ### Community 90 - "ExampleInstrumentedTest.java"
 Cohesion: 0.33
 Nodes (5): ExampleInstrumentedTest, ExampleUnitTest, androidx.test.ext.junit.runners.AndroidJUnit4, org.junit.runner.RunWith, org.junit.Test
-
-### Community 91 - "BetclicImport.tsx"
-Cohesion: 0.18
-Nodes (13): BetclicImport(), BetclicImportProps, EXTENSION_BOOKIE_KEYS, EXTENSION_BOOKIES, importSummary(), InstallSteps(), loadAccountChoices(), EnabledBookmakersCard() (+5 more)
 
 ### Community 92 - "authMiddleware.ts"
 Cohesion: 0.13
@@ -359,32 +352,28 @@ Cohesion: 0.40
 Nodes (4): founder, isLocalDb, pool, remove
 
 ### Community 101 - "BetsManager.tsx"
-Cohesion: 0.10
-Nodes (39): parse(), now, BetsManager(), BULK_MONEY_OPTIONS, BULK_STATUS_OPTIONS, SortDirection, SortField, Dashboard() (+31 more)
+Cohesion: 0.06
+Nodes (47): parse(), now, BetsManager(), BULK_MONEY_OPTIONS, BULK_STATUS_OPTIONS, SortDirection, SortField, Dashboard() (+39 more)
 
-### Community 104 - "useI18n"
-Cohesion: 0.09
-Nodes (37): INCLUDED, PaywallNotice(), PaywallNoticeProps, AiChip(), INCLUDED, SubscriptionCard(), SubscriptionCardProps, TONE_BADGE (+29 more)
+### Community 104 - "MobileSettings.tsx"
+Cohesion: 0.07
+Nodes (43): INCLUDED, PaywallNotice(), PaywallNoticeProps, INCLUDED, SubscriptionCard(), SubscriptionCardProps, TONE_BADGE, ERROR_KEYS (+35 more)
 
-### Community 109 - "Gallery.tsx"
-Cohesion: 0.19
-Nodes (12): AccountSheet(), GalleryInner(), MobileBets, MobileDashboard, ListGroup(), ListItem(), ListItemProps, MobileCard() (+4 more)
+### Community 109 - "MobileAdmin.tsx"
+Cohesion: 0.14
+Nodes (16): AccountSheet(), MobileAdmin, MobileAdminProps, Sheet, TONE, GalleryInner(), MobileBets, MobileDashboard (+8 more)
 
 ### Community 115 - "App.tsx"
-Cohesion: 0.06
-Nodes (52): App(), AppProps, DesktopApp, Gallery, AccountPanel(), AuthPage(), handleSubmit(), AuthPageProps (+44 more)
+Cohesion: 0.05
+Nodes (60): App(), AppProps, DesktopApp, Gallery, AccountPanel(), AccountPanelProps, AuthPage(), handleSubmit() (+52 more)
 
-### Community 116 - "MobileSettings.tsx"
-Cohesion: 0.20
-Nodes (16): Settings(), deliverTextFile(), exportBackupJSON(), exportBetsCSV(), importBetsFromFile(), parseCSVRow(), getBundleVersion(), initLiveUpdate() (+8 more)
-
-### Community 118 - "Toast.tsx"
-Cohesion: 0.25
-Nodes (8): notifyHaptic(), ACCENT, ICONS, ToastApi, ToastContext, ToastKind, ToastProvider(), ToastState
+### Community 118 - "haptics.ts"
+Cohesion: 0.13
+Nodes (17): haptics(), ImpactWeight, NotificationKind, notifyHaptic(), selectionHaptic(), PullToRefresh(), PullToRefreshProps, SwipeableRow() (+9 more)
 
 ### Community 131 - "MobileDashboard.tsx"
-Cohesion: 0.15
-Nodes (10): MobileDashboard, MobileDashboard(), MONEY_OPTIONS, STATUS_META, Timeframe, TIMEFRAME_OPTIONS, toKey(), TONES (+2 more)
+Cohesion: 0.17
+Nodes (9): MobileDashboard(), MONEY_OPTIONS, STATUS_META, Timeframe, TIMEFRAME_OPTIONS, toKey(), TONES, TYPE_OPTIONS (+1 more)
 
 ### Community 133 - "Task 5 report — integrated selection rail"
 Cohesion: 0.10
@@ -398,17 +387,13 @@ Nodes (12): Automated verification, Diff and scope review, Focused integration r
 Cohesion: 0.17
 Nodes (12): scripts, android:open, android:sync, build, check:i18n, clean, dev, lint (+4 more)
 
-### Community 182 - "MobileAdmin.tsx"
+### Community 182 - "useI18n"
 Cohesion: 0.11
-Nodes (36): AdminDashboard(), AdminDashboardProps, DeleteDialog(), GrantDialog(), RevokeDialog(), TONE, TrialDialog(), AdminDashboard (+28 more)
+Nodes (36): AdminDashboard(), AdminDashboardProps, DeleteDialog(), GrantDialog(), RevokeDialog(), TONE, TrialDialog(), PasswordCard() (+28 more)
 
 ### Community 191 - "File Structure"
 Cohesion: 0.25
 Nodes (7): File Structure, Global Constraints, Stable Summary Selection Layout Implementation Plan, Task 1: Add the Shared Selection-State Reducer, Task 2: Route Desktop and Mobile Selection Through the Reducer, Task 3: Fill the Fixed Summary and Conditionally Reveal Compact Actions, Task 4: Full Verification and Responsive Visual Check
-
-### Community 192 - "longPress.ts"
-Cohesion: 0.20
-Nodes (4): createLongPressController(), LongPressController, LongPressOptions, TimerHandle
 
 ### Community 195 - "vercel.json"
 Cohesion: 0.25
@@ -471,24 +456,24 @@ Cohesion: 0.50
 Nodes (3): Final Fix Report, Scope, Verification
 
 ## Knowledge Gaps
-- **449 isolated node(s):** `config`, `daily_insights`, `daily_insights`, `manifest_version`, `name` (+444 more)
+- **453 isolated node(s):** `config`, `daily_insights`, `daily_insights`, `manifest_version`, `name` (+448 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **78 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `useI18n()` connect `useI18n` to `types.ts`, `authFetch`, `MobileDashboard.tsx`, `BetsManager.tsx`, `MobileBets.tsx`, `App.tsx`, `MobileSettings.tsx`, `MobileAdmin.tsx`, `index.tsx`, `BetclicImport.tsx`, `Bet`?**
+- **Why does `useI18n()` connect `useI18n` to `types.ts`, `authFetch`, `MobileDashboard.tsx`, `BetsManager.tsx`, `MobileSettings.tsx`, `MobileAdmin.tsx`, `MobileBets.tsx`, `App.tsx`, `index.tsx`, `MobileInsights.tsx`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
-- **Why does `normalizeBetStatus()` connect `authFetch` to `types.ts`, `MobileSettings.tsx`, `betsRoutes.ts`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `authenticateToken()` connect `authMiddleware.ts` to `insightsRoutes.ts`, `billingRoutes.ts`, `adminRoutes.ts`, `server.ts`, `betsRoutes.ts`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `normalizeBetStatus()` connect `types.ts` to `authFetch`, `betsRoutes.ts`?**
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `isNativeApp()` connect `MobileSettings.tsx` to `types.ts`, `MobileInsights.tsx`, `MobileApp.tsx`, `haptics.ts`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `config`, `daily_insights`, `daily_insights` to the rest of the system?**
-  _449 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _453 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `types.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.1329268292682927 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05979843225083987 - nodes in this community are weakly interconnected._
 - **Should `background.js` be split into smaller, more focused modules?**
   _Cohesion score 0.08902439024390243 - nodes in this community are weakly interconnected._
 - **Should `authFetch` be split into smaller, more focused modules?**
-  _Cohesion score 0.05555555555555555 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10655737704918032 - nodes in this community are weakly interconnected._
