@@ -79,6 +79,32 @@ async function sessionFromOpenBettrackrTab() {
   return null;
 }
 
+/**
+ * Troca o token do site por um token de extensão. Falha fechada: sem ele a
+ * extensão ficaria com uma sessão que o servidor não sabe distinguir da web,
+ * e a importação paga passava a grátis. Um erro aqui é para o utilizador
+ * tentar de novo, não para lhe abrir a porta de trás.
+ */
+async function exchangeForExtensionToken(baseUrl, token) {
+  let res;
+  try {
+    res = await fetch(`${baseUrl}/api/auth/extension-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+  } catch (_) {
+    throw new Error("Não foi possível falar com o BetTrackr para preparar a sessão. Tenta novamente.");
+  }
+  if (!res.ok) {
+    throw new Error("Não foi possível preparar a sessão da extensão. Recarrega a app e tenta novamente.");
+  }
+  const data = await res.json().catch(() => null);
+  if (!data?.token) {
+    throw new Error("Não foi possível preparar a sessão da extensão. Recarrega a app e tenta novamente.");
+  }
+  return data.token;
+}
+
 async function configForImport(sessionSnapshot) {
   const suppliedSnapshot = sessionSnapshot !== undefined && sessionSnapshot !== null;
   const session = validSessionSnapshot(sessionSnapshot) || await sessionFromOpenBettrackrTab();
@@ -90,8 +116,13 @@ async function configForImport(sessionSnapshot) {
     if (!session.expectedUserId) {
       throw new Error("Não foi possível identificar o utilizador atual. Termina sessão e volta a entrar na app.");
     }
+    // O token que a app deixa no localStorage é o do site e não se distingue
+    // de um pedido do site. Trocamo-lo por um que se identifica como extensão,
+    // senão a importação (que é paga) passava sem subscrição. Ver o comentário
+    // da rota em routes/authRoutes.ts.
+    const scoped = await exchangeForExtensionToken(session.baseUrl, session.token);
     await chrome.storage.local.set({
-      bettrackrToken: session.token,
+      bettrackrToken: scoped,
       bettrackrBase: session.baseUrl,
       bettrackrUserId: session.expectedUserId,
     });

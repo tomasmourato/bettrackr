@@ -297,4 +297,31 @@ router.post("/change-password", authenticateToken, async (req: AuthenticatedRequ
   }
 });
 
+// ============================================================
+// POST /api/auth/extension-token  (rota protegida)
+//
+// Troca a sessao do site por um token que se identifica como extensao.
+//
+// Porque existe: a extensao tem duas maneiras de arranjar sessao -- o login
+// no proprio popup (que ja envia client: "extension") e a captura do token
+// que a app deixa no localStorage. A segunda e o caminho normal, e produzia
+// um token identico ao do site: o requireSubscriptionForExtension olhava
+// para ele, nao via client === "extension", e deixava passar. Resultado: a
+// importacao das casas, que e paga, funcionava sem subscricao.
+//
+// A troca nao verifica subscricao de proposito. Quem nao tem Pro fica na
+// mesma com um token valido e leva 402 ao tentar importar -- que e um erro
+// que a extensao sabe explicar. Recusar aqui daria um erro de sessao, que
+// manda o utilizador procurar o problema no sitio errado.
+// ============================================================
+router.post("/extension-token", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const token = signToken({ id: req.user!.id, username: req.user!.username }, "extension");
+    res.json({ success: true, token });
+  } catch (error) {
+    console.error("Erro ao emitir o token da extensão:", error);
+    res.status(500).json({ error: "Erro ao preparar a sessão da extensão." });
+  }
+});
+
 export default router;

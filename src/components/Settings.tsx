@@ -20,6 +20,7 @@ import BookieAccountsCard from "./BookieAccountsCard";
 import EnabledBookmakersCard from "./EnabledBookmakersCard";
 import SubscriptionCard from "./SubscriptionCard";
 import PasswordCard from "./PasswordCard";
+import PaywallNotice from "./PaywallNotice";
 import type { BillingStatus } from "../lib/billingApi";
 import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "../lib/settingsApi";
 import { useI18n } from "../lib/i18n";
@@ -337,8 +338,19 @@ export default function Settings({
             onDelete={onDeleteAccount}
           />
 
-          {/* Importação via extensão de browser */}
-          <BetclicImport accounts={accounts} enabledBookmakers={enabledBookmakers} />
+          {/* Importação via extensão de browser — funcionalidade paga. O
+              bloqueio a sério é do servidor (402 no /api/bets vindo da
+              extensão); esconder aqui evita oferecer o download a quem ia
+              instalar a extensão para depois descobrir que não pode usá-la. */}
+          {subscription && !subscription.entitled ? (
+            <PaywallNotice
+              status={subscription}
+              onRefresh={() => void refreshSubscription()}
+              refreshing={subscriptionLoading}
+            />
+          ) : (
+            <BetclicImport accounts={accounts} enabledBookmakers={enabledBookmakers} />
+          )}
 
           {/* Backup, CSV and Data actions */}
           <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800 space-y-4">
