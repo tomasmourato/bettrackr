@@ -19,6 +19,7 @@ import BetclicImport from "./BetclicImport";
 import BookieAccountsCard from "./BookieAccountsCard";
 import EnabledBookmakersCard from "./EnabledBookmakersCard";
 import SubscriptionCard from "./SubscriptionCard";
+import PasswordCard from "./PasswordCard";
 import type { BillingStatus } from "../lib/billingApi";
 import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "../lib/settingsApi";
 import { useI18n } from "../lib/i18n";
@@ -45,6 +46,8 @@ interface SettingsProps {
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;
   refreshSubscription: () => Promise<void>;
+  // Mudar a password fala com a API: uma sessão morta tem de subir ao App.
+  onSessionExpired: () => void;
 }
 
 export default function Settings({
@@ -64,7 +67,8 @@ export default function Settings({
   onDeleteAccount,
   subscription,
   subscriptionLoading,
-  refreshSubscription
+  refreshSubscription,
+  onSessionExpired
 }: SettingsProps) {
 
   const { t } = useI18n();
@@ -318,6 +322,9 @@ export default function Settings({
 
             </form>
           </div>
+
+          {/* Palavra-passe da conta */}
+          <PasswordCard onSessionExpired={onSessionExpired} />
 
           {/* Contas por casa de apostas */}
           <BookieAccountsCard

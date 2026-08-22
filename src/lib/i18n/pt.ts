@@ -773,6 +773,25 @@ export const PT = {
   // Configurações — contas por casa de apostas
   // ----------------------------------------------------------------
   "settings.management.title": "Gestão",
+  // Palavra-passe (settings.password.*) — formulário partilhado desktop/mobile.
+  "settings.password.title": "Palavra-passe",
+  "settings.password.desc": "Muda a palavra-passe desta conta. É preciso a atual para confirmar que és tu.",
+  "settings.password.current": "Palavra-passe atual",
+  "settings.password.new": "Nova palavra-passe",
+  "settings.password.confirm": "Confirmar nova palavra-passe",
+  "settings.password.hint": "Pelo menos 8 caracteres.",
+  "settings.password.submit": "Alterar palavra-passe",
+  "settings.password.saving": "A alterar…",
+  "settings.password.done": "Palavra-passe alterada.",
+  "settings.password.otherDevices": "As sessões abertas noutros dispositivos continuam ativas.",
+  "settings.password.show": "Mostrar palavra-passe",
+  "settings.password.hide": "Esconder palavra-passe",
+  "settings.password.error.missing": "Preenche a palavra-passe atual e a nova.",
+  "settings.password.error.weak": "A nova palavra-passe tem de ter pelo menos 8 caracteres.",
+  "settings.password.error.same": "A nova palavra-passe tem de ser diferente da atual.",
+  "settings.password.error.current": "A palavra-passe atual não está correta.",
+  "settings.password.error.mismatch": "A confirmação não coincide com a nova palavra-passe.",
+  "settings.password.error.generic": "Não foi possível alterar a palavra-passe. Tenta novamente.",
   "settings.accounts.title": "Contas por casa de apostas",
   "settings.accounts.desc":
     "Regista as tuas contas em cada casa (podes ter várias na mesma casa). Depois associa apostas a cada conta e filtra o painel e a lista por conta.",

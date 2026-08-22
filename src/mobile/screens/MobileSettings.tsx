@@ -19,6 +19,9 @@ import {
   Info,
   Building2,
   Check,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Preferences, AuditLog, Bet, BookieAccount, ThemeMode, Language } from "../../types";
 import { AVAILABLE_BOOKMAKERS } from "../../utils";
@@ -28,6 +31,7 @@ import { isNativeApp } from "../../lib/apiBase";
 import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "../../lib/settingsApi";
 import { bookmakerLabel } from "../../lib/bookmakers";
 import { useI18n } from "../../lib/i18n";
+import { useChangePassword } from "../../hooks/useChangePassword";
 import type { BillingStatus } from "../../lib/billingApi";
 import { MobileSubscriptionCard } from "../components/MobileSubscription";
 import {
@@ -60,6 +64,8 @@ interface MobileSettingsProps {
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;
   refreshSubscription: () => Promise<void>;
+  // Mudar a password fala com a API: uma sessão morta tem de subir ao App.
+  onSessionExpired: () => void;
 }
 
 const inputClasses =
@@ -83,6 +89,7 @@ export default function MobileSettings({
   subscription,
   subscriptionLoading,
   refreshSubscription,
+  onSessionExpired,
 }: MobileSettingsProps) {
   const { t } = useI18n();
   const toast = useToast();
@@ -98,6 +105,17 @@ export default function MobileSettings({
   const [confirmReset, setConfirmReset] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+
+  // Mesmas regras do cartão do desktop — o hook é o mesmo.
+  const password = useChangePassword(onSessionExpired);
+
+  const closePassword = () => {
+    setPasswordOpen(false);
+    setPasswordVisible(false);
+    password.reset();
+  };
 
   // Gestão de contas (dentro da sheet).
   const [newAccountBookmaker, setNewAccountBookmaker] = useState(AVAILABLE_BOOKMAKERS[0] || "Betano");
@@ -362,6 +380,13 @@ export default function MobileSettings({
       <SectionHeader>{t("settings.management.title")}</SectionHeader>
       <ListGroup>
         <ListItem
+          icon={KeyRound}
+          title={t("settings.password.title")}
+          subtitle={t("settings.password.hint")}
+          chevron
+          onClick={() => setPasswordOpen(true)}
+        />
+        <ListItem
           icon={Wallet}
           title={t("settings.accounts.title")}
           subtitle={t("settings.accounts.count", { n: accounts.length })}
@@ -426,6 +451,76 @@ export default function MobileSettings({
           />
         )}
       </ListGroup>
+
+      {/* Sheet: mudar a palavra-passe */}
+      <BottomSheet open={passwordOpen} onClose={closePassword} title={t("settings.password.title")}>
+        <div className="space-y-3 pb-2">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("settings.password.desc")}</p>
+
+          {password.error && (
+            <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{password.error}</p>
+          )}
+
+          <div className="space-y-2">
+            <input
+              className={inputClasses}
+              type={passwordVisible ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder={t("settings.password.current")}
+              aria-label={t("settings.password.current")}
+              value={password.current}
+              onChange={(e) => password.setCurrent(e.target.value)}
+            />
+            <input
+              className={inputClasses}
+              type={passwordVisible ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder={t("settings.password.new")}
+              aria-label={t("settings.password.new")}
+              value={password.next}
+              onChange={(e) => password.setNext(e.target.value)}
+            />
+            <input
+              className={inputClasses}
+              type={passwordVisible ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder={t("settings.password.confirm")}
+              aria-label={t("settings.password.confirm")}
+              value={password.confirm}
+              onChange={(e) => password.setConfirm(e.target.value)}
+            />
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t("settings.password.hint")}</p>
+          </div>
+
+          <Pressable
+            as="button"
+            onClick={() => setPasswordVisible((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400"
+          >
+            {passwordVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+            {passwordVisible ? t("settings.password.hide") : t("settings.password.show")}
+          </Pressable>
+
+          <Pressable
+            as="button"
+            disabled={!password.canSubmit}
+            onClick={async () => {
+              const ok = await password.submit();
+              if (ok) {
+                toast.show(t("settings.password.done"), "success");
+                closePassword();
+              }
+            }}
+            className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center disabled:opacity-50"
+          >
+            {password.saving ? t("settings.password.saving") : t("settings.password.submit")}
+          </Pressable>
+
+          {/* Dito de propósito: os tokens são JWT sem estado, por isso mudar a
+              password aqui não fecha as sessões noutros dispositivos. */}
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t("settings.password.otherDevices")}</p>
+        </div>
+      </BottomSheet>
 
       {/* Sheet: contas por casa */}
       <BottomSheet open={accountsOpen} onClose={() => setAccountsOpen(false)} title={t("settings.accounts.title")}>

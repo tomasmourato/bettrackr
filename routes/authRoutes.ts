@@ -213,4 +213,88 @@ router.get("/me", authenticateToken, async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// ============================================================
+// POST /api/auth/change-password  (rota protegida)
+//
+// Pede a password atual mesmo já tendo um token valido: um telemovel deixado
+// aberto ou um token roubado nao devem chegar para trocar a fechadura da
+// conta. E o mesmo principio do "sudo" -- estar dentro nao e o mesmo que
+// poder mudar as chaves.
+//
+// Responde 403 (e nao 401) quando a password atual esta errada. Nao e
+// pedantismo de status: o authFetch do cliente trata QUALQUER 401 como sessao
+// expirada e faz logout (ver src/lib/authApi.ts), por isso um 401 aqui punha
+// o utilizador fora da app por causa de uma gralha. O 401 fica reservado a
+// "a tua sessao morreu", que e o que o cliente sabe tratar.
+//
+// O que esta rota NAO faz: terminar as sessoes dos outros dispositivos. Os
+// tokens sao JWT sem estado e revoga-los exigia guardar uma versao por
+// utilizador e compara-la em cada pedido. Fica escrito para nao parecer
+// esquecimento.
+// ============================================================
+router.post("/change-password", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body ?? {};
+
+    if (
+      typeof currentPassword !== "string" ||
+      typeof newPassword !== "string" ||
+      !currentPassword ||
+      !newPassword
+    ) {
+      res.status(400).json({
+        code: "MISSING_FIELDS",
+        error: "A password atual e a nova são obrigatórias.",
+      });
+      return;
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      res.status(400).json({ code: "WEAK_PASSWORD", error: passwordError });
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      res.status(400).json({
+        code: "SAME_PASSWORD",
+        error: "A nova password tem de ser diferente da atual.",
+      });
+      return;
+    }
+
+    const result = await pool.query("SELECT id, username, password_hash FROM users WHERE id = $1", [
+      req.user!.id,
+    ]);
+    const user = result.rows[0];
+    if (!user) {
+      res.status(404).json({ error: "Utilizador não encontrado." });
+      return;
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!matches) {
+      res.status(403).json({
+        code: "INVALID_CURRENT_PASSWORD",
+        error: "A password atual não está correta.",
+      });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, user.id]);
+
+    // Token novo: o antigo continua valido (JWT sem estado), mas assinar um
+    // agora faz a sessao atual recomecar o relogio dos 7 dias em vez de
+    // expirar pouco depois de o utilizador ter reforcado a conta.
+    const token = signToken({ id: user.id, username: user.username });
+    setSessionCookie(res, token);
+
+    res.json({ success: true, token });
+  } catch (error) {
+    console.error("Erro ao alterar a password:", error);
+    res.status(500).json({ error: "Erro ao alterar a password." });
+  }
+});
+
 export default router;

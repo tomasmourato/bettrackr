@@ -108,6 +108,36 @@ export async function login(email: string, password: string) {
   return data.user;
 }
 
+// ------------------------------------------------------------
+// Alterar a password (exige a password atual)
+// ------------------------------------------------------------
+
+/** Erro do /api/auth que carrega o código estável devolvido pelo servidor. */
+export class AuthError extends Error {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+  }
+}
+
+/**
+ * O servidor responde 403 (não 401) quando a password atual está errada, para
+ * o authFetch não confundir uma gralha com uma sessão expirada e fazer logout.
+ * Ver o comentário da rota em routes/authRoutes.ts.
+ */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const res = await authFetch("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) {
+    throw new AuthError(data?.error || `Erro ao alterar a password (HTTP ${res.status})`, data?.code);
+  }
+  // O servidor devolve um token novo; guardá-lo mantém a sessão a durar mais
+  // sete dias em vez de continuar com o relógio do token antigo.
+  if (data?.token) saveToken(data.token);
+}
+
 export function logout() {
   clearToken();
   localStorage.removeItem(USER_KEY);

@@ -272,6 +272,7 @@ export default function DesktopApp({
                     subscription={subscription}
                     subscriptionLoading={subscriptionLoading}
                     refreshSubscription={refreshSubscription}
+                    onSessionExpired={onSessionExpired}
                   />
                 )}
                 </Suspense>

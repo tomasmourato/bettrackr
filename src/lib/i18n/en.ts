@@ -767,6 +767,25 @@ export const EN: Record<TKey, Entry> = {
   // Settings — bookmaker accounts
   // ----------------------------------------------------------------
   "settings.management.title": "Management",
+  // Password (settings.password.*) — form shared by desktop and mobile.
+  "settings.password.title": "Password",
+  "settings.password.desc": "Change this account's password. Your current one is required to confirm it's you.",
+  "settings.password.current": "Current password",
+  "settings.password.new": "New password",
+  "settings.password.confirm": "Confirm new password",
+  "settings.password.hint": "At least 8 characters.",
+  "settings.password.submit": "Change password",
+  "settings.password.saving": "Changing…",
+  "settings.password.done": "Password changed.",
+  "settings.password.otherDevices": "Sessions open on other devices stay signed in.",
+  "settings.password.show": "Show password",
+  "settings.password.hide": "Hide password",
+  "settings.password.error.missing": "Fill in your current and new password.",
+  "settings.password.error.weak": "The new password must be at least 8 characters long.",
+  "settings.password.error.same": "The new password must be different from the current one.",
+  "settings.password.error.current": "That current password is not correct.",
+  "settings.password.error.mismatch": "The confirmation does not match the new password.",
+  "settings.password.error.generic": "Could not change the password. Please try again.",
   "settings.accounts.title": "Bookmaker accounts",
   "settings.accounts.desc":
     "Register your accounts at each bookmaker (you can have several at the same one). Then link bets to an account and filter the dashboard and list by account.",
