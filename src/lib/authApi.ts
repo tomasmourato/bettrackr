@@ -1,9 +1,10 @@
 // Autenticação e wrapper de fetch para as rotas protegidas da API.
 
 import { apiUrl } from "./apiBase";
+import { STORAGE_KEYS } from "./storageKeys";
 
-const TOKEN_KEY = "gestordebets_token";
-const USER_KEY = "gestordebets_user";
+const TOKEN_KEY = STORAGE_KEYS.token;
+const USER_KEY = STORAGE_KEYS.user;
 
 export interface StoredUser {
   id: string;
@@ -57,7 +58,7 @@ export function getStoredUser(): StoredUser | null {
     const raw = localStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
-    // JSON corrompido no storage — trata como sessão sem utilizador em cache.
+    // JSON corrompido no storage - trata como sessão sem utilizador em cache.
     localStorage.removeItem(USER_KEY);
     return null;
   }

@@ -35,7 +35,7 @@ const paywallRefresh = document.getElementById("paywall-refresh");
 // Mostra (ou esconde) o convite a subscrever e devolve true se há acesso.
 //
 // Sem informação (sem sessão, ou o servidor não respondeu) devolve true: não
-// se bloqueia nada aqui por causa de um hiccup de rede — quem decide é o
+// se bloqueia nada aqui por causa de um hiccup de rede - quem decide é o
 // servidor, que responde 402 ao import.
 function applySubscription(status, base) {
   const info = status && status.subscription ? status.subscription : null;
@@ -45,13 +45,13 @@ function applySubscription(status, base) {
 
   paywallText.textContent =
     info.trialEndsAt && new Date(info.trialEndsAt) <= new Date()
-      ? "O período experimental terminou — a extensão precisa de uma subscrição ativa."
+      ? "O período experimental terminou - a extensão precisa de uma subscrição ativa."
       : "A extensão precisa de uma subscrição ativa.";
-  paywallLink.href = `${base || "https://gestordebets.vercel.app"}/settings`;
+  paywallLink.href = `${base || "https://betrackr.vercel.app"}/settings`;
   return false;
 }
 
-// Casas ativas escolhidas no site (via GET_STATUS). Por defeito, todas — só é
+// Casas ativas escolhidas no site (via GET_STATUS). Por defeito, todas - só é
 // restringido quando o servidor devolve uma seleção. Partilhado entre o estado
 // (linhas/botões) e a construção dos dropdowns de conta.
 let enabledBookies = BOOKIES.map((b) => b.key);
@@ -127,7 +127,7 @@ async function loadAccounts() {
   try {
     const stored = await chrome.storage.local.get(["bettrackrToken", "bettrackrBase", "importAccountChoices"]);
     if (!stored.bettrackrToken) return;
-    const base = stored.bettrackrBase || "https://gestordebets.vercel.app";
+    const base = stored.bettrackrBase || "https://betrackr.vercel.app";
     const saved = stored.importAccountChoices && typeof stored.importAccountChoices === "object"
       ? stored.importAccountChoices
       : {};
@@ -161,7 +161,7 @@ async function loadAccounts() {
         const option = document.createElement("option");
         option.value = String(account.id);
         // Mostra o username (quando definido) para deixar claro para que conta
-        // real vão as apostas — a mesma associação que a deteção automática usa.
+        // real vão as apostas - a mesma associação que a deteção automática usa.
         option.textContent = account.username
           ? `${account.label} · @${account.username}`
           : String(account.label);
@@ -205,7 +205,7 @@ async function loadAccounts() {
 // Encontra a conta correspondente a uma identidade detetada {username, customerId,
 // email}. O username (handle, ex.: customerCode "ronkzinho") bate certo com o
 // campo username da conta OU com o label; o customerId/email só batem certo com o
-// campo username EXPLÍCITO (nunca com o label) — o email só associa se o
+// campo username EXPLÍCITO (nunca com o label) - o email só associa se o
 // utilizador o tiver posto na conta. Mesma regra do background.
 function matchAccountByUsername(options, identity) {
   const norm = (v) => (v == null ? "" : String(v).trim().toLowerCase());
@@ -258,9 +258,9 @@ async function applyDetectedUsernames(saved) {
         if (saved) saved[key] = "";
         hint.hidden = false;
         hint.style.color = "#9aa4b2";
-        hint.textContent = "Sem sessão iniciada — sem conta";
+        hint.textContent = "Sem sessão iniciada - sem conta";
       } else if (error) {
-        // Não conseguimos detetar (ex.: sem tab betclic aberta) — mostra o motivo,
+        // Não conseguimos detetar (ex.: sem tab betclic aberta) - mostra o motivo,
         // mas NÃO mexe na seleção (não sabemos se está com ou sem sessão).
         hint.hidden = false;
         hint.style.color = "#9aa4b2";
@@ -275,7 +275,7 @@ async function applyDetectedUsernames(saved) {
     const match = matchAccountByUsername(options, identity);
     hint.hidden = false;
     if (match) {
-      // Pré-seleciona e persiste — o import vai para a conta certa mesmo que o
+      // Pré-seleciona e persiste - o import vai para a conta certa mesmo que o
       // utilizador não toque em nada.
       select.value = String(match.id);
       accountChoices[key] = String(match.id);
@@ -289,7 +289,7 @@ async function applyDetectedUsernames(saved) {
       // conta; o email é alternativa (só associa se posto no campo username).
       const emailHint = email && email !== username ? ` (ou o email "${email}")` : "";
       hint.style.color = "#f59e0b";
-      hint.textContent = `Sessão @${username} detetada — põe "${username}" no username da conta${emailHint} para associar automaticamente`;
+      hint.textContent = `Sessão @${username} detetada - põe "${username}" no username da conta${emailHint} para associar automaticamente`;
     }
   }
 }
@@ -313,7 +313,7 @@ function formatSource(name, result) {
 
 async function importSource(source) {
   Object.values(buttons).forEach((button) => { button.disabled = true; });
-  setMsg("A importar…", null);
+  setMsg("A importar...", null);
   try {
     const result = await chrome.runtime.sendMessage({ type: "IMPORT", source, accountIds: selectedAccountIds() });
     if (!result || !result.ok) {
@@ -349,7 +349,7 @@ loginForm.addEventListener("submit", async (event) => {
   const password = loginPassword.value;
   if (!email || !password) { setMsg("Preenche o email e a password.", "error"); return; }
   loginBtn.disabled = true;
-  setMsg("A iniciar sessão…", null);
+  setMsg("A iniciar sessão...", null);
   try {
     const result = await chrome.runtime.sendMessage({ type: "LOGIN", email, password });
     if (!result || !result.ok) {
@@ -395,7 +395,7 @@ updateOnlyToggle.addEventListener("change", async () => {
 paywallRefresh.addEventListener("click", async () => {
   const original = paywallRefresh.textContent;
   paywallRefresh.disabled = true;
-  paywallRefresh.textContent = "A verificar…";
+  paywallRefresh.textContent = "A verificar...";
   try {
     await refreshStatus();
   } finally {
@@ -408,13 +408,13 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message && message.type === "PROGRESS") setMsg(message.text, null);
 });
 
-// Estado primeiro (define as casas ativas), depois as contas — assim os
+// Estado primeiro (define as casas ativas), depois as contas - assim os
 // dropdowns já respeitam a seleção do site.
 refreshStatus()
   .then(() => loadAccounts())
   .catch((error) => setMsg(String(error && error.message || error), "error"));
 
-// Marcador de build visível — confirma que o Chrome carregou o código novo
+// Marcador de build visível - confirma que o Chrome carregou o código novo
 // (o load de extensões unpacked em WSL fica muitas vezes com o worker antigo).
 try {
   const mark = document.createElement("div");

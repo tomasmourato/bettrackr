@@ -17,7 +17,7 @@ describe("BetTrackr import identity verification", () => {
     const requests = [];
     const identity = await verifyBettrackrIdentity({
       token: "current-token",
-      baseUrl: "https://gestordebets.vercel.app/",
+      baseUrl: "https://betrackr.vercel.app/",
       expectedUserId: "user-current",
       fetchImpl: async (url, init) => {
         requests.push({ url, init });
@@ -27,7 +27,7 @@ describe("BetTrackr import identity verification", () => {
 
     expect(identity.userId).toBe("user-current");
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toBe("https://gestordebets.vercel.app/api/auth/me");
+    expect(requests[0].url).toBe("https://betrackr.vercel.app/api/auth/me");
     expect(requests[0].init.headers.Authorization).toBe("Bearer current-token");
   });
 
@@ -35,7 +35,7 @@ describe("BetTrackr import identity verification", () => {
     let importsStarted = 0;
     await expect(runAfterBettrackrVerification({
       token: "stale-token",
-      baseUrl: "https://gestordebets.vercel.app",
+      baseUrl: "https://betrackr.vercel.app",
       expectedUserId: "new-user",
       fetchImpl: async () => response(200, { user: { id: "old-user" } }),
     }, async () => {
@@ -48,13 +48,13 @@ describe("BetTrackr import identity verification", () => {
   test("blocks expired sessions and users missing from the current database", async () => {
     await expect(verifyBettrackrIdentity({
       token: "expired",
-      baseUrl: "https://gestordebets.vercel.app",
+      baseUrl: "https://betrackr.vercel.app",
       fetchImpl: async () => response(401, { error: "Token inválido" }),
     })).rejects.toThrow("expirada");
 
     await expect(verifyBettrackrIdentity({
       token: "old-database-token",
-      baseUrl: "https://gestordebets.vercel.app",
+      baseUrl: "https://betrackr.vercel.app",
       fetchImpl: async () => response(404, { error: "Utilizador não encontrado" }),
     })).rejects.toThrow("não existe nesta base de dados");
   });
@@ -63,7 +63,7 @@ describe("BetTrackr import identity verification", () => {
     let importsStarted = 0;
     const result = await runAfterBettrackrVerification({
       token: "popup-token",
-      baseUrl: "https://gestordebets.vercel.app",
+      baseUrl: "https://betrackr.vercel.app",
       expectedUserId: null,
       fetchImpl: async () => response(200, { user: { id: "popup-user" } }),
     }, async (identity) => {

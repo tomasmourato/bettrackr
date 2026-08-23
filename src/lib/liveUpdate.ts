@@ -1,30 +1,31 @@
 // src/lib/liveUpdate.ts
-// Live update da app nativa (Capacitor), self-hosted na Vercel — sem serviços
+// Live update da app nativa (Capacitor), self-hosted na Vercel - sem serviços
 // pagos. No arranque, a app compara-se com /app-version.json (gerado a cada
 // deploy por scripts/bundle-app.mjs); se o remoto for MAIS RECENTE, descarrega
-// /app-bundle.zip e agenda-o para o PRÓXIMO arranque (zero interrupção — nada
+// /app-bundle.zip e agenda-o para o PRÓXIMO arranque (zero interrupção - nada
 // recarrega debaixo dos dedos do utilizador).
 //
 // NUNCA FAZER DOWNGRADE: a comparação é por `buildTime` (instante do build,
 // embutido em cada bundle como __BUILD_TIME__), não por igualdade de versão.
 // Antes comparava-se só por igualdade e a versão era o SHA do commit: um APK
 // acabado de instalar reporta "builtin", que nunca é igual ao SHA remoto, por
-// isso descarregava SEMPRE o bundle de produção — mesmo sendo mais antigo que
+// isso descarregava SEMPRE o bundle de produção - mesmo sendo mais antigo que
 // o APK. Resultado: a app arrancava bem à primeira e depois ficava presa no
 // splash (o bundle antigo não tinha o código que o esconde). Se o remoto não
 // declarar buildTime, assumimos que não é mais recente e não mexemos.
 //
 // Segurança/rollback: notifyAppReady() confirma que o bundle atual arranca;
 // se um bundle novo nunca o chamar, o plugin reverte sozinho para o anterior.
-// Na web isto é um no-op — a Vercel já atualiza a web a cada deploy.
+// Na web isto é um no-op - a Vercel já atualiza a web a cada deploy.
 
 import { apiUrl, isNativeApp } from "./apiBase";
+import { STORAGE_KEYS } from "./storageKeys";
 
 // Instante do build deste bundle, injetado pelo vite (ver vite.config.ts).
 declare const __BUILD_TIME__: number;
 
 // Evita re-descarregar um bundle que já ficou agendado para o próximo arranque.
-const STAGED_KEY = "gestordebets_staged_bundle";
+const STAGED_KEY = STORAGE_KEYS.stagedBundle;
 
 /** Versão do bundle instalado ("builtin" = o embutido no APK; null na web). */
 export async function getBundleVersion(): Promise<string | null> {
@@ -61,9 +62,9 @@ export async function initLiveUpdate(): Promise<void> {
     }
 
     // Só aplica se for comprovadamente mais recente que ESTE bundle. Um deploy
-    // sem buildTime (ou mais antigo que o APK) é ignorado — nunca downgrade.
+    // sem buildTime (ou mais antigo que o APK) é ignorado - nunca downgrade.
     if (typeof remote.buildTime !== "number" || remote.buildTime <= __BUILD_TIME__) {
-      console.log("[liveUpdate] remoto não é mais recente que o bundle atual — ignorado.");
+      console.log("[liveUpdate] remoto não é mais recente que o bundle atual - ignorado.");
       return;
     }
 
@@ -78,7 +79,7 @@ export async function initLiveUpdate(): Promise<void> {
     localStorage.setItem(STAGED_KEY, remote.version);
     console.log(`[liveUpdate] versão ${remote.version} descarregada; aplica no próximo arranque.`);
   } catch (err) {
-    // Offline, servidor indisponível, zip corrompido… — a app continua com o
+    // Offline, servidor indisponível, zip corrompido... - a app continua com o
     // bundle atual e tenta outra vez no próximo arranque.
     console.warn("[liveUpdate] ignorado:", err);
   }

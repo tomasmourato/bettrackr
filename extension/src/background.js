@@ -10,15 +10,18 @@ import { fetchSolverdeHistory } from "./solverde-history.js";
 import { runAfterBettrackrVerification } from "./bettrackr-identity.js";
 
 const PAGE_SIZE = 20;
-const DEFAULT_BETTRACKR_BASE = "https://gestordebets.vercel.app";
+const DEFAULT_BETTRACKR_BASE = "https://betrackr.vercel.app";
 const BETTRACKR_APP_URLS = [
+  "https://betrackr.vercel.app/*",
+  // Dominio anterior ao rename do projeto. Fica aqui ate deixar de servir a
+  // app, senao as extensoes ja instaladas perdem a ponte com o site.
   "https://gestordebets.vercel.app/*",
   "http://localhost/*",
   "http://127.0.0.1/*",
 ];
 
 // Recarregar/atualizar a extensão mata os content scripts das tabs já abertas
-// e o Chrome NÃO os reinjeta — a app deixava de detetar a extensão (PING sem
+// e o Chrome NÃO os reinjeta - a app deixava de detetar a extensão (PING sem
 // resposta) até o utilizador recarregar a página à mão. Numa reinstalação o
 // chrome.storage também vem vazio (token BetTrackr perdido). Reinjetar a ponte
 // nas tabs abertas da app repõe a deteção e ressincroniza o token de imediato.
@@ -29,7 +32,7 @@ chrome.runtime.onInstalled.addListener(async () => {
       if (tab.id === undefined) continue;
       chrome.scripting
         .executeScript({ target: { tabId: tab.id }, files: ["src/content-bettrackr.js"] })
-        .catch(() => {}); // tab protegida/descarregada — o reload manual continua a funcionar
+        .catch(() => {}); // tab protegida/descarregada - o reload manual continua a funcionar
     }
   } catch (_) {}
 });
@@ -171,7 +174,7 @@ async function fetchBetclicBets(kind, cfg) {
   }, {
     pageSize: PAGE_SIZE,
     onPage: ({ count, total }) => {
-      progress(`A ler apostas do Betclic (${kind}): ${count}${Number.isFinite(total) ? "/" + total : ""}…`);
+      progress(`A ler apostas do Betclic (${kind}): ${count}${Number.isFinite(total) ? "/" + total : ""}...`);
     },
   });
 }
@@ -304,7 +307,7 @@ async function fetchBetanoBets(tabId) {
   }, {
     onProgress(info) {
       const source = info.kind === "open" ? "abertas" : `histórico ${info.window}/${info.windows}`;
-      progress(`A ler apostas do Betano (${source}): ${info.total}…`);
+      progress(`A ler apostas do Betano (${source}): ${info.total}...`);
     },
   });
 }
@@ -431,7 +434,7 @@ async function updateBet(existing, incoming, cfg, accountId) {
 
 async function persistMapped(mapped, unsupported, source, cfg, accountId) {
   // Modo "só atualizar": sincroniza as apostas já registadas no BetTrackr e
-  // ignora as que a casa tem mas a app não — útil para quem regista as apostas
+  // ignora as que a casa tem mas a app não - útil para quem regista as apostas
   // à mão (ou selecionou o que quis importar) e só quer os estados/valores
   // atualizados sem o histórico completo da casa a entrar.
   const stored = await chrome.storage.local.get("updateOnlyImport");
@@ -456,13 +459,13 @@ async function persistMapped(mapped, unsupported, source, cfg, accountId) {
   const chunkSize = 500;
   for (let i = 0; i < fresh.length; i += chunkSize) {
     imported += await postBulk(fresh.slice(i, i + chunkSize), cfg, accountId);
-    progress(`A importar ${source}: ${Math.min(i + chunkSize, fresh.length)}/${fresh.length}…`);
+    progress(`A importar ${source}: ${Math.min(i + chunkSize, fresh.length)}/${fresh.length}...`);
   }
   let updated = 0;
   for (const pair of updates) {
     await updateBet(pair.old, pair.bet, cfg, accountId);
     updated++;
-    progress(`A atualizar ${source}: ${updated}/${updates.length}…`);
+    progress(`A atualizar ${source}: ${updated}/${updates.length}...`);
   }
   const cashouts = mapped.filter((bet) => bet?.metadata?.isCashout === true).length;
   return { fetched: mapped.length, imported, updated, skipped, unsupported, cashouts, ignoredNew };
@@ -470,17 +473,17 @@ async function persistMapped(mapped, unsupported, source, cfg, accountId) {
 
 async function runBetclicImport(cfg, accountId) {
   if (!cfg.betclicToken) throw new Error("Sessão Betclic não detetada.");
-  progress("A obter apostas do Betclic…");
+  progress("A obter apostas do Betclic...");
   const mapped = await fetchBetclicBetsForImport(cfg);
   return persistMapped(mapped, 0, "Betclic", cfg, accountId);
 }
 
 // ============================================================
-// Solverde — ao contrário da Betclic/Betano, a API não usa um token de header;
+// Solverde - ao contrário da Betclic/Betano, a API não usa um token de header;
 // a sessão é um cookie entre subdomínios (www.solverde.pt /
 // sportswidget.solverde.pt). Com host_permissions para ambos, o fetch do
 // service worker é feito com os cookies do utilizador anexados
-// automaticamente — não precisa de nenhuma bridge na página.
+// automaticamente - não precisa de nenhuma bridge na página.
 // ============================================================
 const SOLVERDE_BETS_URL = "https://sportswidget.solverde.pt/bets";
 
@@ -509,7 +512,7 @@ async function solverdeRequestPage({ from, to, page, itemsPerPage }) {
 async function fetchSolverdeBets() {
   return fetchSolverdeHistory(solverdeRequestPage, {
     onPage: ({ count, window, page }) => {
-      progress(`A ler apostas da Solverde (janela ${window}, página ${page}): ${count}…`);
+      progress(`A ler apostas da Solverde (janela ${window}, página ${page}): ${count}...`);
     },
   });
 }
@@ -539,7 +542,7 @@ async function solverdeStatus() {
 }
 
 async function runSolverdeImport(cfg, accountId) {
-  progress("A obter apostas da Solverde…");
+  progress("A obter apostas da Solverde...");
   const raw = await fetchSolverdeBets();
   const byRef = new Map();
   for (const bet of raw) {
@@ -556,7 +559,7 @@ async function runBetanoImport(cfg, accountId, opts = {}) {
   const { tab, restoreUrl, created } = ensured;
   try {
     if (!betanoSessionTokens) await waitForBetanoTokens();
-    progress("A obter apostas do Betano…");
+    progress("A obter apostas do Betano...");
     const { open, settled } = await fetchBetanoBets(tab.id);
     const byRef = new Map();
     for (const bet of settled) byRef.set(betanoRef(bet), bet);
@@ -575,7 +578,7 @@ async function runBetanoImport(cfg, accountId, opts = {}) {
 // Deteção automática de conta pelo username da sessão da casa.
 // A extensão pergunta à casa quem é o utilizador com sessão iniciada e procura
 // uma bookie_account do BetTrackr com esse username (case-insensitive). Se
-// encontrar, encaminha as apostas para essa conta — sobrepondo-se à escolha
+// encontrar, encaminha as apostas para essa conta - sobrepondo-se à escolha
 // manual do dropdown. Sem username detetado (ou sem correspondência), mantém-se
 // a seleção manual.
 // ============================================================
@@ -605,7 +608,7 @@ async function fetchEnabledBookmakers(cfg) {
 // Estado da subscrição do utilizador (/api/billing/status). A extensão é uma
 // funcionalidade paga: sem acesso, o popup explica-o em vez de deixar carregar
 // num botão que o servidor vai recusar com 402.
-// Numa falha de rede devolve null = "não sei", e nada é bloqueado no popup —
+// Numa falha de rede devolve null = "não sei", e nada é bloqueado no popup -
 // quem manda é sempre o servidor no momento do import.
 async function fetchSubscription(cfg) {
   if (!cfg.bettrackrToken) return null;
@@ -628,7 +631,7 @@ async function fetchSubscription(cfg) {
 
 // Função executada DENTRO da página betclic.pt: lê o username do estado SSR
 // embebido no documento (<script id="ng-state" type="application/json"> com
-// ...,"username":"ronkzinho","identity":{...}). É a fonte mais fiável — sem
+// ...,"username":"ronkzinho","identity":{...}). É a fonte mais fiável - sem
 // fetch, sem CORS, sem token. Corre no mundo ISOLATED (só precisa do DOM).
 function betclicReadStateFn() {
   const specific = /"username"\s*:\s*"([^"\\]{1,64})"\s*,\s*"identity"/;
@@ -636,7 +639,7 @@ function betclicReadStateFn() {
 
   // Sessão ativa? A betclic mostra um link para /login (botão "Aceder") no
   // cabeçalho APENAS quando não há sessão. Nem o cookie BC-TOKEN (existe também
-  // para visitantes — é anónimo) nem o CacheServiceLogin (persiste após logout)
+  // para visitantes - é anónimo) nem o CacheServiceLogin (persiste após logout)
   // servem. O link /login é o sinal fiável de "sem sessão" -> sem conta.
   let loggedIn = true;
   try { if (document.querySelector('a[href*="/login"]')) loggedIn = false; } catch (_) {}
@@ -654,7 +657,7 @@ function betclicReadStateFn() {
     }
   } catch (_) {}
 
-  // 2) Estado SSR embebido no documento (congelado no load) — fallback.
+  // 2) Estado SSR embebido no documento (congelado no load) - fallback.
   let ngState = null;
   try {
     const scripts = document.querySelectorAll('script[type="application/json"], script[id*="state"]');
@@ -674,8 +677,8 @@ function betclicReadStateFn() {
 }
 
 // Função executada DENTRO da página betano.pt: lê a identidade da sessão atual.
-// A Betano (plataforma Kaizen) tem um username/handle real — o customerCode
-// (ex.: "ronkzinho") — mas ele NÃO vive no estado embebido (initial_state só
+// A Betano (plataforma Kaizen) tem um username/handle real - o customerCode
+// (ex.: "ronkzinho") - mas ele NÃO vive no estado embebido (initial_state só
 // tem customerId + email). A única fonte é GET /api/balance -> data.customerCode,
 // obtido só com os cookies da sessão. Fazemos um fetch FRESCO a cada sondagem:
 // é isso que apanha a troca de conta (logout+login) sem depender de estado
@@ -685,10 +688,10 @@ function betclicReadStateFn() {
 async function betanoReadStateFn() {
   let customerId = null;
   let email = null;
-  let username = null; // customerCode — o handle mostrado ao utilizador
+  let username = null; // customerCode - o handle mostrado ao utilizador
   let loggedIn = true;
 
-  // 1) initial_state.user — traz customerId + email (secundários) e o sinal
+  // 1) initial_state.user - traz customerId + email (secundários) e o sinal
   //    fiável de logout (isLoggedIn:false).
   try {
     const user = window["initial_state"] && window["initial_state"].user;
@@ -764,7 +767,7 @@ async function probeBookmakerIdentity(source, _cfg) {
 
   // 1) Leitura live do estado da sessão nas tabs abertas da casa. O estado
   //    embebido é "congelado" no load, por isso lemos primeiro a tab ATIVA / a
-  //    mais recente — a que reflete a sessão atual. Assim, mudar de conta
+  //    mais recente - a que reflete a sessão atual. Assim, mudar de conta
   //    (logout + login, que recarrega a página) passa a atualizar.
   let liveError = null;
   try {
@@ -811,7 +814,7 @@ async function probeBookmakerIdentity(source, _cfg) {
   }
 
   // 2) Fallback: identidade guardada pelo content script num load anterior (para
-  //    quando não há tab aberta agora — ex.: auto-import). A identidade rica
+  //    quando não há tab aberta agora - ex.: auto-import). A identidade rica
   //    permite associar por username/customerId/email; senão só o username.
   if (probe.identityKey) {
     const rich = (await chrome.storage.local.get([probe.identityKey]))[probe.identityKey];
@@ -852,7 +855,7 @@ function accountsForBookmaker(accounts, source) {
 //     username da conta OU com o label (rede de segurança para quem nomeou a
 //     conta como o handle sem preencher o campo dedicado);
 //   - o customerId/email só batem certo com o campo username EXPLÍCITO da conta
-//     (nunca com o label) — ou seja, o email só associa se o utilizador o tiver
+//     (nunca com o label) - ou seja, o email só associa se o utilizador o tiver
 //     posto na conta do BetTrackr. Assim evita-se associar por acaso.
 function matchAccountByIdentity(candidates, identity) {
   const norm = (v) => (v == null ? "" : String(v).trim().toLowerCase());
@@ -871,7 +874,7 @@ function matchAccountByIdentity(candidates, identity) {
 }
 
 // Decide a que conta vão as apostas de uma casa. A ordem é a mesma no import
-// manual e no automático — a deteção nunca depende do popup estar aberto:
+// manual e no automático - a deteção nunca depende do popup estar aberto:
 //   1) username da sessão da casa (ex.: Betclic /me) que bate certo com o
 //      username de uma conta -> desambigua várias contas na mesma casa;
 //   2) escolha manual no dropdown do popup, quando existe;
@@ -929,7 +932,7 @@ async function runImportSources(source, cfg, accountIds, opts = {}) {
   const sources = source === "all" ? await fetchEnabledBookmakers(cfg) : [source];
   if (sources.length === 0) throw new Error("Nenhuma casa de apostas ativa. Escolhe pelo menos uma nas definições.");
   const chosenAccounts = accountIds && typeof accountIds === "object" ? accountIds : {};
-  // Contas do utilizador uma única vez — servem a deteção por username e a
+  // Contas do utilizador uma única vez - servem a deteção por username e a
   // regra de "conta única" para todas as casas deste import.
   const accounts = await fetchBettrackrAccounts(cfg);
   const results = {};
@@ -993,7 +996,7 @@ async function extensionStatus() {
     // A Betano tab enables the action. The page bridge reports a useful
     // authentication error if the user is not logged in or needs a reload.
     betano: tabs.length > 0,
-    // Solverde não precisa de tab aberta — sondamos a sessão diretamente.
+    // Solverde não precisa de tab aberta - sondamos a sessão diretamente.
     solverde,
     bettrackr: Boolean(stored.bettrackrToken),
     bettrackrBase,
@@ -1008,7 +1011,7 @@ async function extensionStatus() {
 // ============================================================
 // Login BetTrackr direto na extensão (E3). Deixa a extensão funcionar sem o
 // site do BetTrackr aberto. Guardamos APENAS o JWT devolvido (expira em 7
-// dias) — nunca a password. HTTPS via host_permissions.
+// dias) - nunca a password. HTTPS via host_permissions.
 // ============================================================
 async function bettrackrLogin(email, password, base) {
   const origin = base || DEFAULT_BETTRACKR_BASE;
@@ -1037,7 +1040,7 @@ async function bettrackrLogout() {
 }
 
 // ============================================================
-// Auto-import (E3) — opt-in, desligado por defeito. Disparado pela captura do
+// Auto-import (E3) - opt-in, desligado por defeito. Disparado pela captura do
 // token de uma casa (Betclic guarda o token; Betano envia BETANO_SESSION).
 // Debounce por casa para não repetir a cada navegação/refresh.
 // ============================================================

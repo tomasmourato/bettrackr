@@ -1,4 +1,4 @@
-// content-bettrackr.js — corre no site do BetTrackr. Faz duas coisas:
+// content-bettrackr.js - corre no site do BetTrackr. Faz duas coisas:
 //
 // 1. Lê a sessão atual que a app guarda em localStorage e a origem atual, para
 //    o service worker validar o utilizador antes de chamar /api/bets/bulk.
@@ -12,8 +12,12 @@
   if (window.__bettrackrBridgeLoaded) return;
   window.__bettrackrBridgeLoaded = true;
 
-  const KEY = "gestordebets_token";
-  const USER_KEY = "gestordebets_user";
+  const KEY = "bettrackr_token";
+  const USER_KEY = "bettrackr_user";
+  // Nomes anteriores ao rename do projeto. Um separador aberto com um bundle
+  // em cache antigo ainda escreve aqui, por isso lê-se os dois.
+  const LEGACY_KEY = "gestordebets_token";
+  const LEGACY_USER_KEY = "gestordebets_user";
   const APP = "bettrackr-app"; // mensagens vindas da página
   const EXT = "bettrackr-ext"; // mensagens enviadas pela extensão
   const version = (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || "0";
@@ -21,8 +25,8 @@
   // --- session sync ---
   function currentSession() {
     try {
-      const token = localStorage.getItem(KEY);
-      const storedUser = localStorage.getItem(USER_KEY);
+      const token = localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY);
+      const storedUser = localStorage.getItem(USER_KEY) || localStorage.getItem(LEGACY_USER_KEY);
       const user = storedUser ? JSON.parse(storedUser) : null;
       const expectedUserId = typeof user?.id === "string" ? user.id.trim() : "";
       if (!token) return null;
@@ -34,7 +38,7 @@
 
   // O token do site vai para o service worker, que o troca por um token de
   // extensão antes de o guardar (ver storeBettrackrSession no background.js).
-  // Escrever aqui o token cru — como se fazia antes — deixava a extensão com
+  // Escrever aqui o token cru - como se fazia antes - deixava a extensão com
   // uma sessão que o servidor não distingue da web, e a importação, que é
   // paga, passava sem subscrição.
   async function syncSession() {

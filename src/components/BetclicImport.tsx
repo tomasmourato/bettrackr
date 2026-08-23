@@ -4,6 +4,7 @@ import { useBetclicExtension } from "../hooks/useBetclicExtension";
 import { BookieAccount } from "../types";
 import { isNativeApp } from "../lib/apiBase";
 import { bookmakerLabel } from "../lib/bookmakers";
+import { STORAGE_KEYS } from "../lib/storageKeys";
 import { useI18n, type TFn } from "../lib/i18n";
 
 // Casas suportadas pela extensão; a chave (minúsculas) é a usada pelo service
@@ -13,7 +14,7 @@ const EXTENSION_BOOKIE_KEYS = ["betclic", "betano", "solverde"];
 const EXTENSION_BOOKIES = EXTENSION_BOOKIE_KEYS.map((key) => ({ key, label: bookmakerLabel(key) }));
 
 // Última conta escolhida por casa, para não ter de escolher sempre.
-const ACCOUNT_CHOICE_KEY = "gestordebets_import_accounts";
+const ACCOUNT_CHOICE_KEY = STORAGE_KEYS.importAccounts;
 
 function loadAccountChoices(): Record<string, string> {
   try {
@@ -58,7 +59,7 @@ function importSummary(t: TFn, result: {
   }).join(" · ");
 }
 
-// Passos de instalação manual — reutilizados no estado "não instalada" e no
+// Passos de instalação manual - reutilizados no estado "não instalada" e no
 // bloco "reinstalar", para que as instruções estejam SEMPRE acessíveis no app.
 function InstallSteps() {
   const { t } = useI18n();
@@ -111,7 +112,7 @@ export default function BetclicImport({ accounts = [], enabledBookmakers }: Betc
   const { t } = useI18n();
   const { installed, version, importing, progress, result, runImport, recheck } = useBetclicExtension();
 
-  // Na app nativa (Android) não existem extensões de browser — o cartão
+  // Na app nativa (Android) não existem extensões de browser - o cartão
   // inteiro seria só instruções impossíveis de seguir. A importação por
   // extensão continua disponível na versão web/desktop.
   if (isNativeApp()) return null;

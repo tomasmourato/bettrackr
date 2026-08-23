@@ -7,7 +7,7 @@
 // Prioridade: VITE_API_BASE_URL (definida no build) > produção quando corre
 // dentro do Capacitor > relativo (web).
 
-const PRODUCTION_API = "https://gestordebets.vercel.app";
+const PRODUCTION_API = "https://betrackr.vercel.app";
 
 /** True quando a app corre dentro da shell nativa do Capacitor. */
 export function isNativeApp(): boolean {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "BetTrackr — Importar apostas",
-  "version": "1.0.8",
+  "name": "BetTrackr: Importar apostas",
+  "version": "1.0.9",
   "description": "Importa as tuas apostas do Betclic.pt, Betano.pt e Solverde.pt diretamente para o BetTrackr.",
   "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": [
@@ -12,6 +12,7 @@
     "https://*.begmedia.com/*",
     "https://www.solverde.pt/*",
     "https://sportswidget.solverde.pt/*",
+    "https://betrackr.vercel.app/*",
     "https://gestordebets.vercel.app/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
@@ -63,6 +64,7 @@
     },
     {
       "matches": [
+        "https://betrackr.vercel.app/*",
         "https://gestordebets.vercel.app/*",
         "http://localhost/*",
         "http://127.0.0.1/*"
