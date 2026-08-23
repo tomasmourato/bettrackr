@@ -1,5 +1,5 @@
 // src/lib/adminApi.ts
-// Cliente das rotas /api/admin. Todas exigem role = 'admin' no servidor —
+// Cliente das rotas /api/admin. Todas exigem role = 'admin' no servidor -
 // nada aqui dá permissões, só apresenta o que o servidor deixa fazer.
 
 import { authFetch, parseJsonResponse } from "./authApi";
@@ -102,7 +102,7 @@ export function setUserRole(id: string, role: "user" | "admin"): Promise<{ user:
 
 // ------------------------------------------------------------
 // Perfil de um membro: as apostas dele, para o fundador ver as mesmas
-// estatísticas que o social dá de um amigo. Só o fundador — o servidor
+// estatísticas que o social dá de um amigo. Só o fundador - o servidor
 // responde 403 a um administrador (ver requireFounder).
 // ------------------------------------------------------------
 export interface MemberProfileData {

@@ -11,7 +11,7 @@ coverage/
 graphify-out/cost.json
 .agents/
 .codex/
-# Android (Capacitor) — outputs de build; o projeto android/ em si é versionado
+# Android (Capacitor) - outputs de build; o projeto android/ em si é versionado
 android/.gradle/
 android/.idea/
 android/build/
@@ -21,3 +21,7 @@ android/capacitor-cordova-android-plugins/build/
 
 # Ficheiros temporarios de diagnostico (backups de insights, etc.)
 tmp-*
+
+# Artefactos de planeamento dos assistentes (ficam so na maquina)
+.superpowers/
+docs/superpowers/

@@ -64,7 +64,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
 
       <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm shadow-xl shadow-zinc-950/5 dark:shadow-black/30 p-6 sm:p-8">
 
-        {/* Marca — mesmo desenho do ícone da app */}
+        {/* Marca - mesmo desenho do ícone da app */}
         <div className="flex flex-col items-center gap-3 mb-7">
           <BrandMark size={52} />
           <div className="text-center">

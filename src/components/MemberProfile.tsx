@@ -2,7 +2,7 @@
 // O perfil de outro utilizador: estatísticas (o mesmo Dashboard, alimentado
 // com as apostas dele) e a lista read-only das apostas recentes.
 //
-// Vive à parte porque tem dois donos — o separador social mostra-o de um
+// Vive à parte porque tem dois donos - o separador social mostra-o de um
 // amigo, o painel de gestão mostra-o de qualquer membro (só ao fundador). São
 // dois caminhos e uma vista; duas cópias dela era pedir que uma envelhecesse
 // sem a outra, como já aconteceu neste projeto com o portão do painel.
@@ -40,7 +40,7 @@ function statusMeta(status: Bet["status"]): { key: TKey; className: string } {
 
 interface MemberProfileProps {
   username: string;
-  /** Etiqueta por baixo do nome: "Perfil de amigo", "Membro"… */
+  /** Etiqueta por baixo do nome: "Perfil de amigo", "Membro"... */
   subtitle: string;
   bets: Bet[];
   currency: string;
@@ -111,7 +111,7 @@ export default function MemberProfile({
         </div>
       ) : (
         <>
-          {/* Estatísticas — o mesmo Dashboard, com as apostas dele. */}
+          {/* Estatísticas - o mesmo Dashboard, com as apostas dele. */}
           <Dashboard bets={bets} currency={currency} isDark={isDark} />
 
           <div className="bg-white dark:bg-zinc-900 rounded-sm p-5 border border-zinc-200 dark:border-zinc-800">
@@ -161,7 +161,7 @@ export default function MemberProfile({
                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-sm uppercase border ${meta.className}`}>{t(meta.key)}</span>
                           </td>
                           <td className={`py-2.5 text-right font-semibold font-mono ${safeNum(bet.netProfit) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                            {bet.status === "POR_LIQUIDAR" ? "—" : formatSignedMoney(safeNum(bet.netProfit), currency)}
+                            {bet.status === "POR_LIQUIDAR" ? "-" : formatSignedMoney(safeNum(bet.netProfit), currency)}
                           </td>
                         </tr>
                       );

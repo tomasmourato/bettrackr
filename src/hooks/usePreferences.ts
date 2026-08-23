@@ -18,7 +18,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
 };
 
 // Primeiro arranque: segue o idioma do browser em vez de assumir português.
-// Só é chamada quando não há preferências guardadas — quem já usa a app nunca
+// Só é chamada quando não há preferências guardadas - quem já usa a app nunca
 // vê o idioma mudar sozinho.
 function detectLanguage(): Language {
   if (typeof navigator === "undefined") return DEFAULT_PREFERENCES.language;

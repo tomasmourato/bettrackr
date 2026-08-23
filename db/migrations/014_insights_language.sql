@@ -1,11 +1,11 @@
 -- ============================================================
 -- Migração 014: dicas diárias por idioma
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- A cache das dicas era UMA linha por dia (UNIQUE em insight_date), partilhada
 -- por todos. Com a app em PT/EN isso significava que o primeiro pedido do dia
--- fixava o idioma para toda a gente — um utilizador inglês recebia (e podia
+-- fixava o idioma para toda a gente - um utilizador inglês recebia (e podia
 -- gravar) dicas em português. A chave passa a ser (insight_date, lang).
 --
 -- As linhas que já existem são português, por isso o backfill é 'pt'.

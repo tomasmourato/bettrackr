@@ -79,7 +79,7 @@ export default function App({ initialData }: AppProps) {
     setLocationSearch("");
 
     // Clicar no separador já ativo limpa os filtros. Como a página não é
-    // remontada, não chega mudar `initialSearch` (só é lido no arranque) — o
+    // remontada, não chega mudar `initialSearch` (só é lido no arranque) - o
     // popstate é o mesmo canal que o back/forward usa para reaplicar o URL.
     if (isSameTab && hadFilters) {
       window.dispatchEvent(new PopStateEvent("popstate"));
@@ -367,7 +367,7 @@ export default function App({ initialData }: AppProps) {
   };
 
   // Gate de autenticação: enquanto não houver sessão válida, mostra só o
-  // AuthPage — dentro do I18nProvider, para o ecrã de login também traduzir.
+  // AuthPage - dentro do I18nProvider, para o ecrã de login também traduzir.
   if (!authed) {
     return (
       <I18nProvider lang={preferences.language}>

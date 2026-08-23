@@ -71,7 +71,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Procura com debounce (min. 2 caracteres) — igual ao desktop.
+  // Procura com debounce (min. 2 caracteres) - igual ao desktop.
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {

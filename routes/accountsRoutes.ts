@@ -1,7 +1,7 @@
 // routes/accountsRoutes.ts
 // Contas por casa de apostas: um utilizador pode ter várias contas na mesma
 // casa (ex.: duas contas Betclic) e associar apostas a cada uma. Apagar uma
-// conta não apaga apostas — o FK em bets.account_id faz SET NULL.
+// conta não apaga apostas - o FK em bets.account_id faz SET NULL.
 
 import { Router } from "express";
 import pool from "../db/pool.js";
@@ -113,7 +113,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 // ============================================================
 // PUT /api/accounts/:id -> renomeia uma conta { label }
 // (a casa não é editável: mudaria retroativamente a que casa as
-// apostas associadas "pertencem" — cria antes uma conta nova)
+// apostas associadas "pertencem" - cria antes uma conta nova)
 // ============================================================
 router.put("/:id", async (req: AuthenticatedRequest, res) => {
   const label = cleanLabel(req.body?.label);

@@ -1,10 +1,10 @@
 -- ============================================================
 -- Migração 006: cashout é sempre guardado com status CASHOUT
 --
--- (Renumerada de 004 -> 006: o 004 foi atribuído a outra feature — aposta sem
--- risco — no mesmo período; 006 mantém a sequência sem colisões.)
+-- (Renumerada de 004 -> 006: o 004 foi atribuído a outra feature - aposta sem
+-- risco - no mesmo período; 006 mantém a sequência sem colisões.)
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 -- Corrige imports feitos antes do estado dedicado e protege a invariável na BD.
 -- ============================================================
 

@@ -83,7 +83,7 @@ function promotionInfo(bet) {
   // BonusType (fallback quando os tokens não vêm): 1 = FullBet (freebet),
   // 3 = RiskFree (aposta sem risco). Os tokens são o sinal primário.
   // "Aposta sem risco": stake é dinheiro REAL, mas uma derrota é compensada
-  // (stake devolvida como freebet), por isso o resultado é neutro — é um
+  // (stake devolvida como freebet), por isso o resultado é neutro - é um
   // conceito distinto da freebet e tem prioridade sobre ela.
   const isRiskFree = hasToken("riskfree") || Number(bet.BonusType) === 3;
   // FullBet é uma stake de bónus (freebet). RiskFree usa stake real, por isso

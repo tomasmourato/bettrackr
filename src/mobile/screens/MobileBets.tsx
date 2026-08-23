@@ -102,7 +102,7 @@ const SORT_OPTIONS: KeyOption[] = [
 
 // Edição em massa: só se aplicam os campos que o utilizador altera. "Manter"
 // (KEEP) deixa cada aposta como está. Ficam DE FORA os campos únicos por
-// aposta — montante, odd e seleções — como pedido.
+// aposta - montante, odd e seleções - como pedido.
 const KEEP = "__KEEP__";
 const NO_ACCOUNT = "__NONE__";
 
@@ -267,7 +267,7 @@ export default function MobileBets({
   const accountLabelById = useMemo(() => new Map(accounts.map((a) => [a.id, a.label])), [accounts]);
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
-  // Filtragem + ordenação — mesma semântica do desktop.
+  // Filtragem + ordenação - mesma semântica do desktop.
   const filteredBets = useMemo(() => {
     const q = search.toLowerCase();
     const visible = bets.filter((bet) => {
@@ -476,7 +476,7 @@ export default function MobileBets({
   );
 
   // Selecionar/desmarcar todas as apostas atualmente filtradas (não só as
-  // visíveis num grupo) — como no desktop.
+  // visíveis num grupo) - como no desktop.
   const toggleAllFiltered = () => {
     applySelectionAction({
       type: "toggle-filtered",
@@ -494,7 +494,7 @@ export default function MobileBets({
 
   // Editar em massa: aplica só os campos alterados; os únicos por aposta
   // (montante, odd, seleções) ficam intactos. Recalcula retorno/lucro apenas
-  // quando o estado ou o tipo de dinheiro muda — os cálculos dependem deles.
+  // quando o estado ou o tipo de dinheiro muda - os cálculos dependem deles.
   const applyBulkEdit = async () => {
     const selected = selectedBets();
     if (selected.length === 0) return;
@@ -556,7 +556,7 @@ export default function MobileBets({
           safeNum(next.odd),
           next.status,
           !!next.isFreebet,
-          safeNum(next.finalReturn), // só usado se CASHOUT — mantém consistência
+          safeNum(next.finalReturn), // só usado se CASHOUT - mantém consistência
           next.freebetType,
           next.isRiskFree,
         );
@@ -935,7 +935,7 @@ label={t("bets.bulk.deleteAria")}
                   : ""}
                 {" · "}
                 {detailBet.type === "MULTIPLA" ? t("filters.type.multiple") : t("filters.type.single")}
-                {detailBet.isFreebet ? ` · ${t("filters.money.freebet")} (${detailBet.freebetType || "—"})` : ""}
+                {detailBet.isFreebet ? ` · ${t("filters.money.freebet")} (${detailBet.freebetType || "-"})` : ""}
                 {detailBet.isRiskFree ? ` · ${t("filters.money.riskFree")}` : ""}
               </p>
               {detailBet.notes && <p className="italic">“{detailBet.notes}”</p>}
@@ -1566,7 +1566,7 @@ function FormField({ label, children }: { label: string; children: ReactNode }) 
   );
 }
 
-// Botão de ação em massa na barra escura — só ícone (poupa espaço em ecrãs
+// Botão de ação em massa na barra escura - só ícone (poupa espaço em ecrãs
 // estreitos), com aria-label para acessibilidade.
 function BulkAction({
   icon: Icon,

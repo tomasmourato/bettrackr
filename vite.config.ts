@@ -8,7 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 // dist/build-time.json, que o scripts/bundle-app.mjs copia para
 // app-version.json. Com os dois valores, o live update consegue recusar
 // bundles que NÃO sejam mais recentes do que o que já corre (ver
-// src/lib/liveUpdate.ts) — sem isto, um APK novo era "atualizado" para um
+// src/lib/liveUpdate.ts) - sem isto, um APK novo era "atualizado" para um
 // bundle de produção mais antigo.
 const BUILD_TIME = Date.now();
 

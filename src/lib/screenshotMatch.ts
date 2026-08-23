@@ -1,5 +1,5 @@
 // src/lib/screenshotMatch.ts
-// Normalização das respostas da IA do importador de screenshots — partilhada
+// Normalização das respostas da IA do importador de screenshots - partilhada
 // entre o ScreenshotImporter desktop e o ecrã de importação mobile.
 
 import { BetStatus } from "../types";
@@ -8,7 +8,7 @@ import { normalizeBetStatus } from "./betStatus";
 
 /**
  * A IA devolve o nome da casa de apostas em texto livre ("Placard.pt",
- * "BETANO", …). Tentamos casá-lo com a lista conhecida para pré-selecionar
+ * "BETANO", ...). Tentamos casá-lo com a lista conhecida para pré-selecionar
  * a opção certa; se falhar, cai em "Outra".
  */
 export function matchBookmaker(raw?: string): string {

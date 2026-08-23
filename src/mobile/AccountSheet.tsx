@@ -67,7 +67,7 @@ export function AccountSheet({
       await navigator.clipboard.writeText(shown.id);
       toast.show(t("account.copied"), "success");
     } catch {
-      /* clipboard indisponível — sem crash */
+      /* clipboard indisponível - sem crash */
     }
   };
 
@@ -79,18 +79,18 @@ export function AccountSheet({
           {shown?.username?.slice(0, 2) || "?"}
         </div>
         <div>
-          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{shown?.username || "—"}</p>
+          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{shown?.username || "-"}</p>
           <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{shown?.email || ""}</p>
         </div>
       </div>
 
       {/* Detalhes */}
       <ListGroup>
-        <ListItem title={t("account.username")} trailing={shown?.username || "—"} />
-        <ListItem title={t("account.email")} trailing={<span className="max-w-[55vw] truncate inline-block align-bottom">{shown?.email || "—"}</span>} />
+        <ListItem title={t("account.username")} trailing={shown?.username || "-"} />
+        <ListItem title={t("account.email")} trailing={<span className="max-w-[55vw] truncate inline-block align-bottom">{shown?.email || "-"}</span>} />
         <ListItem
           title={t("account.userId")}
-          subtitle={<span className="font-mono break-all">{shown?.id || "—"}</span>}
+          subtitle={<span className="font-mono break-all">{shown?.id || "-"}</span>}
           trailing={
             <Pressable as="button" onClick={copyId} aria-label={t("account.copyId")} className="p-2 -m-1 text-zinc-400">
               <Copy size={15} />

@@ -6,16 +6,16 @@
 // acesso: se o Stripe estiver em baixo, quem já pagou continua a entrar.
 //
 // Variáveis de ambiente:
-//   STRIPE_SECRET_KEY      — sem ela o pagamento fica indisponível (mas a app
+//   STRIPE_SECRET_KEY      - sem ela o pagamento fica indisponível (mas a app
 //                            funciona: o acesso manual e o trial não dependem
 //                            do Stripe).
-//   STRIPE_WEBHOOK_SECRET  — obrigatória para aceitar webhooks.
-//   STRIPE_PRICE_ID        — opcional; se faltar, o preço vai inline no
+//   STRIPE_WEBHOOK_SECRET  - obrigatória para aceitar webhooks.
+//   STRIPE_PRICE_ID        - opcional; se faltar, o preço vai inline no
 //                            Checkout e não é preciso configurar nada no
 //                            dashboard do Stripe.
-//   STRIPE_TAX_CODE        — opcional; categoria fiscal do produto criado
+//   STRIPE_TAX_CODE        - opcional; categoria fiscal do produto criado
 //                            inline (ver TAX_CODE abaixo).
-//   APP_URL                — base dos redirecionamentos; se faltar, é
+//   APP_URL                - base dos redirecionamentos; se faltar, é
 //                            deduzida do próprio pedido.
 
 import { Router, type Request, type Response } from "express";
@@ -28,7 +28,7 @@ const router = Router();
 
 // Categoria fiscal do produto. É obrigatória: as contas novas do Stripe têm
 // "Managed Payments" ligado por defeito (o Stripe fica como vendedor e trata
-// do IVA por nós) e recusam um produto sem categoria —
+// do IVA por nós) e recusam um produto sem categoria -
 // "the product tax code is missing".
 //
 // txcd_10103000 = Software as a service (SaaS), uso pessoal: software na
@@ -169,7 +169,7 @@ async function userIdForSubscription(subscription: Stripe.Subscription): Promise
 /**
  * Cancela já uma subscrição no Stripe. Usado pelo painel de gestão.
  *
- * Devolve true se a subscrição ficou cancelada — incluindo quando já lá não
+ * Devolve true se a subscrição ficou cancelada - incluindo quando já lá não
  * estava. Um administrador que carrega em "revogar" quer o resultado (deixar
  * de cobrar), e uma subscrição que entretanto desapareceu do Stripe já está
  * nesse estado; falhar aí só deixaria a base de dados presa a dizer "ativa".
@@ -214,7 +214,7 @@ async function ensureCustomer(userId: string): Promise<string> {
 // POST /api/billing/webhook
 //
 // Montado no server.ts ANTES do express.json(), com express.raw(): a
-// verificação da assinatura precisa dos bytes exatos que o Stripe enviou —
+// verificação da assinatura precisa dos bytes exatos que o Stripe enviou -
 // um JSON.parse seguido de JSON.stringify já não bate certo.
 // Exportado à parte por isso mesmo, em vez de viver neste router.
 // ============================================================
@@ -228,9 +228,9 @@ export async function stripeWebhook(req: Request, res: Response): Promise<void> 
   }
   if (!Buffer.isBuffer(req.body)) {
     // Sem os bytes originais não há verificação possível. Falhar alto é melhor
-    // do que aceitar um evento não verificado — quem pode escrever aqui pode
+    // do que aceitar um evento não verificado - quem pode escrever aqui pode
     // dar-se subscrições grátis.
-    console.error("[billing] webhook recebido sem corpo em bruto — verifica a ordem dos middlewares.");
+    console.error("[billing] webhook recebido sem corpo em bruto - verifica a ordem dos middlewares.");
     res.status(400).json({ error: "Corpo do webhook inválido." });
     return;
   }
@@ -365,7 +365,7 @@ router.post("/checkout", async (req: AuthenticatedRequest, res) => {
                 unit_amount: PLAN.priceCents,
                 recurring: { interval: PLAN.interval },
                 // Os 3,99 € JÁ INCLUEM imposto. Sem isto o Stripe trata o
-                // valor como líquido e soma o IVA por cima — um cliente
+                // valor como líquido e soma o IVA por cima - um cliente
                 // português via 4,91 € num sítio onde a app anuncia 3,99 €.
                 //
                 // Efeito colateral aceite: o que recebemos passa a depender do

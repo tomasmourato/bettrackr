@@ -3,7 +3,7 @@
 Aplicação web para gestão e análise de boletins de apostas desportivas.
 Permite registar apostas manualmente, importar boletins a partir de um
 screenshot (com extração automática via Gemini) e acompanhar estatísticas de
-desempenho — lucro líquido, ROI/yield, taxa de acerto e análise de freebets.
+desempenho - lucro líquido, ROI/yield, taxa de acerto e análise de freebets.
 
 ## Stack
 
@@ -75,8 +75,8 @@ A app nativa Android embute o build web (`dist/`) num WebView e fala com a
 API de produção (ver [src/lib/apiBase.ts](src/lib/apiBase.ts); o CORS para a
 origem nativa está em [server.ts](server.ts)).
 
-**Gerar o APK sem instalar nada:** GitHub → **Actions** → workflow
-**"Android APK"** → *Run workflow*. No fim, descarrega o ficheiro
+**Gerar o APK sem instalar nada:** GitHub -> **Actions** -> workflow
+**"Android APK"** -> *Run workflow*. No fim, descarrega o ficheiro
 `bettrackr-debug-apk` dos artifacts e instala-o no telemóvel (é preciso
 permitir "instalar de fontes desconhecidas").
 
@@ -87,9 +87,9 @@ npm run android:sync   # build web + copia para android/
 npm run android:open   # abre o projeto no Android Studio
 ```
 
-Notas: o APK é *debug* (não serve para a Play Store — isso exigiria assinatura
+Notas: o APK é *debug* (não serve para a Play Store - isso exigiria assinatura
 com keystore própria); a importação por extensão de browser não existe na app
-nativa (o cartão é escondido) — usa a web para isso.
+nativa (o cartão é escondido) - usa a web para isso.
 
 **Live update:** a app nativa atualiza o frontend sozinha, sem novo APK.
 Cada deploy gera `dist/app-bundle.zip` + `dist/app-version.json`

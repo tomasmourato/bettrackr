@@ -5,7 +5,7 @@
 //
 // Nota sobre dinheiro: nesta app `currency` é um SÍMBOLO escolhido pelo
 // utilizador ("€", "$", "£", "R$") e não um código ISO, por isso é colado como
-// sufixo em vez de ser passado ao Intl com style:"currency" — assim o valor
+// sufixo em vez de ser passado ao Intl com style:"currency" - assim o valor
 // apresentado continua exatamente igual ao de hoje, só muda o separador
 // decimal/de milhares quando o idioma muda.
 
@@ -53,7 +53,7 @@ export function formatPrice(lang: Language, cents: number, currencyCode: string)
       currency: currencyCode.toUpperCase(),
     }).format(cents / 100);
   } catch {
-    // Código de moeda desconhecido — melhor mostrar o número do que rebentar.
+    // Código de moeda desconhecido - melhor mostrar o número do que rebentar.
     return `${formatNumber(lang, cents / 100, { minimumFractionDigits: 2 })} ${currencyCode.toUpperCase()}`;
   }
 }

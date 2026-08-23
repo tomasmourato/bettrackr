@@ -95,7 +95,7 @@ export function openBillingPortal(): Promise<string> {
  *
  * Na web navega-se o próprio separador: um window.open() depois de um await
  * já não conta como gesto do utilizador e apanha o bloqueador de pop-ups.
- * Na app nativa é o contrário — trocar o URL do WebView tirava o utilizador
+ * Na app nativa é o contrário - trocar o URL do WebView tirava o utilizador
  * de dentro da app, por isso abre-se no browser do sistema.
  */
 export function goToStripe(url: string): void {

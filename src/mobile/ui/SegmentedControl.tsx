@@ -1,6 +1,6 @@
 // src/mobile/ui/SegmentedControl.tsx
 // Controlo segmentado (estilo iOS/Android) para alternar entre poucas
-// opções mutuamente exclusivas — ex.: separadores dentro de um ecrã. Para
+// opções mutuamente exclusivas - ex.: separadores dentro de um ecrã. Para
 // muitas opções ou filtros, usar antes <FilterChips>.
 
 import { motion } from "motion/react";

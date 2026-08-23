@@ -50,7 +50,7 @@ export function useBets(enabled: boolean, onSessionExpired: () => void, initialB
       return;
     }
 
-    // O documento SSR já traz as apostas deste utilizador — pintamo-las de
+    // O documento SSR já traz as apostas deste utilizador - pintamo-las de
     // imediato, sem loader. Mas o payload do SSR pode estar desatualizado ou
     // omitir campos; por isso refazemos o fetch em segundo plano para o cliente
     // convergir para o /api/bets (fonte de verdade, sempre com is_risk_free/

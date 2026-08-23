@@ -3,8 +3,8 @@ export type BetType = 'SIMPLES' | 'MULTIPLA';
 export type SelectionResult = Exclude<BetStatus, 'CASHOUT'>;
 
 // Regra de pagamento de uma freebet:
-//  SNR = Stake Not Returned (ganho = (odd-1) * stake) — padrão da indústria
-//  SR  = Stake Returned     (ganho = odd * stake)     — variante da Betclic
+//  SNR = Stake Not Returned (ganho = (odd-1) * stake) - padrão da indústria
+//  SR  = Stake Returned     (ganho = odd * stake)     - variante da Betclic
 export type FreebetType = 'SNR' | 'SR';
 
 export interface Selection {
@@ -44,7 +44,7 @@ export interface Bet {
   isFreebet: boolean;
   freebetType?: FreebetType; // só relevante quando isFreebet; default resolvido pela casa
   // Aposta sem risco: stake é dinheiro REAL e conta para o lucro como uma
-  // aposta normal — uma derrota perde a stake. A freebet de reembolso, quando
+  // aposta normal - uma derrota perde a stake. A freebet de reembolso, quando
   // existe, é registada à parte. Mutuamente exclusivo com isFreebet.
   isRiskFree?: boolean;
   // Aposta ignorada: continua visível no histórico mas é excluída de todas as

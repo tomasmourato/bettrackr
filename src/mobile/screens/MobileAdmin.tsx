@@ -44,7 +44,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 interface MobileAdminProps {
   /** Relê a subscrição do próprio utilizador depois de uma alteração. */
   onAccessChanged: () => void;
-  /** Papel de quem está a ver — o perfil de membro é só para o fundador. */
+  /** Papel de quem está a ver - o perfil de membro é só para o fundador. */
   viewerRole: "user" | "admin" | "founder" | undefined;
   currency: string;
   isDark: boolean;
@@ -194,7 +194,7 @@ export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isD
       <div className="flex items-center justify-between gap-3 pt-3 text-[11px] text-zinc-500 dark:text-zinc-400">
         <span className="font-mono">
           {t("admin.users.showing", {
-            shown: `${panel.total === 0 ? 0 : (panel.page - 1) * panel.pageSize + 1}–${lastOnPage}`,
+            shown: `${panel.total === 0 ? 0 : (panel.page - 1) * panel.pageSize + 1}-${lastOnPage}`,
             total: panel.total,
           })}
         </span>
@@ -256,7 +256,7 @@ export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isD
             <ListItem title={t("admin.action.revoke")} onClick={() => setSheet("revoke")} chevron />
           )}
           <ListItem icon={Hourglass} title={t("admin.action.trial")} onClick={() => setSheet("trial")} chevron />
-          {/* Num fundador estas duas não aparecem — o servidor recusa-as na
+          {/* Num fundador estas duas não aparecem - o servidor recusa-as na
               mesma, mas mostrá-las só convidava ao erro. */}
           {selected && !isProtected(selected) && (
             <>
@@ -386,7 +386,7 @@ export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isD
           </Pressable>
         </div>
       </BottomSheet>
-      {/* Perfil de um membro — a mesma vista que o social dá de um amigo. */}
+      {/* Perfil de um membro - a mesma vista que o social dá de um amigo. */}
       <SheetPage
         open={!!profileOf}
         onClose={() => setProfileOf(null)}

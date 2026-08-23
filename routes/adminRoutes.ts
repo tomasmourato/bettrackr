@@ -4,7 +4,7 @@
 // Permite ver as contas todas, mudar papéis, conceder ou revogar subscrições
 // à mão (útil para quem paga por fora, para parceiros e para testes), esticar
 // o período experimental e apagar contas. Tudo o que muda uma conta fica
-// registado no admin_audit_log — inclusive quem o fez.
+// registado no admin_audit_log - inclusive quem o fez.
 
 import { Router } from "express";
 import pool from "../db/pool.js";
@@ -57,7 +57,7 @@ async function audit(
   }
 }
 
-// Conta quem tem acesso ao painel — administradores E fundadores. É este
+// Conta quem tem acesso ao painel - administradores E fundadores. É este
 // número que impede a app de ficar sem ninguém que lá entre.
 async function countStaff(): Promise<number> {
   const result = await pool.query(
@@ -264,13 +264,13 @@ router.patch("/users/:id/role", async (req: AccessRequest, res) => {
       res.status(404).json({ error: "Utilizador não encontrado." });
       return;
     }
-    // O cargo de fundador é intocável pela API — é isso que impede um
+    // O cargo de fundador é intocável pela API - é isso que impede um
     // administrador promovido de se virar contra quem o promoveu.
     if (current.rows[0].role === "founder") {
       res.status(409).json({ error: "O cargo de fundador não pode ser alterado a partir do painel." });
       return;
     }
-    // Sem ninguém com acesso ao painel, ninguém volta lá a entrar — nem para
+    // Sem ninguém com acesso ao painel, ninguém volta lá a entrar - nem para
     // se promover de novo.
     if (current.rows[0].role === "admin" && role === "user" && (await countStaff()) <= 1) {
       res.status(409).json({ error: "Tem de existir pelo menos um administrador." });
@@ -375,7 +375,7 @@ router.put("/users/:id/subscription", async (req: AccessRequest, res) => {
       [targetId],
     );
     // Escrever por cima de uma subscrição do Stripe punha a base de dados a
-    // dizer uma coisa e o Stripe outra — e o próximo webhook desfazia a oferta.
+    // dizer uma coisa e o Stripe outra - e o próximo webhook desfazia a oferta.
     if (existing.rows[0]?.source === "stripe" && existing.rows[0]?.stripe_subscription_id) {
       res.status(409).json({
         error: "Esta conta tem uma subscrição do Stripe. Cancela-a no Stripe antes de conceder acesso manual.",
@@ -431,7 +431,7 @@ router.put("/users/:id/subscription", async (req: AccessRequest, res) => {
 // linha como cancelada; numa do Stripe cancela-se TAMBÉM lá, senão ficava a
 // pior das combinações: o utilizador sem acesso e a ser cobrado à mesma.
 //
-// Cancelar não devolve dinheiro — reembolsos fazem-se no Stripe, e reembolsar
+// Cancelar não devolve dinheiro - reembolsos fazem-se no Stripe, e reembolsar
 // uma cobrança não cancela a subscrição (são coisas independentes).
 // ============================================================
 router.delete("/users/:id/subscription", async (req: AccessRequest, res) => {

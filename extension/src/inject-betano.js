@@ -50,7 +50,7 @@
   }
 
   // ---- Identidade da conta --------------------------------------------------
-  // A Betano TEM um username/handle real — o customerCode (ex.: "ronkzinho") —
+  // A Betano TEM um username/handle real - o customerCode (ex.: "ronkzinho") -
   // mas ele NÃO está no estado embebido (window["initial_state"] só tem
   // customerId + email). A única fonte é GET /api/balance -> data.customerCode,
   // obtido só com os cookies da sessão. O customerId (initial_state /

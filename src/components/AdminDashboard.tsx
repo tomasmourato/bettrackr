@@ -49,7 +49,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 interface AdminDashboardProps {
   /** Relê a subscrição do próprio utilizador depois de uma alteração. */
   onAccessChanged: () => void;
-  /** Papel de quem está a ver — o perfil de membro é só para o fundador. */
+  /** Papel de quem está a ver - o perfil de membro é só para o fundador. */
   viewerRole: "user" | "admin" | "founder" | undefined;
   currency: string;
   isDark: boolean;
@@ -196,7 +196,7 @@ export default function AdminDashboard({ onAccessChanged, viewerRole, currency, 
                     <tr key={user.id} className="align-top">
                       <td className="py-3 pr-3 min-w-[12rem]">
                         <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                          {user.username ?? "—"}
+                          {user.username ?? "-"}
                         </p>
                         <p className="text-zinc-500 dark:text-zinc-400 truncate">{user.email}</p>
                         <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono mt-0.5">
@@ -206,7 +206,7 @@ export default function AdminDashboard({ onAccessChanged, viewerRole, currency, 
                       </td>
                       <td className="py-3 pr-3 whitespace-nowrap">
                         {/* Um administrador já aparece como "Administrador" no
-                            crachá de acesso — repetir o papel ao lado só punha
+                            crachá de acesso - repetir o papel ao lado só punha
                             a mesma palavra duas vezes. O fundador é a exceção:
                             aí o papel diz algo que o acesso não diz. */}
                         <span
@@ -284,7 +284,7 @@ export default function AdminDashboard({ onAccessChanged, viewerRole, currency, 
 
         <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
           <span className="font-mono">
-            {t("admin.users.showing", { shown: `${firstOnPage}–${lastOnPage}`, total: panel.total })}
+            {t("admin.users.showing", { shown: `${firstOnPage}-${lastOnPage}`, total: panel.total })}
           </span>
           <div className="flex gap-1.5">
             <button

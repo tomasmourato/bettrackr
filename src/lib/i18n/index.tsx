@@ -34,7 +34,7 @@ export type TVars = Record<string, string | number>;
 export type TFn = (key: TKey, vars?: TVars) => string;
 
 // Escolhe singular/plural a partir de `n` (ou `count`). Sem `n`, uma entrada
-// plural cai no "other" — a forma neutra.
+// plural cai no "other" - a forma neutra.
 function pick(entry: Entry, vars?: TVars): string {
   if (typeof entry === "string") return entry;
   const n = Number(vars?.n ?? vars?.count ?? 0);
@@ -88,7 +88,7 @@ export function I18nProvider({
   lang: Language;
   children: React.ReactNode;
 }) {
-  // O valor só muda quando o idioma muda — evita re-render de toda a árvore
+  // O valor só muda quando o idioma muda - evita re-render de toda a árvore
   // a cada render do App (o Provider está agora na raiz).
   const value = useMemo(() => buildValue(lang), [lang]);
 
@@ -99,7 +99,7 @@ export function I18nProvider({
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.lang = value.locale;
-    document.title = `BetTrackr — ${value.t("app.brandTagline")}`;
+    document.title = `BetTrackr - ${value.t("app.brandTagline")}`;
   }, [value]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

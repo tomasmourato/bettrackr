@@ -14,6 +14,6 @@ export async function hideSplashScreen(): Promise<void> {
     await new Promise((r) => setTimeout(r, 120));
     await SplashScreen.hide();
   } catch {
-    /* plugin indisponível — nada a esconder. */
+    /* plugin indisponível - nada a esconder. */
   }
 }

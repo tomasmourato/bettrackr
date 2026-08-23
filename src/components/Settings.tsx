@@ -115,7 +115,7 @@ export default function Settings({
 
   const handleToggleBookmaker = async (key: string, next: boolean) => {
     // A ordem não é observada (só se testa pertença), por isso não a canonizamos
-    // aqui — o servidor devolve já a lista normalizada.
+    // aqui - o servidor devolve já a lista normalizada.
     const updated = next
       ? [...enabledBookmakers, key]
       : enabledBookmakers.filter((k) => k !== key);
@@ -200,14 +200,14 @@ export default function Settings({
         {/* Left column: Preferences & App Tuning */}
         <div className="space-y-6 lg:col-span-2">
 
-          {/* Subscrição — é o que decide o acesso à IA e à extensão */}
+          {/* Subscrição - é o que decide o acesso à IA e à extensão */}
           <SubscriptionCard
             status={subscription}
             loading={subscriptionLoading}
             onRefresh={refreshSubscription}
           />
 
-          {/* Escolha das casas de apostas ativas — primeiro, define o que aparece no resto */}
+          {/* Escolha das casas de apostas ativas - primeiro, define o que aparece no resto */}
           <EnabledBookmakersCard
             supported={supportedBookmakers}
             enabled={enabledBookmakers}
@@ -281,7 +281,7 @@ export default function Settings({
                   />
                 </div>
 
-                {/* Theme — aplica-se de imediato */}
+                {/* Theme - aplica-se de imediato */}
                 <div>
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("settings.theme.label")}</label>
                   <FilterDropdown
@@ -296,7 +296,7 @@ export default function Settings({
                   />
                 </div>
 
-                {/* Idioma — aplica-se de imediato (i18n) */}
+                {/* Idioma - aplica-se de imediato (i18n) */}
                 <div>
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("settings.language.title")}</label>
                   <FilterDropdown
@@ -338,7 +338,7 @@ export default function Settings({
             onDelete={onDeleteAccount}
           />
 
-          {/* Importação via extensão de browser — funcionalidade paga. O
+          {/* Importação via extensão de browser - funcionalidade paga. O
               bloqueio a sério é do servidor (402 no /api/bets vindo da
               extensão); esconder aqui evita oferecer o download a quem ia
               instalar a extensão para depois descobrir que não pode usá-la. */}
@@ -399,7 +399,7 @@ export default function Settings({
                       type="file"
                       // Além das extensões, inclui os MIME types que o Android/iOS
                       // atribuem a CSVs (text/comma-separated-values, vnd.ms-excel,
-                      // text/plain…) — só com ".csv" o seletor de ficheiros do
+                      // text/plain...) - só com ".csv" o seletor de ficheiros do
                       // telemóvel mostra os CSVs acinzentados/impossíveis de escolher.
                       // O parser valida o conteúdo, por isso ser permissivo é seguro.
                       accept=".json,.csv,application/json,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain"

@@ -4,7 +4,7 @@ import type { Language } from "../types";
 
 // Esta fronteira envolve a app INTEIRA, por isso fica acima do <I18nProvider>
 // e não pode usar o useI18n() (além de ser um componente de classe). Lê o
-// idioma diretamente das preferências guardadas — se falhar, cai no português.
+// idioma diretamente das preferências guardadas - se falhar, cai no português.
 function storedLanguage(): Language {
   try {
     const raw = localStorage.getItem("g_prefs");

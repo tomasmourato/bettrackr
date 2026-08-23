@@ -169,7 +169,7 @@ function MobileShell(props: ShellProps) {
                 fallback={
                   <div className="flex items-center justify-center py-24 text-xs text-zinc-400 dark:text-zinc-500 font-mono">
                     <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    A carregar…
+                    A carregar...
                   </div>
                 }
               >

@@ -1,7 +1,7 @@
 // scripts/zip-extension.mjs
 // Empacota a pasta extension/ num único zip servido estaticamente
 // (/bettrackr-extension.zip), para o app oferecer o download apenas da extensão
-// — sem o utilizador ter de descarregar o projeto todo.
+// - sem o utilizador ter de descarregar o projeto todo.
 //
 // Corre depois do build (o zip vai para dist/). É NÃO-FATAL de propósito: um
 // problema a gerar o zip nunca deve fazer falhar o deploy do site.
@@ -17,7 +17,7 @@ const outFile = path.join(outDir, "bettrackr-extension.zip");
 
 try {
   if (!existsSync(extDir)) {
-    console.warn("[zip-extension] pasta extension/ não encontrada — ignorado.");
+    console.warn("[zip-extension] pasta extension/ não encontrada - ignorado.");
     process.exit(0);
   }
 

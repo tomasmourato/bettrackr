@@ -62,7 +62,7 @@ type SortField = "date" | "stake" | "odd" | "profit";
 type SortDirection = "asc" | "desc";
 
 // Edição em massa: só se aplicam os campos alterados. "Manter" (KEEP) deixa
-// cada aposta como está. Ficam de fora os campos únicos por aposta — montante,
+// cada aposta como está. Ficam de fora os campos únicos por aposta - montante,
 // odd e seleções. CASHOUT não entra no bulk (exige valor recebido próprio).
 const KEEP = "__KEEP__";
 const NO_ACCOUNT = "__NONE__";
@@ -109,7 +109,7 @@ export default function BetsManager({
   const [typeFilter, setTypeFilter] = useState<string>(initialFilters.type);
   const [freebetFilter, setFreebetFilter] = useState<string>(initialFilters.money);
   const [bookmakerFilter, setBookmakerFilter] = useState<string>(initialFilters.bookmaker);
-  // "ALL" | "NONE" (sem conta) | id de uma conta — também chega via drill-down (?account=)
+  // "ALL" | "NONE" (sem conta) | id de uma conta - também chega via drill-down (?account=)
   const [accountFilter, setAccountFilter] = useState<string>(initialFilters.account);
   const [sportFilter, setSportFilter] = useState<string>(initialFilters.sport);
   const [timeframeFilter, setTimeframeFilter] = useState<TimeframeFilterValue>(initialFilters.timeframe);
@@ -445,7 +445,7 @@ export default function BetsManager({
 
   // Editar em massa: aplica só os campos alterados; os únicos por aposta
   // (montante, odd, seleções) ficam intactos. Recalcula retorno/lucro só
-  // quando muda o estado ou o tipo de dinheiro — os cálculos dependem deles.
+  // quando muda o estado ou o tipo de dinheiro - os cálculos dependem deles.
   const applyBulkEdit = async () => {
     const selected = bets.filter(bet => selectedBetIds.has(bet.id));
     if (selected.length === 0) return;
@@ -786,7 +786,7 @@ export default function BetsManager({
     const { potentialReturn, finalReturn, netProfit } = potentialWinningsInfo;
 
     // O PUT substitui a aposta inteira; comment/tags/metadata não são editáveis
-    // neste formulário mas têm de ser preservados — a metadata guarda a chave
+    // neste formulário mas têm de ser preservados - a metadata guarda a chave
     // de deduplicação (importKey) usada pela extensão.
     const preservedMetadata = (() => {
       const metadata = editingBet?.metadata;
@@ -1146,7 +1146,7 @@ export default function BetsManager({
         }
       />
 
-      {/* Painel: editar em massa — só campos comuns */}
+      {/* Painel: editar em massa - só campos comuns */}
       {isSelecting && selectedBetIds.size > 0 && isBulkEditOpen && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm px-3 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
@@ -1241,7 +1241,7 @@ placeholder={t("bets.bulkEdit.notePlaceholder")}
         </div>
       )}
 
-      {/* Painel: ignorar em massa — exclui as selecionadas das estatísticas */}
+      {/* Painel: ignorar em massa - exclui as selecionadas das estatísticas */}
       {isSelecting && selectedBetIds.size > 0 && isBulkIgnoreOpen && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm px-3 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
@@ -1607,9 +1607,9 @@ aria-label={t("bets.details.close")}
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
               <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  [t("bets.details.bookmaker"), detailBet.bookmaker || "—"],
-                  [t("bets.details.dateTime"), detailBet.dateTime || "—"],
-                  [t("bets.details.origin"), detailBet.origin || "—"],
+                  [t("bets.details.bookmaker"), detailBet.bookmaker || "-"],
+                  [t("bets.details.dateTime"), detailBet.dateTime || "-"],
+                  [t("bets.details.origin"), detailBet.origin || "-"],
                   [t("bets.details.money"), detailBet.isFreebet ? `${t("filters.money.freebet")} ${detailBet.freebetType || ""}`.trim() : t("filters.money.real")],
                   ...(detailBet.isIgnored ? [[t("bets.details.stats"), t("bets.details.ignoredValue")]] : []),
                 ].map(([label, value]) => (
@@ -1679,11 +1679,11 @@ aria-label={t("bets.details.close")}
                       <div className="mt-3 grid grid-cols-1 gap-2 border-t border-zinc-200/70 pt-3 dark:border-zinc-700 sm:grid-cols-[1fr_1fr_auto]">
                         <div>
                           <p className="text-[9px] font-bold uppercase text-zinc-400">{t("bets.field.market")}</p>
-                          <p className="mt-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-200">{selection.market || "—"}</p>
+                          <p className="mt-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-200">{selection.market || "-"}</p>
                         </div>
                         <div>
                           <p className="text-[9px] font-bold uppercase text-zinc-400">{t("bets.field.choice")}</p>
-                          <p className="mt-0.5 text-xs font-semibold text-zinc-900 dark:text-zinc-100">{selection.choice || "—"}</p>
+                          <p className="mt-0.5 text-xs font-semibold text-zinc-900 dark:text-zinc-100">{selection.choice || "-"}</p>
                         </div>
                         <div className="sm:text-right">
                           <p className="text-[9px] font-bold uppercase text-zinc-400">{t("bets.field.odd")}</p>

@@ -11,7 +11,7 @@ import type { TFn } from "../lib/i18n";
 
 interface AccountPanelProps {
   open: boolean;
-  /** Utilizador em cache (localStorage) — mostrado de imediato enquanto o /me carrega. */
+  /** Utilizador em cache (localStorage) - mostrado de imediato enquanto o /me carrega. */
   user: { id: string; username: string; email: string } | null;
   language: Language;
   t: TFn;
@@ -105,7 +105,7 @@ export default function AccountPanel({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      /* clipboard indisponível (http/permissões) — sem feedback, sem crash */
+      /* clipboard indisponível (http/permissões) - sem feedback, sem crash */
     }
   };
 
@@ -152,7 +152,7 @@ export default function AccountPanel({
                   {shown?.username?.slice(0, 2) || "?"}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{shown?.username || "—"}</p>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{shown?.username || "-"}</p>
                   <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{shown?.email || ""}</p>
                 </div>
               </div>
@@ -166,12 +166,12 @@ export default function AccountPanel({
 
               {/* Detalhes da conta */}
               <div className="space-y-2">
-                <DetailRow icon={<AtSign size={14} />} label={t("account.username")} value={shown?.username || "—"} />
-                <DetailRow icon={<Mail size={14} />} label={t("account.email")} value={shown?.email || "—"} />
+                <DetailRow icon={<AtSign size={14} />} label={t("account.username")} value={shown?.username || "-"} />
+                <DetailRow icon={<Mail size={14} />} label={t("account.email")} value={shown?.email || "-"} />
                 <DetailRow
                   icon={<Fingerprint size={14} />}
                   label={t("account.userId")}
-                  value={shown?.id || "—"}
+                  value={shown?.id || "-"}
                   mono
                   action={
                     <button

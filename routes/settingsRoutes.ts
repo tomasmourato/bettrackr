@@ -102,7 +102,7 @@ router.put("/", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
-    // Só escreve as colunas enviadas — um PUT parcial não pode apagar a outra.
+    // Só escreve as colunas enviadas - um PUT parcial não pode apagar a outra.
     const sets: string[] = [];
     const values: unknown[] = [];
     if (wantsBookmakers) {

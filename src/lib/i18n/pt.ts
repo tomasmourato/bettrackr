@@ -1,5 +1,5 @@
 // src/lib/i18n/pt.ts
-// Dicionário português — a FONTE DE VERDADE das chaves. Todas as outras
+// Dicionário português: a FONTE DE VERDADE das chaves. Todas as outras
 // línguas são tipadas contra este ficheiro (ver en.ts): acrescentar uma chave
 // aqui sem a traduzir lá é um erro de compilação, não um bug em produção.
 //
@@ -19,7 +19,7 @@ export const PT = {
   "common.cancel": "Cancelar",
   "common.yes": "Sim",
   "common.no": "Não",
-  "common.loading": "A carregar…",
+  "common.loading": "A carregar...",
   "common.clear": "Limpar",
   "common.clearAll": "Limpar tudo",
   "common.confirm": "Confirmar",
@@ -117,7 +117,7 @@ export const PT = {
   "auth.emailPlaceholder": "tu@exemplo.com",
   "auth.password": "Password",
   "auth.passwordHint": "Mínimo 8 caracteres.",
-  "auth.loading": "Aguarda…",
+  "auth.loading": "Aguarda...",
   "auth.noAccount": "Ainda não tens conta?",
   "auth.register": "Regista-te",
   "auth.hasAccount": "Já tens conta?",
@@ -138,9 +138,9 @@ export const PT = {
   "social.title": "Social",
   "social.subtitle": "Adiciona amigos para verem as estatísticas e apostas uns dos outros.",
   "social.addFriend": "Adicionar amigo",
-  "social.searchPlaceholder": "Procurar por username…",
-  "social.searchPlaceholderMobile": "Procurar utilizadores…",
-  "social.searching": "A procurar…",
+  "social.searchPlaceholder": "Procurar por username...",
+  "social.searchPlaceholderMobile": "Procurar utilizadores...",
+  "social.searching": "A procurar...",
   "social.noUsers": "Nenhum utilizador encontrado.",
   "social.results": "Resultados",
   "social.friends": "Amigos",
@@ -164,7 +164,7 @@ export const PT = {
   "social.remove": "Remover",
   "social.back": "Voltar",
   "social.friendProfile": "Perfil de amigo",
-  "social.loadingStats": "A carregar as estatísticas de {username}…",
+  "social.loadingStats": "A carregar as estatísticas de {username}...",
   "social.friendBets": "Apostas de {username}",
   "social.recentBets": "As 50 apostas mais recentes ({total} no total)",
   "social.recentBetsMobile": "Apostas recentes ({total} no total)",
@@ -206,7 +206,7 @@ export const PT = {
   "footer.ai": "IA",
   "footer.social": "Social",
   "footer.settings": "Ajustes",
-  "app.loadingBets": "A carregar apostas…",
+  "app.loadingBets": "A carregar apostas...",
   "app.brandTagline": "Gestão de Apostas",
 
   // ----------------------------------------------------------------
@@ -248,8 +248,8 @@ export const PT = {
   "bets.duplicate": "Duplicar",
 
   "bets.bulkEdit.title": {
-    one: "Editar {n} aposta — só campos comuns",
-    other: "Editar {n} apostas — só campos comuns",
+    one: "Editar {n} aposta, só campos comuns",
+    other: "Editar {n} apostas, só campos comuns",
   },
   "bets.bulkEdit.close": "Fechar edição em massa",
   "bets.bulkEdit.hint":
@@ -264,12 +264,12 @@ export const PT = {
   "bets.bulkEdit.notePlaceholder": "Fica anexada às notas de cada aposta selecionada",
   "bets.bulkEdit.apply": "Aplicar a {n}",
   "bets.bulkIgnore.title": {
-    one: "Ignorar {n} aposta — fora das estatísticas",
-    other: "Ignorar {n} apostas — fora das estatísticas",
+    one: "Ignorar {n} aposta, fora das estatísticas",
+    other: "Ignorar {n} apostas, fora das estatísticas",
   },
   "bets.bulkIgnore.close": "Fechar ignorar em massa",
   "bets.bulkIgnore.reason": "Motivo (opcional, aplicado a todas)",
-  "bets.bulkIgnore.reasonPlaceholder": "Ex.: apostas de teste, erro de registo…",
+  "bets.bulkIgnore.reasonPlaceholder": "Ex.: apostas de teste, erro de registo...",
   "bets.bulkIgnore.confirm": "Ignorar {n}",
 
   // Ordenação
@@ -350,8 +350,8 @@ export const PT = {
   "bets.form.freebetHint": "Aposta grátis",
   "bets.form.riskFreeHint": "Stake real, derrota devolvida",
   "bets.form.freebetType": "Tipo de freebet",
-  "bets.form.snr": "Stake não devolvida — SNR (ganho = (odd−1)×stake)",
-  "bets.form.sr": "Stake devolvida — SR (ganho = odd×stake)",
+  "bets.form.snr": "Stake não devolvida, SNR (ganho = (odd−1)×stake)",
+  "bets.form.sr": "Stake devolvida, SR (ganho = odd×stake)",
   "bets.form.freebetDefault":
     "Predefinido pela casa ({bookmaker}). SNR é o padrão da indústria; a Betclic e a Betano usam SR.",
   "bets.form.riskFreeInfo":
@@ -380,7 +380,7 @@ export const PT = {
     "Por favor preenche todos os campos das seleções com valores válidos (odds devem ser maiores que 1.0).",
 
   // ---- Específicos do ecrã mobile ----
-  "bets.searchShort": "Pesquisar…",
+  "bets.searchShort": "Pesquisar...",
   "bets.selectAria": "Selecionar apostas",
   "bets.day.today": "Hoje",
   "bets.day.yesterday": "Ontem",
@@ -390,7 +390,7 @@ export const PT = {
   "bets.detailFallbackTitle": "Aposta",
   "bets.potentialShort": "Retorno pot.",
   "bets.detailAccount": "Conta {label}",
-  "bets.detailIgnoredLine": "Ignorada — excluída das estatísticas",
+  "bets.detailIgnoredLine": "Ignorada, excluída das estatísticas",
   "bets.bulk.editAria": "Editar selecionadas",
   "bets.bulk.restoreAria": "Repor selecionadas",
   "bets.bulk.ignoreAria": "Ignorar selecionadas",
@@ -400,7 +400,7 @@ export const PT = {
   "bets.ignoreSheet.title": "Ignorar aposta?",
   "bets.ignoreSheet.desc":
     "A aposta em {event} deixa de contar para as estatísticas e gráficos. Continua na lista e podes repô-la quando quiseres.",
-  "bets.ignoreSheet.reasonPlaceholder": "Ex.: aposta de teste, erro de registo…",
+  "bets.ignoreSheet.reasonPlaceholder": "Ex.: aposta de teste, erro de registo...",
   "bets.deleteSheet.title": "Apagar aposta?",
   "bets.deleteSheet.desc": "A aposta em {event} será apagada definitivamente.",
   "bets.bulkDelete.title": "Apagar {n} apostas?",
@@ -432,12 +432,12 @@ export const PT = {
   "bets.form.snrShort": "SNR (stake não devolvida)",
   "bets.form.srShort": "SR (stake devolvida)",
   "bets.form.notesOptional": "Notas (opcional)",
-  "bets.form.notesPlaceholderShort": "Apontamentos sobre a aposta…",
+  "bets.form.notesPlaceholderShort": "Apontamentos sobre a aposta...",
 
   "bets.toast.updated": "Aposta atualizada",
   "bets.toast.added": "Aposta registada",
   "bets.toast.duplicated": "Aposta duplicada",
-  "bets.toast.ignored": "Aposta ignorada — fora das estatísticas",
+  "bets.toast.ignored": "Aposta ignorada, fora das estatísticas",
   "bets.toast.restored": "Aposta reposta nas estatísticas",
   "bets.toast.deleted": "Aposta apagada",
   "bets.toast.bulkUpdated": { one: "{n} aposta atualizada", other: "{n} apostas atualizadas" },
@@ -537,7 +537,7 @@ export const PT = {
   // ----------------------------------------------------------------
   "import.title": "Importador inteligente de apostas",
   "import.subtitle":
-    "Tira um screenshot ao teu boletim na Betano, Betclic ou Placard, cola-o com Ctrl+V ou faz o upload — o Gemini AI extrai as seleções, odds, stake, casa de apostas, estado e freebet por ti.",
+    "Tira um screenshot ao teu boletim na Betano, Betclic ou Placard, cola-o com Ctrl+V ou faz o upload e o Gemini AI extrai as seleções, odds, stake, casa de apostas, estado e freebet por ti.",
   "import.poweredBy": "Powered by",
   "import.dropTitle": "Arrasta o screenshot para aqui",
   "import.dropHint": "Ou clica para pesquisar nos teus ficheiros",
@@ -562,7 +562,7 @@ export const PT = {
     "Por favor confirma todas as seleções. Os valores devem ser válidos e as odds superiores a 1.0.",
   "import.aiNote": "Importado automaticamente via Inteligência Artificial.",
   "import.aiChip": "IA",
-  "import.aiChipTitle": "Preenchido automaticamente pela IA — confirma antes de gravar",
+  "import.aiChipTitle": "Preenchido automaticamente pela IA, confirma antes de gravar",
   "import.screenshotTitle": "Screenshot fornecido",
   "import.remove": "Remover",
   "import.screenshotAlt": "Screenshot do boletim",
@@ -579,20 +579,20 @@ export const PT = {
   "import.status.lostLong": "Perdida (liquidar perda)",
   "import.status.voidLong": "Anulada (reembolsar)",
   "import.freebetQ": "Esta aposta usa saldo de Freebet?",
-  "import.snr": "Stake não devolvida — SNR",
-  "import.sr": "Stake devolvida — SR (Betclic)",
+  "import.snr": "Stake não devolvida, SNR",
+  "import.sr": "Stake devolvida, SR (Betclic)",
   "import.detectedSelections": "Seleções detetadas ({n})",
   "import.detectedSelectionsShort": "Seleções detetadas",
   "import.marketDetected": "Mercado detetado",
   "import.registerDate": "Data de registo",
   "import.notes": "Notas adicionais",
   "import.validationResult": "Resultado da validação",
-  "import.freebetNote": "Freebet — a stake não conta para o lucro",
+  "import.freebetNote": "Freebet: a stake não conta para o lucro",
   "import.saveNext": "Gravar e seguinte",
   "import.confirmSave": "Confirmar e gravar aposta",
   "import.confirmSaveShort": "Confirmar e gravar",
-  "import.savedNext": "Aposta {n} gravada. A rever a próxima ({index}/{total})…",
-  "import.savedNextShort": "Aposta {n} gravada. A rever {index}/{total}…",
+  "import.savedNext": "Aposta {n} gravada. A rever a próxima ({index}/{total})...",
+  "import.savedNextShort": "Aposta {n} gravada. A rever {index}/{total}...",
   "import.savedOne": "Aposta importada e gravada com sucesso!",
   "import.savedMany": "{n} apostas importadas e gravadas com sucesso!",
   "import.savedOneMobile": "Aposta importada com sucesso!",
@@ -612,10 +612,10 @@ export const PT = {
   "ext.title": "Importar apostas",
   "ext.active": "Extensão ativa",
   "ext.desc":
-    "Com a extensão de browser instalada, importas as tuas apostas da Betclic e da Betano com um clique — sem exportações manuais. Cada casa é lida da tua própria sessão.",
-  "ext.searching": "A procurar a extensão…",
+    "Com a extensão de browser instalada, importas as tuas apostas da Betclic e da Betano com um clique, sem exportações manuais. Cada casa é lida da tua própria sessão.",
+  "ext.searching": "A procurar a extensão...",
   "ext.account": "Conta {bookmaker}",
-  "ext.importing": "A importar…",
+  "ext.importing": "A importar...",
   "ext.importAll": "Importar apostas de todas as casas",
   "ext.nothingNew": "Nada novo para importar.",
   "ext.nothingNewSkipped": "Nada novo para importar ({n} já existiam).",
@@ -624,10 +624,10 @@ export const PT = {
     "Antes de importar, abre betclic.pt e/ou a página principal de betano.pt. Mantém o separador principal do Betano aberto durante a importação.",
   "ext.reinstall": "Reinstalar ou instalar noutro dispositivo",
   "ext.notDetected": "Extensão não detetada. Instala-a uma vez para importares as apostas:",
-  "ext.recheck": "Já instalei — verificar novamente",
+  "ext.recheck": "Já instalei, verificar novamente",
   "ext.webstore": "Instalar da Chrome Web Store",
   "ext.download": "Descarregar extensão (.zip)",
-  "ext.step1": "Descarrega e extrai o .zip — escolhe a pasta extraída que contém manifest.json.",
+  "ext.step1": "Descarrega e extrai o .zip e escolhe a pasta extraída que contém manifest.json.",
   "ext.step2": "Abre brave://extensions (ou chrome://extensions).",
   "ext.step3": "Ativa o Modo de programador (canto superior direito).",
   "ext.step4": "Clica em Carregar expandida e escolhe a pasta extension/.",
@@ -643,22 +643,22 @@ export const PT = {
   // ----------------------------------------------------------------
   // Passos de progresso da IA (useLoadingSteps)
   // ----------------------------------------------------------------
-  "ai.step.readImage": "A ler o print do boletim…",
-  "ai.step.readText": "A interpretar a descrição da aposta…",
-  "ai.step.identify": "A identificar evento, mercado e odd…",
-  "ai.step.form": "A pesquisar forma recente e confrontos diretos…",
-  "ai.step.injuries": "A verificar lesões, castigos e onze provável…",
-  "ai.step.odds": "A comparar as odds de mercado entre casas…",
-  "ai.step.probability": "A estimar a probabilidade justa…",
-  "ai.step.ev": "A calcular o Valor Esperado e o edge…",
-  "ai.step.finishing": "Quase lá — a finalizar a análise…",
-  "ai.picks.prepare": "A preparar a análise do dia…",
-  "ai.picks.games": "A pesquisar os jogos de hoje…",
-  "ai.picks.odds": "A recolher as odds aproximadas…",
-  "ai.picks.form": "A avaliar forma, lesões e confrontos…",
-  "ai.picks.select": "A selecionar os melhores picks…",
-  "ai.picks.write": "A escrever as justificações…",
-  "ai.picks.finishing": "Quase lá — a finalizar…",
+  "ai.step.readImage": "A ler o print do boletim...",
+  "ai.step.readText": "A interpretar a descrição da aposta...",
+  "ai.step.identify": "A identificar evento, mercado e odd...",
+  "ai.step.form": "A pesquisar forma recente e confrontos diretos...",
+  "ai.step.injuries": "A verificar lesões, castigos e onze provável...",
+  "ai.step.odds": "A comparar as odds de mercado entre casas...",
+  "ai.step.probability": "A estimar a probabilidade justa...",
+  "ai.step.ev": "A calcular o Valor Esperado e o edge...",
+  "ai.step.finishing": "Quase lá, a finalizar a análise...",
+  "ai.picks.prepare": "A preparar a análise do dia...",
+  "ai.picks.games": "A pesquisar os jogos de hoje...",
+  "ai.picks.odds": "A recolher as odds aproximadas...",
+  "ai.picks.form": "A avaliar forma, lesões e confrontos...",
+  "ai.picks.select": "A selecionar os melhores picks...",
+  "ai.picks.write": "A escrever as justificações...",
+  "ai.picks.finishing": "Quase lá, a finalizar...",
   "ai.evalError": "Não foi possível avaliar a aposta.",
 
   // ----------------------------------------------------------------
@@ -672,18 +672,18 @@ export const PT = {
   "insights.picksFor": "Dicas para {date}",
   "insights.picksForAt": "Dicas para {date} · geradas às {time}",
   "insights.picksSubtitle": "Dicas de picks para os jogos de hoje",
-  "insights.evalSubtitle": "Cola um print e/ou descreve a aposta — a IA estima o Valor Esperado",
+  "insights.evalSubtitle": "Cola um print e/ou descreve a aposta e a IA estima o Valor Esperado",
   "insights.disclaimer":
-    "Conteúdo gerado por IA com pesquisa web — a probabilidade e o Valor Esperado são estimativas, podem conter erros e não garantem qualquer resultado. Nada disto é aconselhamento financeiro. Aposta apenas o que podes perder. +18 · jogo responsável.",
+    "Conteúdo gerado por IA com pesquisa web. A probabilidade e o Valor Esperado são estimativas, podem conter erros e não garantem qualquer resultado. Nada disto é aconselhamento financeiro. Aposta apenas o que podes perder. +18 · jogo responsável.",
   "insights.picksHint":
-    "Na primeira visita do dia a análise é gerada na hora — pode demorar até um minuto.",
+    "Na primeira visita do dia a análise é gerada na hora e pode demorar até um minuto.",
   "insights.evalHint":
-    "A IA pesquisa no Google e calcula o Valor Esperado — pode demorar até um minuto.",
+    "A IA pesquisa no Google e calcula o Valor Esperado e pode demorar até um minuto.",
   "insights.retry": "Tentar novamente",
   "insights.oddsNote":
-    "As odds são aproximadas no momento da geração e mudam ao longo do dia — confirma sempre na casa de apostas. Uma análise nova é gerada a cada dia.",
+    "As odds são aproximadas no momento da geração e mudam ao longo do dia, por isso confirma sempre na casa de apostas. Uma análise nova é gerada a cada dia.",
   "insights.oddsNoteShort":
-    "As odds são aproximadas e mudam ao longo do dia — confirma sempre na casa de apostas.",
+    "As odds são aproximadas e mudam ao longo do dia, por isso confirma sempre na casa de apostas.",
   "insights.evalPlaceholder":
     "Descreve a aposta: evento, mercado, seleção, odd e casa. Ex.: Benfica vencer o Porto @2.10 na Betano. (podes também colar um print do boletim com Ctrl+V)",
   "insights.evalPlaceholderShort":
@@ -691,12 +691,12 @@ export const PT = {
   "insights.attachPrint": "Anexar print",
   "insights.swapPrint": "Trocar print",
   "insights.pasteWith": "ou cola com",
-  "insights.evaluating": "A avaliar…",
+  "insights.evaluating": "A avaliar...",
   "insights.evaluate": "Avaliar aposta",
   "insights.printAlt": "Print da aposta",
   "insights.removeImage": "Remover imagem",
   "insights.expectedValue": "Valor Esperado",
-  "insights.verdictLine": "{verdict} — EV {ev} por unidade apostada",
+  "insights.verdictLine": "{verdict}: EV {ev} por unidade apostada",
   "insights.metric.offeredOdd": "Odd oferecida",
   "insights.metric.offeredOddShort": "Odd oferec.",
   "insights.metric.fairOdd": "Odd justa",
@@ -708,10 +708,10 @@ export const PT = {
   "insights.confidence": "Confiança",
   "insights.confidenceLevel": "Confiança {level}/5",
   "insights.kellyNote":
-    "{pct}% do banco. Kelly é agressivo — usa fração e nunca apostes mais do que podes perder.",
+    "{pct}% do banco. Kelly é agressivo, por isso usa fração e nunca apostes mais do que podes perder.",
   "insights.error.notImage": "Seleciona um ficheiro de imagem (PNG, JPG, WEBP).",
   "insights.kellyLabel": "Stake sugerida (½ Kelly):",
-  "insights.verdictLineShort": "{verdict} — EV {ev} por unidade",
+  "insights.verdictLineShort": "{verdict}: EV {ev} por unidade",
   "insights.error.tooLargePrint": "A imagem excede 3MB. Recorta o print e tenta novamente.",
   "insights.error.tooLargePhoto": "A imagem excede 3MB. Aproxima a foto do boletim.",
   "insights.elapsed": "{n}s decorridos",
@@ -724,7 +724,7 @@ export const PT = {
   "insights.error.unexpected": "Ocorreu um erro inesperado.",
 
   // ----------------------------------------------------------------
-  // Configurações — preferências gerais
+  // Configurações: preferências gerais
   // ----------------------------------------------------------------
   "settings.general.title": "Preferências gerais",
   "settings.save": "Guardar preferências",
@@ -742,7 +742,7 @@ export const PT = {
   "settings.defaultStake.label": "Stake padrão ({currency})",
 
   // ----------------------------------------------------------------
-  // Configurações — aparência (tema + idioma)
+  // Configurações: aparência (tema + idioma)
   // ----------------------------------------------------------------
   "settings.appearance.title": "Aparência",
   "settings.theme.label": "Tema",
@@ -759,21 +759,21 @@ export const PT = {
   "lang.en": "English",
 
   // ----------------------------------------------------------------
-  // Configurações — casas de apostas ativas
+  // Configurações: casas de apostas ativas
   // ----------------------------------------------------------------
   "settings.bookmakers.title": "Casas de apostas",
   "settings.bookmakers.desc":
-    "Escolhe as casas que usas. Só as selecionadas aparecem — e são importadas — no site e na extensão de browser.",
+    "Escolhe as casas que usas. Só as selecionadas aparecem (e são importadas) no site e na extensão de browser.",
   "settings.bookmakers.none":
-    "Nenhuma casa selecionada — não vais conseguir importar apostas até escolheres pelo menos uma.",
+    "Nenhuma casa selecionada, não vais conseguir importar apostas até escolheres pelo menos uma.",
   "settings.bookmakers.loadError": "Erro ao obter as casas ativas.",
   "settings.bookmakers.saveError": "Erro ao guardar as casas ativas.",
 
   // ----------------------------------------------------------------
-  // Configurações — contas por casa de apostas
+  // Configurações: contas por casa de apostas
   // ----------------------------------------------------------------
   "settings.management.title": "Gestão",
-  // Palavra-passe (settings.password.*) — formulário partilhado desktop/mobile.
+  // Palavra-passe (settings.password.*): formulário partilhado desktop/mobile.
   "settings.password.title": "Palavra-passe",
   "settings.password.desc": "Muda a palavra-passe desta conta. É preciso a atual para confirmar que és tu.",
   "settings.password.current": "Palavra-passe atual",
@@ -781,7 +781,7 @@ export const PT = {
   "settings.password.confirm": "Confirmar nova palavra-passe",
   "settings.password.hint": "Pelo menos 8 caracteres.",
   "settings.password.submit": "Alterar palavra-passe",
-  "settings.password.saving": "A alterar…",
+  "settings.password.saving": "A alterar...",
   "settings.password.done": "Palavra-passe alterada.",
   "settings.password.otherDevices": "As sessões abertas noutros dispositivos continuam ativas.",
   "settings.password.show": "Mostrar palavra-passe",
@@ -830,10 +830,10 @@ export const PT = {
   "settings.accounts.deleteConfirmWithBets":
     "As {n} apostas ficam sem conta. Apagar?",
   "settings.accounts.deleteHint":
-    "Apagar uma conta não apaga as apostas — ficam apenas \"sem conta\", associadas à casa.",
+    "Apagar uma conta não apaga as apostas, ficam apenas \"sem conta\", associadas à casa.",
 
   // ----------------------------------------------------------------
-  // Configurações — registo de alterações (auditoria)
+  // Configurações: registo de alterações (auditoria)
   // ----------------------------------------------------------------
   "settings.audit.title": "Registo de alterações",
   "settings.audit.desc": "Registo detalhado de operações efetuadas nesta sessão",
@@ -844,7 +844,7 @@ export const PT = {
   "settings.audit.empty": "Sem alterações nesta sessão.",
 
   // ----------------------------------------------------------------
-  // Configurações — dados (exportar / importar)
+  // Configurações: dados (exportar / importar)
   // ----------------------------------------------------------------
   "settings.data.title": "Dados",
   "settings.data.cardTitle": "Cópia de segurança, importar e exportar",
@@ -870,7 +870,7 @@ export const PT = {
   "settings.import.choose": "Escolher ficheiro (.json, .csv)",
 
   // ----------------------------------------------------------------
-  // Configurações — zona perigosa
+  // Configurações: zona perigosa
   // ----------------------------------------------------------------
   "settings.danger.title": "Zona perigosa",
 
@@ -897,15 +897,15 @@ export const PT = {
   "settings.clear.done": "Dados apagados",
 
   // ----------------------------------------------------------------
-  // Configurações — sobre / atualizações
+  // Configurações: sobre / atualizações
   // ----------------------------------------------------------------
   "settings.about.title": "Sobre",
   "settings.about.version": "Versão do frontend",
-  "settings.about.checking": "A verificar…",
+  "settings.about.checking": "A verificar...",
   "settings.about.checkUpdate": "Verificar atualização",
   "settings.about.checkUpdateDesc": "Procura um bundle novo no servidor",
   "settings.about.checkDone":
-    "Verificação concluída — aplica no próximo arranque se houver novidade.",
+    "Verificação concluída, aplica no próximo arranque se houver novidade.",
 
   // ----------------------------------------------------------------
   // Subscrição (BetTrackr Pro)
@@ -913,7 +913,7 @@ export const PT = {
   "billing.title": "Subscrição",
   "billing.planName": "BetTrackr Pro",
   "billing.perMonth": "{price} por mês",
-  "billing.loading": "A verificar a subscrição…",
+  "billing.loading": "A verificar a subscrição...",
   "billing.state.active": "Ativa",
   "billing.state.trial": "Período experimental",
   "billing.state.admin": "Acesso de administrador",
@@ -924,20 +924,20 @@ export const PT = {
   "billing.renewsOn": "Renova a {date}",
   "billing.accessUntil": "Acesso até {date}",
   "billing.noEndDate": "Sem data de fim",
-  "billing.cancelScheduled": "Cancelada — o acesso mantém-se até {date}.",
-  "billing.cancelScheduledNoDate": "Cancelada — não volta a renovar.",
+  "billing.cancelScheduled": "Cancelada, o acesso mantém-se até {date}.",
+  "billing.cancelScheduledNoDate": "Cancelada, não volta a renovar.",
   "billing.trialEndsOn": "O período experimental acaba a {date}.",
   "billing.trialDaysLeft": { one: "Falta {count} dia.", other: "Faltam {count} dias." },
   "billing.trialOver": "O período experimental terminou.",
   "billing.subscribeFor": "Subscrever por {price}/mês",
   "billing.manage": "Gerir subscrição",
-  "billing.opening": "A abrir…",
+  "billing.opening": "A abrir...",
   "billing.unavailable":
     "Os pagamentos ainda não estão disponíveis. Fala connosco para ativarmos a tua conta.",
   "billing.checkoutError": "Não foi possível iniciar o pagamento.",
   "billing.portalError": "Não foi possível abrir a gestão da subscrição.",
   "billing.checkoutSuccess": "Subscrição ativa. Obrigado!",
-  "billing.checkoutCancelled": "Pagamento cancelado — não foi cobrado nada.",
+  "billing.checkoutCancelled": "Pagamento cancelado, não foi cobrado nada.",
   "billing.nativeNotice": "O pagamento abre no browser; volta à app quando terminares.",
   "billing.includesTitle": "O que inclui",
   "billing.includes.screenshot": "Ler boletins a partir de um screenshot",
@@ -957,7 +957,7 @@ export const PT = {
   "footer.admin": "Gestão",
   "admin.title": "Gestão",
   "admin.subtitle": "Contas, papéis e subscrições",
-  "admin.loading": "A carregar…",
+  "admin.loading": "A carregar...",
   "admin.error": "Não foi possível falar com o servidor.",
   "admin.retry": "Tentar novamente",
   "admin.metric.users": "Contas",
@@ -1002,7 +1002,7 @@ export const PT = {
   "admin.revoke.bodyManual":
     "A conta perde já o acesso às funcionalidades pagas. Podes voltar a oferecer-lhe subscrição a seguir.",
   "admin.revoke.bodyPaid":
-    "Isto cancela já a subscrição no Stripe: a conta perde o acesso e deixa de ser cobrada. Não devolve o dinheiro já pago — reembolsos fazem-se no Stripe.",
+    "Isto cancela já a subscrição no Stripe: a conta perde o acesso e deixa de ser cobrada. Não devolve o dinheiro já pago. Os reembolsos fazem-se no Stripe.",
   "admin.action.trial": "Alterar experiência",
   "admin.action.delete": "Apagar conta",
   "admin.action.close": "Fechar",
@@ -1021,7 +1021,7 @@ export const PT = {
     "A conta e todas as apostas são removidas. Não há maneira de voltar atrás.",
   "admin.delete.confirm": "Apagar definitivamente",
   "admin.cancel": "Cancelar",
-  "admin.saving": "A guardar…",
+  "admin.saving": "A guardar...",
   "admin.audit.title": "Registo de alterações",
   "admin.audit.empty": "Ainda não há alterações registadas.",
   "admin.audit.action.role.update": "{admin} mudou o papel de {user}",

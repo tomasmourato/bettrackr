@@ -1,4 +1,4 @@
-# Compila o APK Android (debug) na nuvem — não precisas de Android Studio
+# Compila o APK Android (debug) na nuvem - não precisas de Android Studio
 # nem do SDK localmente. Corre manualmente: GitHub -> Actions ->
 # "Android APK" -> Run workflow. O APK fica nos artifacts da execução.
 name: Android APK

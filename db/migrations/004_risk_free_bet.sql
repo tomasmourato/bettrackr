@@ -1,11 +1,11 @@
 -- ============================================================
 -- Migração 004: aposta sem risco (risk-free bet)
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- Adiciona a coluna is_risk_free. Uma aposta sem risco usa stake REAL (conta
 -- para o stake total e uma vitória paga como uma aposta normal), mas uma
--- derrota total devolve a stake — tipicamente como freebet, registada à parte —
+-- derrota total devolve a stake - tipicamente como freebet, registada à parte -
 -- por isso o resultado desta aposta é neutro (net 0), como uma anulada.
 --
 -- É um modo mutuamente exclusivo com is_freebet: uma aposta sem risco NÃO é uma

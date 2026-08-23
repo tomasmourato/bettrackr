@@ -1,7 +1,7 @@
 // src/hooks/useBillingActions.ts
 // Os dois botões que falam com o Stripe (subscrever e gerir), partilhados
 // pelo cartão das Definições e pelo aviso de subscrição dos ecrãs pagos, em
-// desktop e mobile. Guardam o estado de "a abrir…" e a mensagem de erro.
+// desktop e mobile. Guardam o estado de "a abrir..." e a mensagem de erro.
 
 import { useState } from "react";
 import { isNativeApp } from "../lib/apiBase";
@@ -30,14 +30,14 @@ export function useBillingActions() {
       const url = kind === "checkout" ? await startCheckout() : await openBillingPortal();
       goToStripe(url);
       // Na web o browser sai desta página a seguir e o `busy` fica como está
-      // de propósito — limpá-lo faria o botão piscar de volta ao normal a
+      // de propósito - limpá-lo faria o botão piscar de volta ao normal a
       // meio da navegação. Na app nativa a página não muda (o Stripe abre no
       // browser do sistema), por isso aí o botão tem mesmo de ser reposto.
       if (isNativeApp()) setBusy(null);
     } catch (err) {
       const key = err instanceof BillingError && err.code ? ERROR_KEYS[err.code] : undefined;
       const fallback = kind === "checkout" ? "billing.checkoutError" : "billing.portalError";
-      // Só se usa o texto do servidor quando o código é desconhecido — e aí
+      // Só se usa o texto do servidor quando o código é desconhecido - e aí
       // uma frase em português é melhor do que nenhuma pista.
       setError(
         key ? t(key) : err instanceof BillingError && err.code ? err.message : t(fallback),

@@ -16,7 +16,7 @@ router.use(authenticateToken);
 // pedidos feitos com um token da extensão passam pelo portão da subscrição.
 router.use(requireSubscriptionForExtension);
 
-// Colunas devolvidas ao frontend — lista única partilhada com o SSR (server.ts).
+// Colunas devolvidas ao frontend - lista única partilhada com o SSR (server.ts).
 const BET_COLUMNS = BET_SELECT_COLUMNS;
 
 const VALID_FREEBET_TYPES = ["SNR", "SR"];
@@ -402,14 +402,14 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
 // PATCH /api/bets/:id/ignore  -> marca/desmarca a aposta como ignorada
 // (excluída das estatísticas), com um motivo opcional em `comment`.
 // Endpoint dedicado e leve: não revalida nem substitui a aposta toda como o
-// PUT — só alterna a flag e (opcionalmente) o comentário.
+// PUT - só alterna a flag e (opcionalmente) o comentário.
 // ============================================================
 router.patch("/:id/ignore", async (req: AuthenticatedRequest, res) => {
     try {
         const { id } = req.params;
         const ignored =
             req.body?.ignored === true || req.body?.ignored === "true";
-        // Só mexemos no comentário quando o campo vem no corpo — assim desmarcar
+        // Só mexemos no comentário quando o campo vem no corpo - assim desmarcar
         // não apaga o motivo por acidente, mas o utilizador pode limpá-lo com "".
         const hasComment = Object.prototype.hasOwnProperty.call(
             req.body ?? {},

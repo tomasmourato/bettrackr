@@ -2,7 +2,7 @@
 // Fonte única da pergunta "esta conta pode usar as funcionalidades pagas?".
 //
 // Três coisas dão acesso, por esta ordem:
-//   1. ser administrador — quem gere a app não pode ficar de fora dela;
+//   1. ser administrador - quem gere a app não pode ficar de fora dela;
 //   2. ter subscrição válida (Stripe ou concedida à mão no painel de gestão);
 //   3. estar dentro do período experimental.
 //
@@ -33,7 +33,7 @@ const PAST_DUE_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 export type Role = "user" | "admin" | "founder";
 
 // Papéis com acesso ao painel de gestão (e às funcionalidades pagas). O
-// 'founder' é um 'admin' que a API não consegue despromover nem apagar — ver
+// 'founder' é um 'admin' que a API não consegue despromover nem apagar - ver
 // routes/adminRoutes.ts e a migração 017.
 export const STAFF_ROLES: readonly Role[] = ["admin", "founder"];
 
@@ -79,7 +79,7 @@ function iso(value: unknown): string | null {
 /**
  * Uma subscrição só conta se o estado for de acesso E o período pago ainda não
  * tiver acabado. current_period_end a NULL numa subscrição manual significa
- * "sem fim" — é assim que um administrador oferece acesso permanente.
+ * "sem fim" - é assim que um administrador oferece acesso permanente.
  */
 export function subscriptionGrantsAccess(
   snapshot: Pick<SubscriptionSnapshot, "status" | "currentPeriodEnd">,
@@ -125,7 +125,7 @@ export const SUBSCRIPTION_COLUMNS = `
  * para o painel de gestão poder filtrar e contar sem trazer a tabela toda para
  * memória. Pressupõe `users u LEFT JOIN subscriptions s ON s.user_id = u.id`.
  *
- * Se as regras acima mudarem, esta expressão muda com elas — os três dias de
+ * Se as regras acima mudarem, esta expressão muda com elas - os três dias de
  * tolerância são o PAST_DUE_GRACE_MS.
  */
 export const ENTITLED_SQL = `(

@@ -131,12 +131,12 @@ export default function MobileDashboard({
     return { start: toKey(start), end: toKey(today) };
   }, [filterTimeframe, customStart, customEnd]);
 
-  // Subconjunto filtrado — mesma semântica do dashboard desktop.
+  // Subconjunto filtrado - mesma semântica do dashboard desktop.
   const bets = useMemo(
     () =>
       allBets.filter((b) => {
         // Apostas ignoradas nunca contam para estatísticas/gráficos (mesma
-        // regra do Dashboard desktop — sem isto os números divergiam).
+        // regra do Dashboard desktop - sem isto os números divergiam).
         if (b.isIgnored) return false;
         if (filterBookmaker !== "ALL" && b.bookmaker !== filterBookmaker) return false;
         if (filterAccount === "NONE" && b.accountId) return false;
@@ -319,7 +319,7 @@ export default function MobileDashboard({
         )}
       </div>
 
-      {/* KPI 1 — Lucro líquido (herói, com evolução) */}
+      {/* KPI 1 - Lucro líquido (herói, com evolução) */}
       <MobileCard className="!p-4">
         <div className="flex items-start justify-between">
           <div>
@@ -358,7 +358,7 @@ export default function MobileDashboard({
         </div>
       </MobileCard>
 
-      {/* KPIs 2–4 em grelha */}
+      {/* KPIs 2-4 em grelha */}
       <div className="grid grid-cols-2 gap-3">
         <KpiCard
           label={t("dashboard.roi")}

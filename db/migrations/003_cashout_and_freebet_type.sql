@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migração 003: estado CASHOUT + tipo de freebet
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- (1) Reintroduz o estado 'CASHOUT' na constraint de status. A migração 002
 --     tinha-o removido (era um valor legado); agora passa a ser um estado de
@@ -29,7 +29,7 @@ ALTER TABLE bets ADD CONSTRAINT bets_status_check CHECK (
 -- ------------------------------------------------------------
 ALTER TABLE bets ADD COLUMN IF NOT EXISTS freebet_type TEXT;
 
--- Preenche as freebets existentes com 'SR' — preserva os números já gravados,
+-- Preenche as freebets existentes com 'SR' - preserva os números já gravados,
 -- que foram calculados com a regra SR (net_profit = odd * stake). As apostas
 -- novas recebem o tipo por omissão de cada casa através da app.
 UPDATE bets SET freebet_type = 'SR' WHERE is_freebet = TRUE AND freebet_type IS NULL;

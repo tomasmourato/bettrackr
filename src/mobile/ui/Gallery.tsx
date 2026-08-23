@@ -1,5 +1,5 @@
 // src/mobile/ui/Gallery.tsx
-// Galeria de desenvolvimento dos primitivos mobile — acessível com
+// Galeria de desenvolvimento dos primitivos mobile - acessível com
 // `?gallery=1`, fora do gate de autenticação, só para verificação visual e
 // de interação no browser/emulador. REMOVER na Fase 5 (polish).
 
@@ -77,7 +77,7 @@ function GalleryInner() {
             ]}
           >
             <div className="px-4 py-3">
-              <div className="text-sm font-medium">Benfica — Porto</div>
+              <div className="text-sm font-medium">Benfica - Porto</div>
               <div className="text-xs text-zinc-500 font-mono">Stake 10,00 € · Odd 2,10</div>
             </div>
           </SwipeableRow>
@@ -111,13 +111,13 @@ function GalleryInner() {
           </div>
         </SheetPage>
 
-        <SectionHeader>Ecrã — Dashboard mobile</SectionHeader>
-        <Suspense fallback={<div className="text-xs text-zinc-400 py-6">A carregar…</div>}>
+        <SectionHeader>Ecrã - Dashboard mobile</SectionHeader>
+        <Suspense fallback={<div className="text-xs text-zinc-400 py-6">A carregar...</div>}>
           <MobileDashboard bets={INITIAL_BETS} currency="€" isDark={document.documentElement.classList.contains("dark")} onOpenBets={(f) => toast.show("Abrir apostas: " + f.status, "info")} />
         </Suspense>
 
-        <SectionHeader>Ecrã — Apostas mobile</SectionHeader>
-        <Suspense fallback={<div className="text-xs text-zinc-400 py-6">A carregar…</div>}>
+        <SectionHeader>Ecrã - Apostas mobile</SectionHeader>
+        <Suspense fallback={<div className="text-xs text-zinc-400 py-6">A carregar...</div>}>
           <MobileBets
             bets={INITIAL_BETS}
             currency="€"

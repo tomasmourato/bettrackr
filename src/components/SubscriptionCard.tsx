@@ -27,7 +27,7 @@ const INCLUDED = [
 interface SubscriptionCardProps {
   status: BillingStatus | null;
   loading: boolean;
-  /** Relê o estado — usado ao voltar do Stripe. */
+  /** Relê o estado - usado ao voltar do Stripe. */
   onRefresh: () => Promise<void>;
 }
 

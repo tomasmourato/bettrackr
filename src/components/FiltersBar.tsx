@@ -19,8 +19,8 @@ interface FiltersBarProps {
  * as duas páginas não divergirem no aspeto.
  *
  * Os filtros ficam num flex-wrap (e não numa grelha de N colunas fixas): o
- * número de filtros varia por página e por utilizador — o estado só existe no
- * histórico, a conta só aparece com contas criadas — e com colunas fixas o
+ * número de filtros varia por página e por utilizador - o estado só existe no
+ * histórico, a conta só aparece com contas criadas - e com colunas fixas o
  * último filtro caía sozinho para uma linha quase vazia. Com wrap + `flex-1`
  * cada linha distribui o espaço pelos filtros que lá couberem.
  */

@@ -1,13 +1,13 @@
 -- ============================================================
 -- Migração 012: aposta sem risco passa a contar dinheiro REAL
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- Até aqui uma aposta sem risco perdida era neutra (final_return = stake,
 -- net_profit = 0), assumindo que a stake voltava como freebet. O novo modelo
 -- trata a stake como dinheiro real: uma derrota perde a stake, tal como uma
 -- aposta normal (a freebet de reembolso é registada à parte). Só as linhas
--- PERDIDA e MEIO_PERDIDA sem risco tinham valores desatualizados — GANHA,
+-- PERDIDA e MEIO_PERDIDA sem risco tinham valores desatualizados - GANHA,
 -- ANULADA e MEIO_GANHA já coincidiam com o cálculo de aposta normal.
 --
 -- PERDIDA:      final_return = 0,          net_profit = -stake

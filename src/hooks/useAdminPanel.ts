@@ -42,7 +42,7 @@ export function useAdminPanel(onAccessChanged?: () => void) {
   const [error, setError] = useState<string | null>(null);
 
   // O texto de pesquisa só chega ao servidor depois de o utilizador parar de
-  // escrever — senão era um pedido por tecla.
+  // escrever - senão era um pedido por tecla.
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);

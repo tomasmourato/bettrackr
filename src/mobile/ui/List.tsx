@@ -16,7 +16,7 @@ export function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Cartão de superfície — contentor base dos ecrãs mobile. */
+/** Cartão de superfície - contentor base dos ecrãs mobile. */
 export function MobileCard({
   children,
   className = "",

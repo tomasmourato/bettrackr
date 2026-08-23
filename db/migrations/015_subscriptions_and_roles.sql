@@ -1,15 +1,15 @@
 -- ============================================================
 -- Migração 015: subscrições, período experimental e papéis
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- As funcionalidades de IA (leitura de boletins e dicas/avaliação) e a
--- extensão passam a exigir subscrição ativa. O núcleo da app — registar
--- apostas à mão, painel, social — continua livre.
+-- extensão passam a exigir subscrição ativa. O núcleo da app - registar
+-- apostas à mão, painel, social - continua livre.
 --
 -- Quem já tinha conta não pode ficar sem acesso de um dia para o outro, por
 -- isso as contas que existiam no momento em que esta migração correu recebem
--- 14 dias. Contas criadas DEPOIS disto não levam período experimental — o
+-- 14 dias. Contas criadas DEPOIS disto não levam período experimental - o
 -- acesso passa a depender da subscrição.
 -- ============================================================
 
@@ -29,7 +29,7 @@ END $$;
 -- Sem DEFAULT: quem se regista de novo não ganha período experimental.
 --
 -- Os 14 dias são dados UMA única vez, no momento em que a coluna passa a
--- existir — ou seja, exatamente a quem já tinha conta antes da funcionalidade.
+-- existir - ou seja, exatamente a quem já tinha conta antes da funcionalidade.
 -- Ficar dentro do IF é o que garante isso: numa segunda execução a coluna já
 -- existe, o bloco não corre, e ninguém volta a receber período experimental
 -- (nem sequer quem o tenha entretanto perdido no painel de gestão).
@@ -54,15 +54,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_stripe_customer_id_key
   WHERE stripe_customer_id IS NOT NULL;
 
 -- ------------------------------------------------------------
--- subscriptions — uma linha por utilizador, com o estado ATUAL.
+-- subscriptions - uma linha por utilizador, com o estado ATUAL.
 --
 -- Não é um histórico: quando alguém cancela e volta a subscrever, a linha é
 -- atualizada. Quem precisa de rasto de quem mexeu no quê tem o
 -- admin_audit_log abaixo.
 --
 -- source distingue as duas origens que a app suporta:
---   'stripe' — criada/atualizada pelo webhook do Stripe;
---   'manual' — concedida por um administrador no painel de gestão.
+--   'stripe' - criada/atualizada pelo webhook do Stripe;
+--   'manual' - concedida por um administrador no painel de gestão.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -107,7 +107,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_stripe_subscription_id_key
 CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions (status);
 
 -- ------------------------------------------------------------
--- admin_audit_log — rasto do que os administradores fazem às contas.
+-- admin_audit_log - rasto do que os administradores fazem às contas.
 --
 -- Os nomes ficam gravados como texto além da chave estrangeira: se o
 -- utilizador for apagado a linha continua a dizer sobre quem era, em vez de

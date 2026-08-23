@@ -13,7 +13,7 @@ export const EN: Record<TKey, Entry> = {
   "common.cancel": "Cancel",
   "common.yes": "Yes",
   "common.no": "No",
-  "common.loading": "Loading…",
+  "common.loading": "Loading...",
   "common.clear": "Clear",
   "common.clearAll": "Clear all",
   "common.confirm": "Confirm",
@@ -111,7 +111,7 @@ export const EN: Record<TKey, Entry> = {
   "auth.emailPlaceholder": "you@example.com",
   "auth.password": "Password",
   "auth.passwordHint": "Minimum 8 characters.",
-  "auth.loading": "Please wait…",
+  "auth.loading": "Please wait...",
   "auth.noAccount": "Don't have an account yet?",
   "auth.register": "Sign up",
   "auth.hasAccount": "Already have an account?",
@@ -132,9 +132,9 @@ export const EN: Record<TKey, Entry> = {
   "social.title": "Social",
   "social.subtitle": "Add friends so you can see each other's statistics and bets.",
   "social.addFriend": "Add friend",
-  "social.searchPlaceholder": "Search by username…",
-  "social.searchPlaceholderMobile": "Search users…",
-  "social.searching": "Searching…",
+  "social.searchPlaceholder": "Search by username...",
+  "social.searchPlaceholderMobile": "Search users...",
+  "social.searching": "Searching...",
   "social.noUsers": "No user found.",
   "social.results": "Results",
   "social.friends": "Friends",
@@ -158,7 +158,7 @@ export const EN: Record<TKey, Entry> = {
   "social.remove": "Remove",
   "social.back": "Back",
   "social.friendProfile": "Friend profile",
-  "social.loadingStats": "Loading {username}'s statistics…",
+  "social.loadingStats": "Loading {username}'s statistics...",
   "social.friendBets": "{username}'s bets",
   "social.recentBets": "The 50 most recent bets ({total} in total)",
   "social.recentBetsMobile": "Recent bets ({total} in total)",
@@ -200,7 +200,7 @@ export const EN: Record<TKey, Entry> = {
   "footer.ai": "AI",
   "footer.social": "Social",
   "footer.settings": "Settings",
-  "app.loadingBets": "Loading bets…",
+  "app.loadingBets": "Loading bets...",
   "app.brandTagline": "Bet Management",
 
   // ----------------------------------------------------------------
@@ -242,8 +242,8 @@ export const EN: Record<TKey, Entry> = {
   "bets.duplicate": "Duplicate",
 
   "bets.bulkEdit.title": {
-    one: "Edit {n} bet — shared fields only",
-    other: "Edit {n} bets — shared fields only",
+    one: "Edit {n} bet, shared fields only",
+    other: "Edit {n} bets, shared fields only",
   },
   "bets.bulkEdit.close": "Close bulk edit",
   "bets.bulkEdit.hint":
@@ -258,12 +258,12 @@ export const EN: Record<TKey, Entry> = {
   "bets.bulkEdit.notePlaceholder": "Gets appended to the notes of every selected bet",
   "bets.bulkEdit.apply": "Apply to {n}",
   "bets.bulkIgnore.title": {
-    one: "Ignore {n} bet — excluded from stats",
-    other: "Ignore {n} bets — excluded from stats",
+    one: "Ignore {n} bet, excluded from stats",
+    other: "Ignore {n} bets, excluded from stats",
   },
   "bets.bulkIgnore.close": "Close bulk ignore",
   "bets.bulkIgnore.reason": "Reason (optional, applied to all)",
-  "bets.bulkIgnore.reasonPlaceholder": "E.g. test bets, logging mistake…",
+  "bets.bulkIgnore.reasonPlaceholder": "E.g. test bets, logging mistake...",
   "bets.bulkIgnore.confirm": "Ignore {n}",
 
   // Sorting
@@ -344,8 +344,8 @@ export const EN: Record<TKey, Entry> = {
   "bets.form.freebetHint": "Free bet",
   "bets.form.riskFreeHint": "Real stake, loss refunded",
   "bets.form.freebetType": "Freebet type",
-  "bets.form.snr": "Stake not returned — SNR (win = (odds−1)×stake)",
-  "bets.form.sr": "Stake returned — SR (win = odds×stake)",
+  "bets.form.snr": "Stake not returned, SNR (win = (odds−1)×stake)",
+  "bets.form.sr": "Stake returned, SR (win = odds×stake)",
   "bets.form.freebetDefault":
     "Preset by the bookmaker ({bookmaker}). SNR is the industry default; Betclic and Betano use SR.",
   "bets.form.riskFreeInfo":
@@ -374,7 +374,7 @@ export const EN: Record<TKey, Entry> = {
     "Please fill in every selection field with valid values (odds must be greater than 1.0).",
 
   // ---- Mobile screen specific ----
-  "bets.searchShort": "Search…",
+  "bets.searchShort": "Search...",
   "bets.selectAria": "Select bets",
   "bets.day.today": "Today",
   "bets.day.yesterday": "Yesterday",
@@ -384,7 +384,7 @@ export const EN: Record<TKey, Entry> = {
   "bets.detailFallbackTitle": "Bet",
   "bets.potentialShort": "Pot. return",
   "bets.detailAccount": "Account {label}",
-  "bets.detailIgnoredLine": "Ignored — excluded from statistics",
+  "bets.detailIgnoredLine": "Ignored, excluded from statistics",
   "bets.bulk.editAria": "Edit selected",
   "bets.bulk.restoreAria": "Restore selected",
   "bets.bulk.ignoreAria": "Ignore selected",
@@ -394,7 +394,7 @@ export const EN: Record<TKey, Entry> = {
   "bets.ignoreSheet.title": "Ignore bet?",
   "bets.ignoreSheet.desc":
     "The bet on {event} stops counting towards the statistics and charts. It stays in the list and you can restore it whenever you want.",
-  "bets.ignoreSheet.reasonPlaceholder": "E.g. test bet, logging mistake…",
+  "bets.ignoreSheet.reasonPlaceholder": "E.g. test bet, logging mistake...",
   "bets.deleteSheet.title": "Delete bet?",
   "bets.deleteSheet.desc": "The bet on {event} will be permanently deleted.",
   "bets.bulkDelete.title": "Delete {n} bets?",
@@ -426,12 +426,12 @@ export const EN: Record<TKey, Entry> = {
   "bets.form.snrShort": "SNR (stake not returned)",
   "bets.form.srShort": "SR (stake returned)",
   "bets.form.notesOptional": "Notes (optional)",
-  "bets.form.notesPlaceholderShort": "Notes about the bet…",
+  "bets.form.notesPlaceholderShort": "Notes about the bet...",
 
   "bets.toast.updated": "Bet updated",
   "bets.toast.added": "Bet recorded",
   "bets.toast.duplicated": "Bet duplicated",
-  "bets.toast.ignored": "Bet ignored — excluded from statistics",
+  "bets.toast.ignored": "Bet ignored, excluded from statistics",
   "bets.toast.restored": "Bet restored into the statistics",
   "bets.toast.deleted": "Bet deleted",
   "bets.toast.bulkUpdated": { one: "{n} bet updated", other: "{n} bets updated" },
@@ -531,7 +531,7 @@ export const EN: Record<TKey, Entry> = {
   // ----------------------------------------------------------------
   "import.title": "Smart bet importer",
   "import.subtitle":
-    "Take a screenshot of your betslip on Betano, Betclic or Placard, paste it with Ctrl+V or upload it — Gemini AI extracts the selections, odds, stake, bookmaker, status and freebet for you.",
+    "Take a screenshot of your betslip on Betano, Betclic or Placard, paste it with Ctrl+V or upload it and Gemini AI extracts the selections, odds, stake, bookmaker, status and freebet for you.",
   "import.poweredBy": "Powered by",
   "import.dropTitle": "Drag the screenshot here",
   "import.dropHint": "Or click to browse your files",
@@ -555,7 +555,7 @@ export const EN: Record<TKey, Entry> = {
     "Please confirm every selection. The values must be valid and the odds greater than 1.0.",
   "import.aiNote": "Imported automatically via Artificial Intelligence.",
   "import.aiChip": "AI",
-  "import.aiChipTitle": "Filled in automatically by the AI — check before saving",
+  "import.aiChipTitle": "Filled in automatically by the AI, check before saving",
   "import.screenshotTitle": "Screenshot provided",
   "import.remove": "Remove",
   "import.screenshotAlt": "Betslip screenshot",
@@ -572,20 +572,20 @@ export const EN: Record<TKey, Entry> = {
   "import.status.lostLong": "Lost (settle the loss)",
   "import.status.voidLong": "Void (refund)",
   "import.freebetQ": "Does this bet use a freebet balance?",
-  "import.snr": "Stake not returned — SNR",
-  "import.sr": "Stake returned — SR (Betclic)",
+  "import.snr": "Stake not returned, SNR",
+  "import.sr": "Stake returned, SR (Betclic)",
   "import.detectedSelections": "Detected selections ({n})",
   "import.detectedSelectionsShort": "Detected selections",
   "import.marketDetected": "Detected market",
   "import.registerDate": "Record date",
   "import.notes": "Additional notes",
   "import.validationResult": "Validation result",
-  "import.freebetNote": "Freebet — the stake does not count towards profit",
+  "import.freebetNote": "Freebet: the stake does not count towards profit",
   "import.saveNext": "Save and next",
   "import.confirmSave": "Confirm and save bet",
   "import.confirmSaveShort": "Confirm and save",
-  "import.savedNext": "Bet {n} saved. Reviewing the next one ({index}/{total})…",
-  "import.savedNextShort": "Bet {n} saved. Reviewing {index}/{total}…",
+  "import.savedNext": "Bet {n} saved. Reviewing the next one ({index}/{total})...",
+  "import.savedNextShort": "Bet {n} saved. Reviewing {index}/{total}...",
   "import.savedOne": "Bet imported and saved successfully!",
   "import.savedMany": "{n} bets imported and saved successfully!",
   "import.savedOneMobile": "Bet imported successfully!",
@@ -606,10 +606,10 @@ export const EN: Record<TKey, Entry> = {
   "ext.title": "Import bets",
   "ext.active": "Extension active",
   "ext.desc":
-    "With the browser extension installed you import your Betclic and Betano bets in one click — no manual exports. Each bookmaker is read from your own session.",
-  "ext.searching": "Looking for the extension…",
+    "With the browser extension installed you import your Betclic and Betano bets in one click, no manual exports. Each bookmaker is read from your own session.",
+  "ext.searching": "Looking for the extension...",
   "ext.account": "{bookmaker} account",
-  "ext.importing": "Importing…",
+  "ext.importing": "Importing...",
   "ext.importAll": "Import bets from every bookmaker",
   "ext.nothingNew": "Nothing new to import.",
   "ext.nothingNewSkipped": "Nothing new to import ({n} already existed).",
@@ -618,10 +618,10 @@ export const EN: Record<TKey, Entry> = {
     "Before importing, open betclic.pt and/or the betano.pt home page. Keep the main Betano tab open during the import.",
   "ext.reinstall": "Reinstall or install on another device",
   "ext.notDetected": "Extension not detected. Install it once to import your bets:",
-  "ext.recheck": "Already installed — check again",
+  "ext.recheck": "Already installed, check again",
   "ext.webstore": "Install from the Chrome Web Store",
   "ext.download": "Download the extension (.zip)",
-  "ext.step1": "Download and extract the .zip — pick the extracted folder that contains manifest.json.",
+  "ext.step1": "Download and extract the .zip and pick the extracted folder that contains manifest.json.",
   "ext.step2": "Open brave://extensions (or chrome://extensions).",
   "ext.step3": "Turn on Developer mode (top right corner).",
   "ext.step4": "Click Load unpacked and choose the extension/ folder.",
@@ -637,22 +637,22 @@ export const EN: Record<TKey, Entry> = {
   // ----------------------------------------------------------------
   // AI progress steps (useLoadingSteps)
   // ----------------------------------------------------------------
-  "ai.step.readImage": "Reading the betslip screenshot…",
-  "ai.step.readText": "Interpreting the bet description…",
-  "ai.step.identify": "Identifying event, market and odds…",
-  "ai.step.form": "Researching recent form and head-to-head…",
-  "ai.step.injuries": "Checking injuries, suspensions and likely line-up…",
-  "ai.step.odds": "Comparing market odds across bookmakers…",
-  "ai.step.probability": "Estimating the fair probability…",
-  "ai.step.ev": "Calculating Expected Value and edge…",
-  "ai.step.finishing": "Almost there — finishing the analysis…",
-  "ai.picks.prepare": "Preparing the analysis for today…",
-  "ai.picks.games": "Researching the matches for today…",
-  "ai.picks.odds": "Collecting approximate odds…",
-  "ai.picks.form": "Assessing form, injuries and fixtures…",
-  "ai.picks.select": "Selecting the best picks…",
-  "ai.picks.write": "Writing the reasoning…",
-  "ai.picks.finishing": "Almost there — finishing up…",
+  "ai.step.readImage": "Reading the betslip screenshot...",
+  "ai.step.readText": "Interpreting the bet description...",
+  "ai.step.identify": "Identifying event, market and odds...",
+  "ai.step.form": "Researching recent form and head-to-head...",
+  "ai.step.injuries": "Checking injuries, suspensions and likely line-up...",
+  "ai.step.odds": "Comparing market odds across bookmakers...",
+  "ai.step.probability": "Estimating the fair probability...",
+  "ai.step.ev": "Calculating Expected Value and edge...",
+  "ai.step.finishing": "Almost there, finishing the analysis...",
+  "ai.picks.prepare": "Preparing the analysis for today...",
+  "ai.picks.games": "Researching the matches for today...",
+  "ai.picks.odds": "Collecting approximate odds...",
+  "ai.picks.form": "Assessing form, injuries and fixtures...",
+  "ai.picks.select": "Selecting the best picks...",
+  "ai.picks.write": "Writing the reasoning...",
+  "ai.picks.finishing": "Almost there, finishing up...",
   "ai.evalError": "Could not evaluate the bet.",
 
   // ----------------------------------------------------------------
@@ -667,18 +667,18 @@ export const EN: Record<TKey, Entry> = {
   "insights.picksForAt": "Tips for {date} · generated at {time}",
   "insights.picksSubtitle": "Pick suggestions for today's matches",
   "insights.evalSubtitle":
-    "Paste a screenshot and/or describe the bet — the AI estimates the Expected Value",
+    "Paste a screenshot and/or describe the bet and the AI estimates the Expected Value",
   "insights.disclaimer":
-    "AI-generated content with web search — the probability and Expected Value are estimates, may contain errors and guarantee no outcome. None of this is financial advice. Only bet what you can afford to lose. 18+ · gamble responsibly.",
+    "AI-generated content with web search. The probability and Expected Value are estimates, may contain errors and guarantee no outcome. None of this is financial advice. Only bet what you can afford to lose. 18+ · gamble responsibly.",
   "insights.picksHint":
-    "On the first visit of the day the analysis is generated on the spot — it can take up to a minute.",
+    "On the first visit of the day the analysis is generated on the spot and it can take up to a minute.",
   "insights.evalHint":
-    "The AI searches Google and calculates the Expected Value — it can take up to a minute.",
+    "The AI searches Google and calculates the Expected Value and it can take up to a minute.",
   "insights.retry": "Try again",
   "insights.oddsNote":
-    "The odds are approximate at the time of generation and shift during the day — always check at the bookmaker. A fresh analysis is generated every day.",
+    "The odds are approximate at the time of generation and shift during the day, so always check at the bookmaker. A fresh analysis is generated every day.",
   "insights.oddsNoteShort":
-    "The odds are approximate and shift during the day — always check at the bookmaker.",
+    "The odds are approximate and shift during the day, so always check at the bookmaker.",
   "insights.evalPlaceholder":
     "Describe the bet: event, market, selection, odds and bookmaker. E.g. Benfica to beat Porto @2.10 on Betano. (you can also paste a betslip screenshot with Ctrl+V)",
   "insights.evalPlaceholderShort":
@@ -686,12 +686,12 @@ export const EN: Record<TKey, Entry> = {
   "insights.attachPrint": "Attach screenshot",
   "insights.swapPrint": "Replace screenshot",
   "insights.pasteWith": "or paste with",
-  "insights.evaluating": "Evaluating…",
+  "insights.evaluating": "Evaluating...",
   "insights.evaluate": "Evaluate bet",
   "insights.printAlt": "Bet screenshot",
   "insights.removeImage": "Remove image",
   "insights.expectedValue": "Expected Value",
-  "insights.verdictLine": "{verdict} — EV {ev} per unit staked",
+  "insights.verdictLine": "{verdict}: EV {ev} per unit staked",
   "insights.metric.offeredOdd": "Offered odds",
   "insights.metric.offeredOddShort": "Offered",
   "insights.metric.fairOdd": "Fair odds",
@@ -703,10 +703,10 @@ export const EN: Record<TKey, Entry> = {
   "insights.confidence": "Confidence",
   "insights.confidenceLevel": "Confidence {level}/5",
   "insights.kellyNote":
-    "{pct}% of the bankroll. Kelly is aggressive — use a fraction and never bet more than you can afford to lose.",
+    "{pct}% of the bankroll. Kelly is aggressive, so use a fraction and never bet more than you can afford to lose.",
   "insights.error.notImage": "Select an image file (PNG, JPG, WEBP).",
   "insights.kellyLabel": "Suggested stake (½ Kelly):",
-  "insights.verdictLineShort": "{verdict} — EV {ev} per unit",
+  "insights.verdictLineShort": "{verdict}: EV {ev} per unit",
   "insights.error.tooLargePrint": "The image exceeds 3MB. Crop the screenshot and try again.",
   "insights.error.tooLargePhoto": "The image exceeds 3MB. Move the camera closer to the betslip.",
   "insights.elapsed": "{n}s elapsed",
@@ -719,7 +719,7 @@ export const EN: Record<TKey, Entry> = {
   "insights.error.unexpected": "An unexpected error occurred.",
 
   // ----------------------------------------------------------------
-  // Settings — general preferences
+  // Settings: general preferences
   // ----------------------------------------------------------------
   "settings.general.title": "General preferences",
   "settings.save": "Save preferences",
@@ -737,7 +737,7 @@ export const EN: Record<TKey, Entry> = {
   "settings.defaultStake.label": "Default stake ({currency})",
 
   // ----------------------------------------------------------------
-  // Settings — appearance (theme + language)
+  // Settings: appearance (theme + language)
   // ----------------------------------------------------------------
   "settings.appearance.title": "Appearance",
   "settings.theme.label": "Theme",
@@ -748,26 +748,26 @@ export const EN: Record<TKey, Entry> = {
 
   "settings.language.title": "Language",
   "settings.language.desc": "Choose the application language.",
-  // Language names always stay in their own language — same values as pt.ts.
+  // Language names always stay in their own language, same values as pt.ts.
   "lang.pt": "Português",
   "lang.en": "English",
 
   // ----------------------------------------------------------------
-  // Settings — enabled bookmakers
+  // Settings: enabled bookmakers
   // ----------------------------------------------------------------
   "settings.bookmakers.title": "Bookmakers",
   "settings.bookmakers.desc":
-    "Pick the bookmakers you use. Only the selected ones show up — and get imported — on the site and in the browser extension.",
+    "Pick the bookmakers you use. Only the selected ones show up (and get imported) on the site and in the browser extension.",
   "settings.bookmakers.none":
-    "No bookmaker selected — you won't be able to import bets until you pick at least one.",
+    "No bookmaker selected, you won't be able to import bets until you pick at least one.",
   "settings.bookmakers.loadError": "Could not load the enabled bookmakers.",
   "settings.bookmakers.saveError": "Could not save the enabled bookmakers.",
 
   // ----------------------------------------------------------------
-  // Settings — bookmaker accounts
+  // Settings: bookmaker accounts
   // ----------------------------------------------------------------
   "settings.management.title": "Management",
-  // Password (settings.password.*) — form shared by desktop and mobile.
+  // Password (settings.password.*): form shared by desktop and mobile.
   "settings.password.title": "Password",
   "settings.password.desc": "Change this account's password. Your current one is required to confirm it's you.",
   "settings.password.current": "Current password",
@@ -775,7 +775,7 @@ export const EN: Record<TKey, Entry> = {
   "settings.password.confirm": "Confirm new password",
   "settings.password.hint": "At least 8 characters.",
   "settings.password.submit": "Change password",
-  "settings.password.saving": "Changing…",
+  "settings.password.saving": "Changing...",
   "settings.password.done": "Password changed.",
   "settings.password.otherDevices": "Sessions open on other devices stay signed in.",
   "settings.password.show": "Show password",
@@ -824,10 +824,10 @@ export const EN: Record<TKey, Entry> = {
   "settings.accounts.deleteConfirmWithBets":
     "The {n} linked bets will be left without an account. Delete?",
   "settings.accounts.deleteHint":
-    "Deleting an account does not delete its bets — they are just left \"without an account\", still linked to the bookmaker.",
+    "Deleting an account does not delete its bets, they are just left \"without an account\", still linked to the bookmaker.",
 
   // ----------------------------------------------------------------
-  // Settings — change log (audit)
+  // Settings: change log (audit)
   // ----------------------------------------------------------------
   "settings.audit.title": "Change log",
   "settings.audit.desc": "Detailed record of the operations done in this session",
@@ -838,7 +838,7 @@ export const EN: Record<TKey, Entry> = {
   "settings.audit.empty": "No changes in this session.",
 
   // ----------------------------------------------------------------
-  // Settings — data (export / import)
+  // Settings: data (export / import)
   // ----------------------------------------------------------------
   "settings.data.title": "Data",
   "settings.data.cardTitle": "Backup, import and export",
@@ -863,7 +863,7 @@ export const EN: Record<TKey, Entry> = {
   "settings.import.choose": "Choose file (.json, .csv)",
 
   // ----------------------------------------------------------------
-  // Settings — danger zone
+  // Settings: danger zone
   // ----------------------------------------------------------------
   "settings.danger.title": "Danger zone",
 
@@ -890,15 +890,15 @@ export const EN: Record<TKey, Entry> = {
   "settings.clear.done": "Data deleted",
 
   // ----------------------------------------------------------------
-  // Settings — about / updates
+  // Settings: about / updates
   // ----------------------------------------------------------------
   "settings.about.title": "About",
   "settings.about.version": "Frontend version",
-  "settings.about.checking": "Checking…",
+  "settings.about.checking": "Checking...",
   "settings.about.checkUpdate": "Check for update",
   "settings.about.checkUpdateDesc": "Looks for a new bundle on the server",
   "settings.about.checkDone":
-    "Check finished — it applies on the next launch if there is something new.",
+    "Check finished, it applies on the next launch if there is something new.",
 
   // ----------------------------------------------------------------
   // Subscription (BetTrackr Pro)
@@ -906,7 +906,7 @@ export const EN: Record<TKey, Entry> = {
   "billing.title": "Subscription",
   "billing.planName": "BetTrackr Pro",
   "billing.perMonth": "{price} per month",
-  "billing.loading": "Checking your subscription…",
+  "billing.loading": "Checking your subscription...",
   "billing.state.active": "Active",
   "billing.state.trial": "Free trial",
   "billing.state.admin": "Admin access",
@@ -917,20 +917,20 @@ export const EN: Record<TKey, Entry> = {
   "billing.renewsOn": "Renews on {date}",
   "billing.accessUntil": "Access until {date}",
   "billing.noEndDate": "No end date",
-  "billing.cancelScheduled": "Cancelled — access stays until {date}.",
-  "billing.cancelScheduledNoDate": "Cancelled — it will not renew again.",
+  "billing.cancelScheduled": "Cancelled, access stays until {date}.",
+  "billing.cancelScheduledNoDate": "Cancelled, it will not renew again.",
   "billing.trialEndsOn": "Your free trial ends on {date}.",
   "billing.trialDaysLeft": { one: "{count} day left.", other: "{count} days left." },
   "billing.trialOver": "Your free trial has ended.",
   "billing.subscribeFor": "Subscribe for {price}/month",
   "billing.manage": "Manage subscription",
-  "billing.opening": "Opening…",
+  "billing.opening": "Opening...",
   "billing.unavailable":
     "Payments are not available yet. Get in touch and we will activate your account.",
   "billing.checkoutError": "Could not start the payment.",
   "billing.portalError": "Could not open subscription management.",
   "billing.checkoutSuccess": "Subscription active. Thank you!",
-  "billing.checkoutCancelled": "Payment cancelled — you were not charged.",
+  "billing.checkoutCancelled": "Payment cancelled, you were not charged.",
   "billing.nativeNotice": "Payment opens in your browser; come back to the app when you are done.",
   "billing.includesTitle": "What you get",
   "billing.includes.screenshot": "Read bet slips straight from a screenshot",
@@ -950,7 +950,7 @@ export const EN: Record<TKey, Entry> = {
   "footer.admin": "Admin",
   "admin.title": "Admin",
   "admin.subtitle": "Accounts, roles and subscriptions",
-  "admin.loading": "Loading…",
+  "admin.loading": "Loading...",
   "admin.error": "Could not reach the server.",
   "admin.retry": "Try again",
   "admin.metric.users": "Accounts",
@@ -995,7 +995,7 @@ export const EN: Record<TKey, Entry> = {
   "admin.revoke.bodyManual":
     "The account loses access to the paid features right away. You can grant it a subscription again afterwards.",
   "admin.revoke.bodyPaid":
-    "This cancels the Stripe subscription immediately: the account loses access and stops being charged. It does not refund what was already paid — refunds are done in Stripe.",
+    "This cancels the Stripe subscription immediately: the account loses access and stops being charged. It does not refund what was already paid. Refunds are done in Stripe.",
   "admin.action.trial": "Change trial",
   "admin.action.delete": "Delete account",
   "admin.action.close": "Close",
@@ -1013,7 +1013,7 @@ export const EN: Record<TKey, Entry> = {
   "admin.delete.body": "The account and every bet are removed. There is no way back.",
   "admin.delete.confirm": "Delete permanently",
   "admin.cancel": "Cancel",
-  "admin.saving": "Saving…",
+  "admin.saving": "Saving...",
   "admin.audit.title": "Change log",
   "admin.audit.empty": "No changes recorded yet.",
   "admin.audit.action.role.update": "{admin} changed the role of {user}",

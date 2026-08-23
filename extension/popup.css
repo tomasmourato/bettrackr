@@ -240,9 +240,9 @@ li { margin: 4px 0; }
 }
 .toggle input { margin-top: 2px; accent-color: var(--accent); }
 
-/* Aviso de subscrição — a extensão é uma funcionalidade paga. Âmbar em vez
+/* Aviso de subscrição - a extensão é uma funcionalidade paga. Âmbar em vez
    de vermelho: não é um erro, é um convite. */
-/* Aviso de subscrição — acompanha o PaywallNotice da web para quem salta
+/* Aviso de subscrição - acompanha o PaywallNotice da web para quem salta
    entre os dois não sentir que mudou de produto. */
 .paywall {
   background: rgba(16, 185, 129, 0.06);

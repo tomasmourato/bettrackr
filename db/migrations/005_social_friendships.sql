@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migração 005: amizades (funcionalidade social)
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- Modela pedidos de amizade e amizades aceites numa única tabela dirigida:
 --   requester_id -> addressee_id, com status 'pending' | 'accepted'.

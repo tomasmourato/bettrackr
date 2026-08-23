@@ -21,7 +21,7 @@ interface UseUrlFilterSyncOptions {
  * montada durante uma transição de separador não escrever no URL da outra.
  */
 export function useUrlFilterSync({ path, search, onExternalChange }: UseUrlFilterSyncOptions) {
-  // O primeiro render apenas reflete o URL que já lá está — escrever nessa
+  // O primeiro render apenas reflete o URL que já lá está - escrever nessa
   // altura duplicaria a entrada de histórico da navegação que nos trouxe aqui.
   const isFirstRun = useRef(true);
 

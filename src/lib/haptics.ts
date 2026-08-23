@@ -2,7 +2,7 @@
 // Feedback tátil na app nativa (Android via Capacitor). Na web é um no-op.
 // O plugin é importado dinamicamente (mesmo padrão de src/lib/liveUpdate.ts)
 // para nunca entrar no bundle web nem rebentar fora do Capacitor. Todas as
-// funções engolem erros — feedback tátil nunca deve partir um fluxo.
+// funções engolem erros - feedback tátil nunca deve partir um fluxo.
 
 import { isNativeApp } from "./apiBase";
 
@@ -18,7 +18,7 @@ async function haptics() {
   }
 }
 
-/** Toque curto — usar em botões, tabs, seleção de chips. */
+/** Toque curto - usar em botões, tabs, seleção de chips. */
 export async function tapHaptic(weight: ImpactWeight = "light"): Promise<void> {
   const mod = await haptics();
   if (!mod) return;
@@ -35,7 +35,7 @@ export async function tapHaptic(weight: ImpactWeight = "light"): Promise<void> {
   }
 }
 
-/** Notificação — usar em sucesso/erro de ações (guardar, apagar). */
+/** Notificação - usar em sucesso/erro de ações (guardar, apagar). */
 export async function notifyHaptic(kind: NotificationKind = "success"): Promise<void> {
   const mod = await haptics();
   if (!mod) return;

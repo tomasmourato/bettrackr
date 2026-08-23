@@ -1,6 +1,6 @@
 // src/lib/adminDisplay.ts
 // Etiquetas do painel de gestão. Está à parte dos componentes para a versão
-// desktop e a mobile dizerem o mesmo — e para as chaves de tradução serem
+// desktop e a mobile dizerem o mesmo - e para as chaves de tradução serem
 // verificadas pelo tipo TKey num sítio só.
 
 import type { AdminAuditEntry, AdminUser, AdminUserFilter } from "./adminApi";
@@ -35,16 +35,16 @@ const AUDIT_KEYS: Record<string, TKey> = {
 /** Frase legível para uma linha do registo de alterações. */
 export function auditLine(entry: AdminAuditEntry, t: TFn): string {
   const vars = {
-    admin: entry.adminUsername ?? "—",
-    user: entry.targetUsername ?? "—",
+    admin: entry.adminUsername ?? "-",
+    user: entry.targetUsername ?? "-",
     action: entry.action,
   };
   // Uma ação que ainda não tenha frase própria continua a aparecer, com o
-  // nome cru — é melhor uma linha feia do que uma alteração invisível.
+  // nome cru - é melhor uma linha feia do que uma alteração invisível.
   return t(AUDIT_KEYS[entry.action] ?? "admin.audit.action.unknown", vars);
 }
 
-/** O cargo de fundador é intocável pela API — o painel também não o oferece. */
+/** O cargo de fundador é intocável pela API - o painel também não o oferece. */
 export function isProtected(user: AdminUser): boolean {
   return user.role === "founder";
 }

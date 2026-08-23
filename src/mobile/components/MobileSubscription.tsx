@@ -1,7 +1,7 @@
 // src/mobile/components/MobileSubscription.tsx
 // Versão mobile do cartão da subscrição e do aviso que substitui os ecrãs
 // pagos. O conteúdo (estado, datas, avisos) vem do mesmo
-// src/lib/subscriptionDisplay.ts que a versão desktop usa — aqui só muda a
+// src/lib/subscriptionDisplay.ts que a versão desktop usa - aqui só muda a
 // forma: cartões arredondados e alvos de toque grandes.
 
 import { CheckCircle2, Loader2, Lock, RefreshCw, Sparkles } from "lucide-react";

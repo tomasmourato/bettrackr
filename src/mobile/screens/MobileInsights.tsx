@@ -221,7 +221,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
       setEvalError(null);
       setEvalImage(dataUrl);
     } catch {
-      /* utilizador cancelou — não é erro */
+      /* utilizador cancelou - não é erro */
     }
   };
 
@@ -280,7 +280,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
               ? formattedDate
                 ? `Dicas para ${formattedDate}${generatedTime ? ` · ${generatedTime}` : ""}`
                 : t("insights.picksSubtitleShort")
-              : "Print e/ou texto — a IA estima o Valor Esperado"}
+              : "Print e/ou texto - a IA estima o Valor Esperado"}
           </p>
         </div>
         {mode === "picks" && (
@@ -490,7 +490,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
           {evalLoading ? (
             <>
               <div className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin"></div>
-              A avaliar…
+              A avaliar...
             </>
           ) : (
             <>
@@ -618,7 +618,7 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                             className="flex items-center justify-between gap-2 text-[11px] bg-zinc-50 dark:bg-zinc-800/50 rounded-lg px-2.5 py-1.5"
                           >
                             <span className="min-w-0 truncate text-zinc-700 dark:text-zinc-200">
-                              {leg.event} — <span className="text-emerald-600 dark:text-emerald-300">{leg.selection}</span>
+                              {leg.event} - <span className="text-emerald-600 dark:text-emerald-300">{leg.selection}</span>
                             </span>
                             <span className="shrink-0 font-mono text-zinc-500 dark:text-zinc-400">
                               {(leg.estimatedProbability * 100).toFixed(0)}%

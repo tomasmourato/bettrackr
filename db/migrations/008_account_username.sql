@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migração 008: username da conta na casa de apostas
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- Permite associar a cada bookie_account o username real usado na casa
 -- (ex.: "pedroocoragem" na Betclic). A extensão deteta o username da sessão

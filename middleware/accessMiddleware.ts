@@ -61,7 +61,7 @@ export async function requireSubscription(
  *
  * As rotas das apostas são partilhadas: o site usa-as para registar apostas à
  * mão (grátis) e a extensão usa-as para importar das casas (pago). O que as
- * distingue é a marca "client" gravada no token no momento do login — a
+ * distingue é a marca "client" gravada no token no momento do login - a
  * extensão pede o token identificando-se, o site não. Como está dentro do
  * JWT, não é algo que se troque num header.
  *

@@ -1,4 +1,4 @@
-# BetTrackr — Extensão de importação de apostas
+# BetTrackr - Extensão de importação de apostas
 
 Extensão de browser (Manifest V3, Chrome/Edge/Brave) que importa as tuas
 apostas do Betclic.pt e Betano.pt diretamente para o BetTrackr.
@@ -7,16 +7,16 @@ apostas do Betclic.pt e Betano.pt diretamente para o BetTrackr.
 
 Os sites consomem APIs JSON internas. A extensão:
 
-1. **Captura a sessão** — scripts no contexto de cada página observam apenas
+1. **Captura a sessão** - scripts no contexto de cada página observam apenas
    os headers que o próprio site envia. No Betano, os pedidos são executados na
    página aberta para reutilizar cookies e contexto anti-bot.
-2. **Lê as apostas** — pagina Betclic (`ended`/`ongoing`) e Betano (abertas e
+2. **Lê as apostas** - pagina Betclic (`ended`/`ongoing`) e Betano (abertas e
    janelas de seis meses até 2012).
-3. **Traduz** — cada casa tem um mapper próprio, incluindo regras próprias para
+3. **Traduz** - cada casa tem um mapper próprio, incluindo regras próprias para
    freebets e promoções.
-4. **Deduplica e atualiza** — usa chaves `betclic:<ref>` ou `betano:<BetId>`;
+4. **Deduplica e atualiza** - usa chaves `betclic:<ref>` ou `betano:<BetId>`;
    uma aposta aberta é atualizada quando passa a estar liquidada.
-5. **Envia** — cria novas apostas em lote e atualiza as existentes pela API do
+5. **Envia** - cria novas apostas em lote e atualiza as existentes pela API do
    BetTrackr.
 
 A extensão nunca inclui cookies, passwords ou tokens de sessão no código.
@@ -29,7 +29,7 @@ A extensão nunca inclui cookies, passwords ou tokens de sessão no código.
 
 ## Utilização
 
-1. Inicia sessão no **BetTrackr** (basta abrir a app uma vez — a extensão
+1. Inicia sessão no **BetTrackr** (basta abrir a app uma vez - a extensão
    capta o token e a origem automaticamente; em local usa `http://localhost`).
 2. Abre **betclic.pt** ou a página principal de **betano.pt** e entra.
 3. Mantém o separador principal do Betano aberto durante a importação; não é necessário abrir a janela do histórico.
@@ -38,12 +38,12 @@ A extensão nunca inclui cookies, passwords ou tokens de sessão no código.
 
 ## Limitações conhecidas
 
-- **Histórico** — os sites podem limitar o histórico ou alterar as APIs internas.
-- **Estados** — estados desconhecidos do Betano não são importados sem evidência
+- **Histórico** - os sites podem limitar o histórico ou alterar as APIs internas.
+- **Estados** - estados desconhecidos do Betano não são importados sem evidência
   suficiente para evitar distorcer os resultados.
-- **Freebets** — no Betano, `FullBet` é freebet; `RiskFree` mantém-se como stake
+- **Freebets** - no Betano, `FullBet` é freebet; `RiskFree` mantém-se como stake
   monetária e o tipo da promoção fica guardado em metadata.
-- **Termos dos sites** — o acesso automatizado pode violar os termos dos
+- **Termos dos sites** - o acesso automatizado pode violar os termos dos
   bookmakers. Usa por tua conta e risco.
 
 ## Ficheiros

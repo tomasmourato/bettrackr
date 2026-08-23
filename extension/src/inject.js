@@ -1,4 +1,4 @@
-// inject.js — corre no MAIN world de betclic.pt (mesma execução que o código
+// inject.js - corre no MAIN world de betclic.pt (mesma execução que o código
 // da própria página) e a partir de document_start, para conseguir interceptar
 // os pedidos que a página faz à API begmedia.
 //
@@ -21,7 +21,7 @@
   }
 
   // Só captamos a partir do pedido de apostas em si (/me/bets): garante que o
-  // token e o host (betting/apif.begmedia.pt — o Betclic alterna entre eles)
+  // token e o host (betting/apif.begmedia.pt - o Betclic alterna entre eles)
   // vêm da API certa, e não dos hosts de analytics/sync (.begmedia.com).
   function looksLikeBetsApi(url) {
     return typeof url === "string" && url.includes("begmedia") && url.includes("/me/bets");
@@ -42,7 +42,7 @@
     return typeof url === "string" && url.includes("begmedia") && /\/api\/v\d+\/me(\?|#|$)/.test(url);
   }
 
-  // Lê passivamente o username da RESPOSTA de um /me que a própria página faz —
+  // Lê passivamente o username da RESPOSTA de um /me que a própria página faz -
   // o pedido mais fiável possível (Origin/cookies/token todos corretos). Envia
   // o username para o content script guardar; nada sensível é lido.
   function sniffIdentity(url, promise) {

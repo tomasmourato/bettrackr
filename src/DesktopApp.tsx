@@ -64,7 +64,7 @@ export default function DesktopApp({
   const activeNavItem = navItems.find((item) => item.tab === activeTab);
 
   // Um separador pago mostra o convite a subscrever em vez do ecrã. Enquanto
-  // `subscription` for null ainda não se sabe nada — nesse caso o ecrã abre
+  // `subscription` for null ainda não se sabe nada - nesse caso o ecrã abre
   // normalmente e é o 402 do servidor que trava o que interessa.
   const blockedByPaywall = Boolean(
     subscription && !subscription.entitled && PAID_TABS.has(activeTab),
@@ -73,7 +73,7 @@ export default function DesktopApp({
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 antialiased selection:bg-emerald-500/90 selection:text-zinc-950" id="main-container">
 
-      {/* Sidebar (desktop) — navegação fixa à esquerda, estilo terminal */}
+      {/* Sidebar (desktop) - navegação fixa à esquerda, estilo terminal */}
       <aside className="hidden md:flex fixed inset-y-0 left-0 z-40 w-56 flex-col border-r border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-950">
 
         {/* Marca */}
@@ -122,7 +122,7 @@ export default function DesktopApp({
       {/* Coluna principal (com margem para a sidebar no desktop) */}
       <div className="md:pl-56 flex flex-col min-h-screen">
 
-        {/* Topbar — título da secção + ações rápidas */}
+        {/* Topbar - título da secção + ações rápidas */}
         <header className="sticky top-0 z-40 h-14 md:h-12 shrink-0 border-b border-zinc-200 dark:border-zinc-800/80 bg-white/90 dark:bg-zinc-950/90 backdrop-blur">
           <div className="h-full px-4 sm:px-6 flex items-center justify-between gap-3">
 
@@ -137,7 +137,7 @@ export default function DesktopApp({
 
             <div className="flex items-center gap-2">
 
-              {/* Estado de ligação (mobile — no desktop vive na sidebar) */}
+              {/* Estado de ligação (mobile - no desktop vive na sidebar) */}
               <span className={`md:hidden w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-rose-500 animate-pulse"}`} title={isOnline ? "Online" : "Offline"}></span>
 
               {/* Alternar tema */}
@@ -150,7 +150,7 @@ export default function DesktopApp({
                 {isDark ? <Sun size={14} /> : <Moon size={14} />}
               </button>
 
-              {/* Conta — abre o painel lateral com os detalhes e o logout */}
+              {/* Conta - abre o painel lateral com os detalhes e o logout */}
               <button
                 onClick={() => setIsAccountOpen(true)}
                 title={currentUser ? `${t("account.title")} (${currentUser.username})` : t("account.title")}
@@ -190,7 +190,7 @@ export default function DesktopApp({
               {t("app.loadingBets")}
             </div>
           ) : (
-            // Transição de separador: fade curto, sem AnimatePresence/exit —
+            // Transição de separador: fade curto, sem AnimatePresence/exit -
             // esperar pela saída atrasava o conteúdo novo. initial=false no
             // primeiro render para o HTML vindo do SSR não piscar na hidratação.
             <motion.div
@@ -204,7 +204,7 @@ export default function DesktopApp({
                   fallback={
                     <div className="flex items-center justify-center py-24 text-xs text-zinc-400 dark:text-zinc-500 font-mono">
                       <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      A carregar…
+                      A carregar...
                     </div>
                   }
                 >
@@ -285,7 +285,7 @@ export default function DesktopApp({
           )}
         </main>
 
-        {/* Tab bar (mobile) — indicador de secção ativa na margem superior */}
+        {/* Tab bar (mobile) - indicador de secção ativa na margem superior */}
         <footer className="md:hidden bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-t border-zinc-200 dark:border-zinc-800/80 fixed bottom-0 inset-x-0 z-40">
           {/* Colunas calculadas: o separador de gestão só existe para
               administradores, por isso o número de itens não é fixo. */}

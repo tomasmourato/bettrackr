@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migração 016: o período experimental deixa de ser dado a contas novas
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- A 015 criou users.trial_ends_at com DEFAULT "agora + 14 dias", o que dava
 -- período experimental a TODA a gente que se registasse. A intenção era outra:

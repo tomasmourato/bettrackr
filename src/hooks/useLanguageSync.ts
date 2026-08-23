@@ -10,7 +10,7 @@
 //
 // A direção cliente -> servidor é feita no App.tsx, quando o utilizador muda
 // de idioma nas Configurações (updateLanguage). Aqui usa-se o
-// `updatePreferences` cru — adotar o valor do servidor não deve disparar um
+// `updatePreferences` cru - adotar o valor do servidor não deve disparar um
 // PUT de volta.
 
 import { useEffect, useRef } from "react";

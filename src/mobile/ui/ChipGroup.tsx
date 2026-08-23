@@ -1,6 +1,6 @@
 // src/mobile/ui/ChipGroup.tsx
-// Grupo de chips com etiqueta (single-select, com wrap) — usado nas sheets
-// de filtros e em escolhas curtas de formulários (estado, tipo de freebet…).
+// Grupo de chips com etiqueta (single-select, com wrap) - usado nas sheets
+// de filtros e em escolhas curtas de formulários (estado, tipo de freebet...).
 
 interface ChipGroupProps {
   label: string;

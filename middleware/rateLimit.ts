@@ -9,7 +9,7 @@ interface Bucket {
  * Rate limiter de janela fixa, em memória, por IP.
  *
  * Em serverless cada instância tem o seu próprio Map, por isso o limite
- * efetivo é "max por instância" — não substitui um limitador distribuído,
+ * efetivo é "max por instância" - não substitui um limitador distribuído,
  * mas trava força bruta contra o login e abuso da quota do Gemini sem
  * dependências externas. Requer `app.set("trust proxy", 1)` para que o
  * req.ip reflita o X-Forwarded-For atrás do proxy da Vercel.

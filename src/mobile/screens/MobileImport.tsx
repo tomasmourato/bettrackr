@@ -156,7 +156,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
       }
       await analyze(dataUrl);
     } catch {
-      /* utilizador cancelou a câmara/galeria — não é erro. */
+      /* utilizador cancelou a câmara/galeria - não é erro. */
     }
   };
 

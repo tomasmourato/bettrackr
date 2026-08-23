@@ -84,8 +84,8 @@ export type UserRole = "user" | "admin" | "founder";
 
 /**
  * Quem vê o painel de gestão. Vive aqui sozinha porque a pergunta é feita em
- * dois sítios — a lista de separadores e o guarda do separador ativo no
- * App.tsx — e responder a cada um por si já deixou o fundador de fora uma vez.
+ * dois sítios - a lista de separadores e o guarda do separador ativo no
+ * App.tsx - e responder a cada um por si já deixou o fundador de fora uma vez.
  *
  * Esconder o separador é comodidade e não segurança: as rotas /api/admin
  * respondem 403 a quem não tem o papel, venha o pedido de onde vier.
@@ -107,7 +107,7 @@ export type StoredUser = ReturnType<typeof getStoredUser>;
 export interface ShellProps {
   // Navegação
   activeTab: AppTab;
-  // Query string atual (filtros no URL) — passada como initialSearch ao
+  // Query string atual (filtros no URL) - passada como initialSearch ao
   // Dashboard/BetsManager para links partilhados e drill-downs do dashboard.
   locationSearch: string;
   // False durante o primeiro render (hidratação do SSR): os shells devem
@@ -128,14 +128,14 @@ export interface ShellProps {
   onUpdatePreferences: (prefs: Preferences) => void;
   isDark: boolean;
   onToggleTheme: () => void;
-  // Mesma função que o useI18n() devolve — os shells já a recebem por props,
+  // Mesma função que o useI18n() devolve - os shells já a recebem por props,
   // o resto da árvore usa o hook.
   t: TFn;
 
   // Estado de rede
   isOnline: boolean;
 
-  // Subscrição — null enquanto não se sabe (a carregar ou sem resposta).
+  // Subscrição - null enquanto não se sabe (a carregar ou sem resposta).
   // Os ecrãs pagos tratam null como "ainda não sei" e não mostram o paywall.
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;

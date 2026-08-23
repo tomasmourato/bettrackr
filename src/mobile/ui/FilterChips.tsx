@@ -1,6 +1,6 @@
 // src/mobile/ui/FilterChips.tsx
 // Fila de chips com scroll horizontal para filtros rápidos (estado, casa,
-// desporto…). Substitui os dropdowns densos do desktop no mobile. Um chip
+// desporto...). Substitui os dropdowns densos do desktop no mobile. Um chip
 // pode indicar seleção ativa e (opcionalmente) abrir a sheet de filtros.
 
 import React from "react";
@@ -16,7 +16,7 @@ interface FilterChipsProps {
   /** Valor selecionado (single-select). */
   value: string;
   onChange: (value: string) => void;
-  /** Slot à esquerda — ex.: botão "Filtros" que abre a sheet completa. */
+  /** Slot à esquerda - ex.: botão "Filtros" que abre a sheet completa. */
   leading?: React.ReactNode;
 }
 

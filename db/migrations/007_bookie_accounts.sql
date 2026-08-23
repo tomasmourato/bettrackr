@@ -1,12 +1,12 @@
 -- ============================================================
 -- Migração 007: múltiplas contas por casa de apostas
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- Cada utilizador pode registar várias contas na mesma casa (ex.: duas contas
 -- Betclic). Uma aposta pode (opcionalmente) pertencer a uma conta; apostas
 -- antigas ficam com account_id NULL ("sem conta"). Apagar uma conta NÃO apaga
--- as apostas — ficam órfãs (SET NULL), continuando associadas à casa.
+-- as apostas - ficam órfãs (SET NULL), continuando associadas à casa.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS bookie_accounts (

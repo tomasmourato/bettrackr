@@ -2,7 +2,7 @@
 // Live update da app nativa (Capacitor): empacota o build web (dist/) em
 // dist/app-bundle.zip e escreve dist/app-version.json com a versão do build.
 // A app Android compara a sua versão com este JSON no arranque e, se for
-// diferente, descarrega o zip e aplica-o (ver src/lib/liveUpdate.ts) — sem
+// diferente, descarrega o zip e aplica-o (ver src/lib/liveUpdate.ts) - sem
 // reinstalar o APK.
 //
 // Corre DEPOIS do vite build (o conteúdo de dist/ tem de estar completo).
@@ -23,12 +23,12 @@ const EXCLUDE = new Set(["app-bundle.zip", "bettrackr-extension.zip", "app-versi
 
 try {
   if (!existsSync(distDir) || !existsSync(path.join(distDir, "index.html"))) {
-    console.warn("[bundle-app] dist/ incompleto — ignorado (corre depois do vite build).");
+    console.warn("[bundle-app] dist/ incompleto - ignorado (corre depois do vite build).");
     process.exit(0);
   }
 
   // Versão do bundle: o commit do deploy (Vercel) ou um timestamp em builds
-  // locais. Só interessa que mude a cada build — a app compara por igualdade.
+  // locais. Só interessa que mude a cada build - a app compara por igualdade.
   const version = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) || `local-${Date.now()}`;
 
   const { default: AdmZip } = await import("adm-zip");
@@ -43,13 +43,13 @@ try {
 
   // buildTime: escrito pelo vite (dist/build-time.json) e embutido no próprio
   // bundle como __BUILD_TIME__. Publicá-lo aqui permite à app comparar idades
-  // e RECUSAR bundles que não sejam mais recentes do que o que já corre — sem
+  // e RECUSAR bundles que não sejam mais recentes do que o que já corre - sem
   // isto, um APK acabado de instalar era "atualizado" para um bundle antigo.
   let buildTime = null;
   try {
     buildTime = JSON.parse(readFileSync(path.join(distDir, "build-time.json"), "utf8")).buildTime ?? null;
   } catch {
-    console.warn("[bundle-app] build-time.json ausente — app-version.json sai sem buildTime.");
+    console.warn("[bundle-app] build-time.json ausente - app-version.json sai sem buildTime.");
   }
 
   writeFileSync(versionFile, JSON.stringify({ version, buildTime }) + "\n");

@@ -57,7 +57,7 @@ const admins = await pool.query(
 );
 console.log(`Com acesso ao painel agora: ${admins.rows[0].total}`);
 if (admins.rows[0].total === 0) {
-  console.warn("AVISO: não há nenhum administrador — o painel de gestão fica inacessível.");
+  console.warn("AVISO: não há nenhum administrador - o painel de gestão fica inacessível.");
 }
 
 await pool.end();

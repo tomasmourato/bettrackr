@@ -1,8 +1,8 @@
 // src/hooks/useChangePassword.ts
 // O formulário de mudar a password, partilhado pelo cartão das Definições
 // (desktop) e pelo painel equivalente no mobile. Os dois desenham-se de
-// maneira diferente, mas as regras — o que é válido, o que o servidor
-// respondeu, quando é que o botão acorda — são as mesmas e vivem só aqui.
+// maneira diferente, mas as regras - o que é válido, o que o servidor
+// respondeu, quando é que o botão acorda - são as mesmas e vivem só aqui.
 // Duas cópias seria pedir que uma envelhecesse sem a outra.
 
 import { useEffect, useRef, useState } from "react";
@@ -51,7 +51,7 @@ export function useChangePassword(onSessionExpired: () => void) {
     setError(null);
     setDone(false);
 
-    // As mesmas três regras que o servidor aplica. Aqui são só cortesia — a
+    // As mesmas três regras que o servidor aplica. Aqui são só cortesia - a
     // decisão que conta é a dele, porque esta corre no browser do utilizador.
     if (next.length < MIN_PASSWORD_LENGTH) {
       setError(t("settings.password.error.weak"));
@@ -73,7 +73,7 @@ export function useChangePassword(onSessionExpired: () => void) {
       setDone(true);
       return true;
     } catch (err) {
-      // Uma sessão expirada não é um erro deste formulário — sobe para quem
+      // Uma sessão expirada não é um erro deste formulário - sobe para quem
       // sabe tratá-la, como em todos os outros hooks.
       if (err instanceof SessionExpiredError) {
         onSessionExpiredRef.current();

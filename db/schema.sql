@@ -37,7 +37,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_stripe_customer_id_key
   WHERE stripe_customer_id IS NOT NULL;
 
 -- ------------------------------------------------------------
--- AI Insights — cache diária das dicas geradas (Gemini + Google Search).
+-- AI Insights - cache diária das dicas geradas (Gemini + Google Search).
 -- Uma linha por dia e por idioma, partilhada por todos. Ver migrações 009 e 014.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS daily_insights (
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS daily_insights (
 );
 
 -- ------------------------------------------------------------
--- Subscrições — uma linha por utilizador com o estado ATUAL (não é histórico).
+-- Subscrições - uma linha por utilizador com o estado ATUAL (não é histórico).
 -- Dá acesso à IA e à extensão. Ver migração 015.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
 );
 
 -- ------------------------------------------------------------
--- Contas por casa de apostas — um utilizador pode ter várias contas na
+-- Contas por casa de apostas - um utilizador pode ter várias contas na
 -- mesma casa (ex.: duas contas Betclic). Ver migração 007.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bookie_accounts (
@@ -123,7 +123,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS bookie_accounts_username_key
   WHERE username IS NOT NULL;
 
 -- ------------------------------------------------------------
--- Apostas (bets) — PostgreSQL é a única fonte de verdade.
+-- Apostas (bets) - PostgreSQL é a única fonte de verdade.
 --
 -- Notas de modelação:
 --  * status inclui CASHOUT; o valor do cashout usa a coluna final_return.
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS bets (
 );
 
 -- ------------------------------------------------------------
--- Amizades (funcionalidade social) — pedidos e amizades aceites.
+-- Amizades (funcionalidade social) - pedidos e amizades aceites.
 -- Linha dirigida requester_id -> addressee_id com status pending/accepted.
 -- Ver db/migrations/005_social_friendships.sql para detalhes.
 -- ------------------------------------------------------------

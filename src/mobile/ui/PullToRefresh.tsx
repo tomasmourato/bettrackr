@@ -1,6 +1,6 @@
 // src/mobile/ui/PullToRefresh.tsx
 // Puxar para atualizar (pull-to-refresh) por toque. IMPORTANTE: NÃO cria um
-// contentor de scroll próprio — o shell mobile usa o scroll da PÁGINA (body).
+// contentor de scroll próprio - o shell mobile usa o scroll da PÁGINA (body).
 // Este wrapper é um bloco normal em fluxo; só engata o gesto de "puxar"
 // quando a página já está no topo (window.scrollY <= 0). Assim o scroll
 // normal nunca é bloqueado (era o bug: `h-full overflow-y-auto` aninhado
@@ -74,7 +74,7 @@ export function PullToRefresh({ onRefresh, children, threshold = 72 }: PullToRef
       onTouchEnd={onTouchEnd}
       className="relative"
     >
-      {/* Indicador (altura 0 em repouso — não ocupa espaço) */}
+      {/* Indicador (altura 0 em repouso - não ocupa espaço) */}
       <motion.div
         style={{ height: y, opacity: y }}
         className="flex items-end justify-center overflow-hidden"

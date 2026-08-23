@@ -1,7 +1,7 @@
 // routes/insightsRoutes.ts
 // AI Insights diários: dicas de picks para os jogos DO DIA, geradas pelo
 // Gemini com grounding no Google Search (o modelo pesquisa os jogos e odds
-// reais antes de escrever — sem grounding alucinaria jogos inexistentes).
+// reais antes de escrever - sem grounding alucinaria jogos inexistentes).
 //
 // Custo controlado: gera-se UMA vez por dia e guarda-se em daily_insights;
 // todos os utilizadores leem a mesma linha. Pedidos concorrentes no primeiro
@@ -19,7 +19,7 @@ import { getGeminiClient, extractJson } from "../lib/gemini.js";
 const router = Router();
 
 // O modelo é imposto pelo plano, não por preferência: no free tier o grounding
-// do Google Search só tem quota no gemini-2.5-flash — os modelos mais recentes
+// do Google Search só tem quota no gemini-2.5-flash - os modelos mais recentes
 // (3.x) devolvem 429 assim que a pesquisa é ativada, e sem pesquisa o modelo
 // inventaria jogos. Reavaliar se/quando houver faturação ativa.
 const MODEL = "gemini-2.5-flash";
@@ -55,12 +55,12 @@ const LANG_INSTRUCTION: Record<Lang, string> = {
 function outputLanguageBlock(lang: Lang, fields: string[]): string {
   const list = fields.map((f) => `"${f}"`).join(", ");
   return lang === "en"
-    ? `\n\nOUTPUT LANGUAGE — CRITICAL: every piece of text inside the JSON MUST be written in English, including ${list}. The examples in the schema below are written in Portuguese only to illustrate the FORMAT — translate those values into English. Do not output Portuguese words such as "Futebol", "Resultado Final" or "Handicap Asiático"; use "Football", "Full Time Result", "Asian Handicap" and so on. Proper nouns (team and competition names) keep their official name.`
+    ? `\n\nOUTPUT LANGUAGE (CRITICAL): every piece of text inside the JSON MUST be written in English, including ${list}. The examples in the schema below are written in Portuguese only to illustrate the FORMAT - translate those values into English. Do not output Portuguese words such as "Futebol", "Resultado Final" or "Handicap Asiático"; use "Football", "Full Time Result", "Asian Handicap" and so on. Proper nouns (team and competition names) keep their official name.`
     : `\n\nIDIOMA DA RESPOSTA: todo o texto dentro do JSON tem de estar em português de Portugal, incluindo ${list}. Nomes próprios (equipas e competições) mantêm o nome oficial.`;
 }
 
 // Etiqueta do veredito: é o SERVIDOR que a escreve (não o modelo), por isso
-// tem de existir nos dois idiomas — senão um utilizador inglês recebia
+// tem de existir nos dois idiomas - senão um utilizador inglês recebia
 // "Valor esperado positivo".
 const VERDICT_LABELS: Record<Lang, Record<"VALOR" | "JUSTA" | "SEM_VALOR", string>> = {
   pt: {
@@ -92,7 +92,7 @@ interface Pick {
 }
 
 // Normaliza/valida o JSON devolvido pelo modelo. Campos em falta não rebentam
-// a resposta — o pick é descartado se lhe faltar o essencial.
+// a resposta - o pick é descartado se lhe faltar o essencial.
 function sanitizeContent(raw: any): { summary: string; picks: Pick[] } {
   const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
   const picks: Pick[] = (Array.isArray(raw?.picks) ? raw.picks : [])
@@ -126,13 +126,13 @@ function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang) {
   return `
 Hoje é ${dateLisbon}. És um analista de apostas desportivas experiente e prudente, ${LANG_INSTRUCTION[lang]}.
 
-USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds — inclui apenas eventos que confirmaste na pesquisa.
+USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds - inclui apenas eventos que confirmaste na pesquisa.
 
 Escolhe 6 a 10 picks para hoje que cumpram tudo isto:
 - Pelo menos 3 desportos diferentes (ex.: futebol, basquetebol, ténis; outros são bem-vindos).
-- Odds variadas: alguns favoritos seguros (odd ~1.30–1.60), alguns equilibrados (~1.80–2.50) e no máximo 1 aposta de valor com odd 3.00+.
+- Odds variadas: alguns favoritos seguros (odd ~1.30-1.60), alguns equilibrados (~1.80-2.50) e no máximo 1 aposta de valor com odd 3.00+.
 - Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).
-- Justificação curta (1–2 frases) baseada em forma recente, confrontos, lesões ou contexto — factual, sem promessas.
+- Justificação curta (1-2 frases) baseada em forma recente, confrontos, lesões ou contexto - factual, sem promessas.
 
 Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
 {
@@ -208,7 +208,7 @@ async function generateInsights(dateLisbon: string, lang: Lang) {
 // Avaliação de apostas (print e/ou texto) -> Valor Esperado
 // O modelo pesquisa e estima a PROBABILIDADE justa; os números (EV, prob.
 // implícita, edge, odd justa, Kelly) são calculados AQUI, deterministicamente,
-// porque os modelos erram aritmética. Sem cache — cada aposta é única.
+// porque os modelos erram aritmética. Sem cache - cada aposta é única.
 // ============================================================
 const EVAL_MAX_ATTEMPTS = 2;
 const EVAL_TIME_BUDGET_MS = 45_000;
@@ -235,20 +235,20 @@ function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean
 
   const textBlock = userText ? `\n\nDescrição do utilizador:\n"""\n${userText}\n"""` : "";
 
-  return `Hoje é ${dateLisbon} (fuso Europe/Lisbon). És um analista quantitativo de apostas desportivas — rigoroso, calibrado e prudente — ${LANG_INSTRUCTION[lang]}.
+  return `Hoje é ${dateLisbon} (fuso Europe/Lisbon). És um analista quantitativo de apostas desportivas - rigoroso, calibrado e prudente - ${LANG_INSTRUCTION[lang]}.
 
 TAREFA: avaliar a(s) aposta(s) descrita(s) ${sources} e determinar se têm VALOR ESPERADO positivo (se a odd oferecida é generosa face à probabilidade real).${textBlock}
 
-PASSO 1 — IDENTIFICAR. Para cada aposta extrai: desporto, competição, evento (equipas/atletas), mercado, a seleção escolhida, a casa de apostas e a ODD DECIMAL oferecida.${hasImage ? " Lê estes dados diretamente do boletim na imagem." : ""} Se a odd não estiver indicada, estima a odd de mercado atual a partir da pesquisa. Se a aposta juntar várias seleções (acumulador/múltipla), classifica-a como "MULTIPLA" e lista cada perna em "legs".
+PASSO 1: IDENTIFICAR. Para cada aposta extrai: desporto, competição, evento (equipas/atletas), mercado, a seleção escolhida, a casa de apostas e a ODD DECIMAL oferecida.${hasImage ? " Lê estes dados diretamente do boletim na imagem." : ""} Se a odd não estiver indicada, estima a odd de mercado atual a partir da pesquisa. Se a aposta juntar várias seleções (acumulador/múltipla), classifica-a como "MULTIPLA" e lista cada perna em "legs".
 
-PASSO 2 — PESQUISAR (USA A PESQUISA GOOGLE, obrigatório). Para cada evento, reúne informação ATUAL e factual: se o jogo ainda não começou (data/hora); forma recente; confrontos diretos (H2H); lesões, castigos e ausências; onze/rotação provável; casa vs fora; motivação (classificação, objetivos, calendário/fadiga); condições relevantes (piso, clima); e as ODDS DE MERCADO atuais em várias casas europeias para aferires o consenso. Usa apenas o que confirmares na pesquisa — NÃO inventes jogos, equipas, lesões nem odds. Se o evento já terminou ou não existe, di-lo na justificação e baixa a confiança.
+PASSO 2: PESQUISAR (USA A PESQUISA GOOGLE, obrigatório). Para cada evento, reúne informação ATUAL e factual: se o jogo ainda não começou (data/hora); forma recente; confrontos diretos (H2H); lesões, castigos e ausências; onze/rotação provável; casa vs fora; motivação (classificação, objetivos, calendário/fadiga); condições relevantes (piso, clima); e as ODDS DE MERCADO atuais em várias casas europeias para aferires o consenso. Usa apenas o que confirmares na pesquisa - NÃO inventes jogos, equipas, lesões nem odds. Se o evento já terminou ou não existe, di-lo na justificação e baixa a confiança.
 
-PASSO 3 — ESTIMAR A PROBABILIDADE justa da seleção ("estimatedProbability", decimal entre 0.02 e 0.98), com honestidade e calibração:
+PASSO 3: ESTIMAR A PROBABILIDADE justa da seleção ("estimatedProbability", decimal entre 0.02 e 0.98), com honestidade e calibração:
 - Ancora na probabilidade implícita do consenso de mercado (a odd de mercado, já descontada a margem da casa) e ajusta com a tua análise. Afasta-te do mercado apenas quando a pesquisa o justificar claramente.
 - Quando a informação é escassa, aproxima-te da probabilidade implícita e baixa a confiança.
 - Evita excesso de confiança. Para múltiplas, estima a probabilidade combinada tendo em conta a correlação entre pernas.
 
-REGRA CRÍTICA — NÃO EMITAS VEREDITO DE VALOR. Não calcules nem menciones o Valor Esperado, a probabilidade implícita, a odd justa, "edge", nem afirmes que a aposta "tem valor", "é boa", "vale a pena" ou o contrário. Esses números são calculados pelo sistema a partir da "offeredOdd" e da tua "estimatedProbability" — se opinares sobre valor, entras em contradição com o cálculo. Limita-te a reportar os factos e a fundamentar a PROBABILIDADE que estimaste.
+REGRA CRÍTICA: NÃO EMITAS VEREDITO DE VALOR. Não calcules nem menciones o Valor Esperado, a probabilidade implícita, a odd justa, "edge", nem afirmes que a aposta "tem valor", "é boa", "vale a pena" ou o contrário. Esses números são calculados pelo sistema a partir da "offeredOdd" e da tua "estimatedProbability" - se opinares sobre valor, entras em contradição com o cálculo. Limita-te a reportar os factos e a fundamentar a PROBABILIDADE que estimaste.
 
 Para cada aposta escreve ainda: uma "justification" clara e honesta (2 a 4 frases) que explique COMO chegaste à probabilidade (forma, H2H, ausências, contexto, consenso de mercado) e termine aí, sem juízo de valor; 2 a 5 "keyFactors" (os fatores que mais pesam) e 1 a 4 "risks" (incertezas ou cenários adversos).
 
@@ -444,7 +444,7 @@ async function evaluateBet(input: { imageBase64?: string; text: string; lang: La
 
 /**
  * Devolve a linha de hoje, gerando-a se ainda não existir. Partilhada pelo
- * pedido do utilizador e pelo cron — o cron aquece a cache de madrugada e o
+ * pedido do utilizador e pelo cron - o cron aquece a cache de madrugada e o
  * utilizador normal só lê; se o cron falhar, o primeiro pedido ainda gera.
  */
 async function ensureInsightsForDate(date: string, lang: Lang) {
@@ -506,7 +506,7 @@ router.get("/cron", async (req, res) => {
 
 // Daqui para baixo é tudo funcionalidade paga: primeiro identifica-se quem
 // pede, depois confirma-se que tem subscrição (ou período experimental).
-// O /cron fica acima de propósito — não tem utilizador nem subscrição.
+// O /cron fica acima de propósito - não tem utilizador nem subscrição.
 router.use(authenticateToken);
 router.use(requireSubscription);
 

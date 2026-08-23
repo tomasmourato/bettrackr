@@ -41,7 +41,7 @@ export function useNativeChrome(isDark: boolean): void {
         // escuros (para fundo claro).
         await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
       } catch {
-        /* plugin indisponível — sem status bar nativo. */
+        /* plugin indisponível - sem status bar nativo. */
       }
     })();
 
@@ -51,7 +51,7 @@ export function useNativeChrome(isDark: boolean): void {
   }, [isDark]);
 
   // Nota: o splash é escondido no arranque em main.tsx (src/lib/splash.ts),
-  // não aqui — o primeiro ecrã pode ser o login, que vive fora dos shells.
+  // não aqui - o primeiro ecrã pode ser o login, que vive fora dos shells.
 }
 
 /**
@@ -69,7 +69,7 @@ export function useAndroidBackButton(onBack: () => void): void {
         const listener = await App.addListener("backButton", () => onBack());
         remove = () => listener.remove();
       } catch {
-        /* sem plugin App — sem botão voltar. */
+        /* sem plugin App - sem botão voltar. */
       }
     })();
 

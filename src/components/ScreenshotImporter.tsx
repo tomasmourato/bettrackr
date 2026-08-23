@@ -215,7 +215,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
         setLoadingStep(t("import.step.extract"));
       }, 3500);
 
-      // authFetch injeta o header Authorization — a rota /api/parse-screenshot
+      // authFetch injeta o header Authorization - a rota /api/parse-screenshot
       // é protegida por authenticateToken no servidor.
       const response = await authFetch("/api/parse-screenshot", {
         method: "POST",
@@ -358,7 +358,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
     setImportedCount(savedSoFar);
 
     // Se ainda há boletins detetados por rever, avança para o próximo em vez
-    // de fechar (G1 — vários boletins no mesmo screenshot).
+    // de fechar (G1 - vários boletins no mesmo screenshot).
     const nextIndex = detectedIndex + 1;
     if (nextIndex < detectedBets.length) {
       setDetectedIndex(nextIndex);
@@ -368,7 +368,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
       return;
     }
 
-    // Terminou a fila — limpa tudo.
+    // Terminou a fila - limpa tudo.
     setParsedBet(null);
     setSelectedImage(null);
     setImageFileName("");

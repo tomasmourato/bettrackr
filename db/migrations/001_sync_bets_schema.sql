@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migração 001: sincronizar o schema da tabela `bets` (e `users`)
 --
--- Esta migração é IDEMPOTENTE — pode ser executada várias vezes em
+-- Esta migração é IDEMPOTENTE - pode ser executada várias vezes em
 -- segurança. Cola-a no editor SQL do Supabase para alinhar uma base de
 -- dados existente com o que o código do backend espera.
 --

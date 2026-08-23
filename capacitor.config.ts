@@ -9,12 +9,12 @@ const config: CapacitorConfig = {
   appName: 'BetTrackr',
   webDir: 'dist',
   server: {
-    // Origem https estável — necessária para localStorage/crypto e para o
+    // Origem https estável - necessária para localStorage/crypto e para o
     // CORS do servidor reconhecer a app.
     androidScheme: 'https',
   },
   android: {
-    // Sem conteúdo http misturado — tudo é https (API) ou local.
+    // Sem conteúdo http misturado - tudo é https (API) ou local.
     allowMixedContent: false,
   },
   // Cor de fundo enquanto o WebView arranca (evita flash branco no dark mode
@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
   backgroundColor: '#0f172a',
   plugins: {
     // Live update self-hosted (src/lib/liveUpdate.ts): autoUpdate desligado
-    // para o plugin NÃO contactar a cloud da Capgo — quem verifica/descarrega
+    // para o plugin NÃO contactar a cloud da Capgo - quem verifica/descarrega
     // somos nós, a partir da própria Vercel.
     CapacitorUpdater: {
       autoUpdate: false,

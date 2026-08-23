@@ -1,7 +1,7 @@
 // src/hooks/useLoadingSteps.ts
 // Passos de progresso para as esperas longas da IA (avaliação de apostas e
-// dicas do dia). O servidor não faz streaming — a chamada ao Gemini é um
-// pedido único — por isso o progresso é TEMPORAL (estimado a partir dos tempos
+// dicas do dia). O servidor não faz streaming - a chamada ao Gemini é um
+// pedido único - por isso o progresso é TEMPORAL (estimado a partir dos tempos
 // típicos), não real. Serve para o utilizador perceber o que está a acontecer
 // e que a app não bloqueou. Partilhado entre o AIInsights (desktop) e o
 // MobileInsights para os dois mostrarem exatamente o mesmo texto.

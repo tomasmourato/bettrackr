@@ -1,7 +1,7 @@
 // src/mobile/screens/MobileSettings.tsx
 // Definições mobile em estilo "definições Android": listas agrupadas por
 // secção (preferências, contas, dados, sobre, auditoria). Reutiliza a mesma
-// lógica do desktop — dataTransfer.ts para CSV/backup e os handlers do
+// lógica do desktop - dataTransfer.ts para CSV/backup e os handlers do
 // ShellProps para o resto. Ações destrutivas confirmam em bottom sheet.
 
 import { useEffect, useRef, useState } from "react";
@@ -108,7 +108,7 @@ export default function MobileSettings({
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
-  // Mesmas regras do cartão do desktop — o hook é o mesmo.
+  // Mesmas regras do cartão do desktop - o hook é o mesmo.
   const password = useChangePassword(onSessionExpired);
 
   const closePassword = () => {
@@ -125,7 +125,7 @@ export default function MobileSettings({
   const [renameLabel, setRenameLabel] = useState("");
   const [renameUsername, setRenameUsername] = useState("");
 
-  // Casas de apostas ativas (partilhadas com a extensão via /api/settings) —
+  // Casas de apostas ativas (partilhadas com a extensão via /api/settings) -
   // paridade com o EnabledBookmakersCard do desktop.
   const [supportedBookmakers, setSupportedBookmakers] = useState<string[]>([...SUPPORTED_BOOKMAKERS]);
   const [enabledBookmakers, setEnabledBookmakers] = useState<string[]>([]);
@@ -246,7 +246,7 @@ export default function MobileSettings({
 
   return (
     <div className="space-y-1 pb-4">
-      {/* Subscrição — decide o acesso à IA e à extensão */}
+      {/* Subscrição - decide o acesso à IA e à extensão */}
       <SectionHeader>{t("billing.title")}</SectionHeader>
       <MobileSubscriptionCard
         status={subscription}
@@ -440,7 +440,7 @@ export default function MobileSettings({
         <ListItem
           icon={Info}
           title={t("settings.about.version")}
-          trailing={bundleVersion ?? (isNativeApp() ? "…" : "web")}
+          trailing={bundleVersion ?? (isNativeApp() ? "..." : "web")}
         />
         {isNativeApp() && (
           <ListItem

@@ -4,7 +4,7 @@
 // conceder acesso, o utilizador cancelar).
 //
 // Enquanto carrega, `status` é null. Os ecrãs pagos tratam isso como "ainda
-// não sei" e mostram o carregamento — nunca o convite a subscrever, senão o
+// não sei" e mostram o carregamento - nunca o convite a subscrever, senão o
 // paywall piscava a cada arranque para quem já paga.
 
 import { useCallback, useEffect, useRef, useState } from "react";

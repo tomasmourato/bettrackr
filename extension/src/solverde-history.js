@@ -1,4 +1,4 @@
-// solverde-history.js — pagina o endpoint POST /bets da Solverde
+// solverde-history.js - pagina o endpoint POST /bets da Solverde
 // (sportswidget.solverde.pt). O intervalo from/to é arbitrário mas o
 // tamanho máximo aceite por pedido não está confirmado, por isso avançamos
 // por janelas de 90 dias (o mesmo tamanho que se viu a própria Solverde
@@ -6,7 +6,7 @@
 // pedido multi-ano.
 //
 // A paginação usa `pagination.hasMoreData` (a flag que a própria API
-// devolve) em vez de recalcular `totalPages` a partir de `itemsPerPage` —
+// devolve) em vez de recalcular `totalPages` a partir de `itemsPerPage` -
 // pedir mais de 20 itens por página fazia a API devolver uma paginação
 // inconsistente e a importação parava sempre nos primeiros 50 resultados.
 
@@ -70,7 +70,7 @@ export async function fetchSolverdeHistory(requestPage, options = {}) {
 
     // Otimização: se uma janela de 90 dias não teve nenhuma aposta, é pouco
     // provável (mas não impossível) que haja atividade dispersa mais antiga
-    // logo a seguir — continuamos sempre até ao início definido, só paramos
+    // logo a seguir - continuamos sempre até ao início definido, só paramos
     // mais cedo se quem chamar isto quiser (não paramos aqui por defeito).
     void sawAnyBet;
 

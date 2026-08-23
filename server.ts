@@ -26,7 +26,7 @@ import { rateLimit } from "./middleware/rateLimit.js";
 // O .env.local sobrepõe-se ao .env; um .env.<branch>.local sobrepõe-se aos
 // dois. Assim a branch "test" pode apontar para a BD de dev criando um
 // .env.test.local (ignorado pelo git), sem tocar no .env.local partilhado.
-// Na Vercel nada disto corre — as variáveis vêm do dashboard.
+// Na Vercel nada disto corre - as variáveis vêm do dashboard.
 function currentGitBranch(): string | null {
   try {
     const head = readFileSync(".git/HEAD", "utf8").trim();
@@ -52,7 +52,7 @@ const extensionZipPath = path.join(process.cwd(), "dist", "bettrackr-extension.z
 
 // A app é uma SPA: /dashboard e /bets são servidos como o index.html estático
 // (a Vercel serve-os diretamente do dist/; ver vercel.json) e o React trata do
-// routing e do carregamento dos dados no cliente. Não há SSR das páginas — o
+// routing e do carregamento dos dados no cliente. Não há SSR das páginas - o
 // servidor só serve a API.
 
 // Atrás do proxy da Vercel, o IP real do cliente vem no X-Forwarded-For.
@@ -99,7 +99,7 @@ app.use((req, res, next) => {
 
 // CORS restrito para a app nativa (Capacitor). O WebView Android serve os
 // assets de https://localhost, por isso as chamadas à API são cross-origin.
-// A web normal (mesma origem) não é afetada — o browser nem consulta CORS.
+// A web normal (mesma origem) não é afetada - o browser nem consulta CORS.
 // A autenticação é por header Bearer (sem cookies), logo sem credenciais CORS.
 const NATIVE_APP_ORIGINS = new Set([
   "https://localhost",     // Capacitor Android (androidScheme: https)
@@ -138,7 +138,7 @@ app.get("/api/health", async (_req, res) => {
     await pool.query("SELECT 1");
     database = { ok: true };
   } catch (error: any) {
-    // Só o código do erro — a mensagem completa podia expor o host da BD.
+    // Só o código do erro - a mensagem completa podia expor o host da BD.
     database = { ok: false, error: error?.code ?? "UNKNOWN" };
   }
 
@@ -225,7 +225,7 @@ Indícios: textos como "Freebet", "Aposta Grátis", "Aposta Gratuita", "Bónus",
 riscada/anulada no cálculo do retorno (nas freebets o valor da stake não é devolvido no retorno).
 Se não houver qualquer indício, devolve false.
 
-ESTADO DA APOSTA ("status") — usa exatamente um destes valores:
+ESTADO DA APOSTA ("status") - usa exatamente um destes valores:
 - "GANHA": a aposta foi liquidada com ganho. Indícios: visto/check verde, texto "Ganha", "Ganhou", "Vencedora",
   "Won", valor de retorno a verde, montante creditado.
 - "PERDIDA": a aposta foi liquidada com perda. Indícios: cruz/X vermelho, texto "Perdida", "Perdeu", "Lost",
@@ -241,7 +241,7 @@ ESTADO DA APOSTA ("status") — usa exatamente um destes valores:
   ou ausência de qualquer marca de resultado.
 Se as seleções tiverem resultados mistos (umas ganhas e outras perdidas) numa múltipla, o estado é "PERDIDA".
 Se todas as seleções estiverem ganhas numa múltipla, o estado é "GANHA".
-Na dúvida, devolve "POR_LIQUIDAR" — é o valor seguro, pois o utilizador pode corrigi-lo antes de gravar.
+Na dúvida, devolve "POR_LIQUIDAR" - é o valor seguro, pois o utilizador pode corrigi-lo antes de gravar.
 
 RETORNO DO CASHOUT ("cashoutReturn"):
 Se o estado for "CASHOUT", devolve o montante efetivamente recebido pelo encerramento antecipado.
@@ -406,7 +406,7 @@ Se não conseguires identificar alguma informação com certeza, faz a melhor es
     const parsedData = JSON.parse(textResult.trim());
     res.json({ success: true, data: parsedData });
   } catch (error: any) {
-    // A mensagem interna fica só no log — pode conter detalhes da API/quota
+    // A mensagem interna fica só no log - pode conter detalhes da API/quota
     // que não devem chegar ao cliente.
     console.error("Erro ao analisar imagem com Gemini:", error);
     res.status(500).json({ error: "Ocorreu um erro ao processar o screenshot." });

@@ -3,7 +3,7 @@
 // de window.postMessage (a extensão injeta um content script nesta origem que
 // serve de ponte). Não precisa do ID da extensão nem de a publicar.
 //
-// Um site NUNCA consegue instalar uma extensão automaticamente — isso é uma
+// Um site NUNCA consegue instalar uma extensão automaticamente - isso é uma
 // fronteira de segurança do browser. O que isto permite é: detetar se a
 // extensão está instalada e disparar a importação a partir de um botão do app.
 

@@ -19,7 +19,7 @@ const INCLUDED = [
 
 interface PaywallNoticeProps {
   status: BillingStatus;
-  /** Relê o estado — para quem pagou noutro separador não ficar preso aqui. */
+  /** Relê o estado - para quem pagou noutro separador não ficar preso aqui. */
   onRefresh: () => void;
   refreshing?: boolean;
 }

@@ -1,5 +1,5 @@
 // src/mobile/ui/SheetPage.tsx
-// Página em folha inteira que sobe de baixo — para fluxos maiores que uma
+// Página em folha inteira que sobe de baixo - para fluxos maiores que uma
 // bottom sheet (ex.: formulário de aposta). Tem cabeçalho fixo com botão
 // fechar/voltar, respeita as safe areas e regista-se no backStack.
 

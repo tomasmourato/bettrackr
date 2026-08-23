@@ -3,7 +3,7 @@
 //
 // Este hook lê esse parâmetro uma única vez, limpa-o do URL (para um refresh
 // não repetir a mensagem) e pede a releitura da subscrição quando o pagamento
-// correu bem — o webhook costuma chegar primeiro, mas não é garantido.
+// correu bem - o webhook costuma chegar primeiro, mas não é garantido.
 
 import { useEffect, useState } from "react";
 

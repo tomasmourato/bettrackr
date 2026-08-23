@@ -9,7 +9,7 @@ import './index.css';
 // Chunk desatualizado após um novo deploy: a app aberta há algum tempo ainda
 // referencia hashes de chunks lazy antigos; ao trocar de separador (React.lazy)
 // o import dinâmico dá 404 e, sem isto, a app ficava em branco. O Vite emite
-// `vite:preloadError` quando um import dinâmico falha — recarregamos uma vez
+// `vite:preloadError` quando um import dinâmico falha - recarregamos uma vez
 // para apanhar o index.html novo (com os hashes atuais). Limitado a um reload
 // por 30s para nunca entrar em loop se o chunk estiver mesmo em falta.
 if (typeof window !== "undefined") {
@@ -28,7 +28,7 @@ if (typeof window !== "undefined") {
 initLiveUpdate();
 
 // Esconde o splash nativo assim que o React pinta. Chamado aqui (e não num
-// shell) porque o primeiro ecrã pode ser o login — que vive fora dos shells.
+// shell) porque o primeiro ecrã pode ser o login - que vive fora dos shells.
 hideSplashScreen();
 
 // SPA pura: sem SSR das páginas, o servidor devolve sempre o index.html vazio

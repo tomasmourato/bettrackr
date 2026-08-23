@@ -1,4 +1,4 @@
-// Aba "AI Insights": duas secções —
+// Aba "AI Insights": duas secções -
 //  1) Dicas de picks para os jogos de hoje (geradas pelo Gemini com pesquisa
 //     Google e cacheadas por dia no servidor);
 //  2) Avaliar aposta: o utilizador cola um print e/ou descreve a aposta e a IA
@@ -183,7 +183,7 @@ export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
   };
 
   // Colar print com Ctrl+V (só no modo de avaliação). Só intercetamos quando a
-  // área de transferência traz mesmo uma imagem — colar texto continua a ir
+  // área de transferência traz mesmo uma imagem - colar texto continua a ir
   // normalmente para a caixa de descrição.
   useEffect(() => {
     if (mode !== "evaluate") return;
@@ -569,7 +569,7 @@ aria-label={t("insights.removeImage")}
                                 className="flex items-center justify-between gap-2 text-[11px] bg-zinc-50 dark:bg-zinc-800/50 rounded-sm px-2.5 py-1.5"
                               >
                                 <span className="min-w-0 truncate text-zinc-700 dark:text-zinc-200">
-                                  {leg.event} — <span className="text-emerald-600 dark:text-emerald-300">{leg.selection}</span>
+                                  {leg.event} - <span className="text-emerald-600 dark:text-emerald-300">{leg.selection}</span>
                                 </span>
                                 <span className="shrink-0 font-mono text-zinc-500 dark:text-zinc-400">
                                   {(leg.estimatedProbability * 100).toFixed(0)}%

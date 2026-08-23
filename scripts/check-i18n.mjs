@@ -2,12 +2,12 @@
 // Porteiro da tradução. Corre no `npm run lint` (a seguir ao tsc) e falha
 // quando a i18n regride. Verifica três coisas:
 //
-//   1. COMPLETUDE   — toda a chave do pt.ts existe no en.ts e vice-versa.
+//   1. COMPLETUDE   - toda a chave do pt.ts existe no en.ts e vice-versa.
 //                     (o tipo Record<TKey, Entry> do en.ts já garante isto no
 //                     tsc; aqui a mensagem de erro é legível e lista as chaves)
-//   2. MARCADORES   — as duas línguas usam os mesmos {marcadores} por chave, e
+//   2. MARCADORES   - as duas línguas usam os mesmos {marcadores} por chave, e
 //                     as entradas plurais são plurais em ambas.
-//   3. REGRESSÕES   — os ficheiros já migrados (MIGRATED, abaixo) não voltam a
+//   3. REGRESSÕES   - os ficheiros já migrados (MIGRATED, abaixo) não voltam a
 //                     ganhar texto em português fixo. É esta a rede que impede
 //                     que uma funcionalidade nova reintroduza strings soltas
 //                     num ecrã que já estava traduzido.
@@ -27,20 +27,20 @@ const I18N_DIR = join(root, "src", "lib", "i18n");
 // português fora de comentários. Cresce a cada fase.
 // ----------------------------------------------------------------
 const MIGRATED = [
-  // Fase 1 — Configurações (desktop + mobile) e cartões partilhados
+  // Fase 1 - Configurações (desktop + mobile) e cartões partilhados
   "src/components/Settings.tsx",
   "src/components/EnabledBookmakersCard.tsx",
   "src/components/BookieAccountsCard.tsx",
   "src/mobile/screens/MobileSettings.tsx",
 
-  // Fase 2 — Painel e histórico de apostas (desktop + mobile)
+  // Fase 2 - Painel e histórico de apostas (desktop + mobile)
   "src/components/Dashboard.tsx",
   "src/mobile/screens/MobileDashboard.tsx",
   "src/components/BetsManager.tsx",
   "src/mobile/screens/MobileBets.tsx",
   "src/hooks/useBetForm.ts",
 
-  // Fase 3 — Filtros, social, autenticação e ecrã de erro
+  // Fase 3 - Filtros, social, autenticação e ecrã de erro
   "src/components/TimeframeFilter.tsx",
   "src/components/FiltersBar.tsx",
   "src/components/Social.tsx",
@@ -48,7 +48,7 @@ const MIGRATED = [
   "src/components/AuthPage.tsx",
   "src/components/ErrorBoundary.tsx",
 
-  // Fase 4 — Importação e IA
+  // Fase 4 - Importação e IA
   "src/components/ScreenshotImporter.tsx",
   "src/components/BetclicImport.tsx",
   "src/mobile/screens/MobileImport.tsx",
@@ -57,10 +57,10 @@ const MIGRATED = [
   "src/hooks/useLoadingSteps.ts",
   "src/lib/betEvaluation.ts",
 
-  // Merge do PR #8 — componente novo, traduzido ao integrar
+  // Merge do PR #8 - componente novo, traduzido ao integrar
   "src/components/FilteredBetsSummary.tsx",
 
-  // Subscrição e painel de gestão — nascidos já traduzidos
+  // Subscrição e painel de gestão - nascidos já traduzidos
   "src/components/SubscriptionCard.tsx",
   "src/components/PaywallNotice.tsx",
   "src/components/AdminDashboard.tsx",
@@ -78,7 +78,7 @@ const PT_WORDS = [
   "aposta", "apostas", "conta", "contas", "casa", "casas", "dados", "ficheiro",
   "guardar", "apagar", "cancelar", "utilizador", "nenhum", "nenhuma", "todos",
   "todas", "escolhe", "repor", "moeda", "idioma",
-  // Sem acento e sem colisão com inglês — o teste dos acentos não as apanha.
+  // Sem acento e sem colisão com inglês - o teste dos acentos não as apanha.
   "erro", "imagem", "ocorreu", "inesperado", "decorridos", "recorta", "novamente",
   "excede", "seleciona", "boletim", "sucesso", "gravada", "gravar", "atualizada",
   "amigo", "amigos", "procurar", "carregar", "jogo", "jogos", "dinheiro",
@@ -115,7 +115,7 @@ function readKeys(file) {
 const pt = readKeys("pt.ts");
 const en = readKeys("en.ts");
 
-if (pt.size === 0) errors.push("pt.ts: nenhuma chave encontrada — o formato mudou?");
+if (pt.size === 0) errors.push("pt.ts: nenhuma chave encontrada - o formato mudou?");
 
 for (const key of pt.keys()) {
   if (!en.has(key)) errors.push(`en.ts: falta a chave "${key}"`);
@@ -136,7 +136,7 @@ for (const [key, ptEntry] of pt) {
   const a = placeholders(ptEntry.body).join(",");
   const b = placeholders(enEntry.body).join(",");
   if (a !== b) {
-    errors.push(`"${key}": marcadores diferentes — pt {${a || "—"}} vs en {${b || "—"}}`);
+    errors.push(`"${key}": marcadores diferentes - pt {${a || "-"}} vs en {${b || "-"}}`);
   }
 }
 
@@ -146,7 +146,7 @@ for (const [key, ptEntry] of pt) {
 
 // Ignora o que não é texto de interface:
 //   - comentários (o código é comentado em português de propósito);
-//   - chamadas console.* — diagnóstico para quem desenvolve, não para quem
+//   - chamadas console.* - diagnóstico para quem desenvolve, não para quem
 //     usa a app, por isso não são traduzidas (mesma categoria dos comentários).
 function stripNoise(source) {
   return source
@@ -167,7 +167,7 @@ for (const file of MIGRATED) {
   const cleaned = stripNoise(source);
   cleaned.split("\n").forEach((line, index) => {
     if (!PT_ACCENTS.test(line) && !PT_WORD_RE.test(line)) return;
-    errors.push(`${file}:${index + 1}: português fixo num ficheiro já traduzido — ${line.trim().slice(0, 90)}`);
+    errors.push(`${file}:${index + 1}: português fixo num ficheiro já traduzido - ${line.trim().slice(0, 90)}`);
   });
 }
 
@@ -211,5 +211,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `check-i18n: ok — ${pt.size} chaves x 2 idiomas, ${MIGRATED.length} ficheiro(s) migrado(s) sem regressões.`
+  `check-i18n: ok - ${pt.size} chaves x 2 idiomas, ${MIGRATED.length} ficheiro(s) migrado(s) sem regressões.`
 );

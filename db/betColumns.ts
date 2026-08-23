@@ -1,6 +1,6 @@
 // Lista única de colunas devolvidas ao frontend para uma aposta. Partilhada
 // pela rota REST (GET /api/bets) e pelo SSR (server.ts), para os dois payloads
-// nunca divergirem — divergirem já escondeu is_risk_free/account_id no SSR e
+// nunca divergirem - divergirem já escondeu is_risk_free/account_id no SSR e
 // partiu os filtros "Sem risco" e de conta nas páginas renderizadas no servidor.
 //
 // Convertemos DECIMAL -> float8 (senão o driver pg devolve strings) e

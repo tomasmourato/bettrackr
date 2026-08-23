@@ -52,12 +52,12 @@ interface DashboardProps {
   currency: string;
   isDark: boolean;
   // Contas por casa do utilizador; ausente/vazio na vista de um amigo
-  // (não conhecemos as contas dele) — o filtro de conta fica escondido.
+  // (não conhecemos as contas dele) - o filtro de conta fica escondido.
   accounts?: BookieAccount[];
   // Opcional: drill-down para a lista de apostas filtrada. Ausente na vista
   // read-only de um amigo (não há BetsManager próprio para onde navegar).
   onOpenBets?: (filters: DashboardBetsFilters) => void;
-  // Query string inicial ("?account=…"), vinda do SSR ou do URL no arranque.
+  // Query string inicial ("?account=..."), vinda do SSR ou do URL no arranque.
   initialSearch?: string;
 }
 
@@ -217,7 +217,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
   const stats = useMemo(() => calculateDashboardStats(bets), [bets]);
 
   // O Recharts é desenhado em SVG com cores explícitas, por isso não reage
-  // às classes `dark:` do Tailwind — as cores dos eixos, grelha e tooltips
+  // às classes `dark:` do Tailwind - as cores dos eixos, grelha e tooltips
   // têm de ser trocadas manualmente conforme o tema efetivo.
   const chart = useMemo(
     () => ({
@@ -239,7 +239,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
   // 1. Prepare data for profit history chart
   const profitChartData = useMemo(() => {
     // Sort settled bets chronologically by dateTime
-    // "YYYY-MM-DD HH:mm" só é aceite pelo Date com o "T" — sem o replace o
+    // "YYYY-MM-DD HH:mm" só é aceite pelo Date com o "T" - sem o replace o
     // Safari/iOS devolve Invalid Date e a ordenação do gráfico desfaz-se.
     const settledBets = bets
       .filter(b => b.status !== "POR_LIQUIDAR")
@@ -359,7 +359,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
   }, [bets, t]);
 
   // 3. Prepare data for Bet Status distribution.
-  // "Distribuição de Resultados" mostra apenas apostas RESOLVIDAS — as
+  // "Distribuição de Resultados" mostra apenas apostas RESOLVIDAS - as
   // pendentes (POR_LIQUIDAR) não são um resultado. Antes eram incluídas como
   // fatia "Pendente", o que fazia a soma das fatias não bater certo com o
   // número central "Resolvidas". (correção do bug D1)
@@ -694,7 +694,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                     </PieChart>
                   </ResponsiveContainer>
                   
-                  {/* Central Text — clicável: leva ao histórico das resolvidas */}
+                  {/* Central Text - clicável: leva ao histórico das resolvidas */}
                   <button
                     type="button"
                     onClick={openResolvedBets}

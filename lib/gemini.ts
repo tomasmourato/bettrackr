@@ -21,7 +21,7 @@ export function getGeminiClient(): GoogleGenAI {
  * Tem de ser tolerante: com o grounding do Google Search ativo, a API NÃO
  * aceita `responseMimeType: "application/json"` nem `responseSchema`
  * ("Tool use with a response mime type is unsupported"), por isso não há
- * forma de garantir JSON no pedido — o modelo às vezes envolve o JSON em
+ * forma de garantir JSON no pedido - o modelo às vezes envolve o JSON em
  * fences, precede-o de prosa, ou deixa vírgulas finais.
  */
 export function extractJson(text: string): any {

@@ -4,10 +4,10 @@
 -- A tabela original tinha CHECK (status IN ('PENDENTE','GANHA','PERDIDA',
 -- 'CASHOUT','ANULADA')). A aplicação usa POR_LIQUIDAR, MEIO_GANHA e
 -- MEIO_PERDIDA, pelo que qualquer aposta não liquidada era rejeitada
--- (erro 23514) — era isto que fazia falhar a importação de CSV e os
+-- (erro 23514) - era isto que fazia falhar a importação de CSV e os
 -- dados de demonstração.
 --
--- Esta migração é IDEMPOTENTE — pode ser executada várias vezes.
+-- Esta migração é IDEMPOTENTE - pode ser executada várias vezes.
 -- ============================================================
 
 -- 1. Migra estados legados para o vocabulário atual.

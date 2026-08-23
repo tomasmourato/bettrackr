@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migração 013: idioma da interface por utilizador
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- O idioma era guardado só em localStorage ("g_prefs"), por isso não seguia o
 -- utilizador entre dispositivos nem sobrevivia a uma instalação nova. Passa a

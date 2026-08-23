@@ -1,4 +1,4 @@
-// content-betclic.js — corre no ISOLATED world de betclic.pt. Recebe o token
+// content-betclic.js - corre no ISOLATED world de betclic.pt. Recebe o token
 // capturado pelo inject.js (MAIN world) via postMessage e guarda-o no
 // armazenamento da extensão para o service worker o usar.
 
@@ -6,7 +6,7 @@
 // Username da conta Betclic a partir do estado SSR embebido no documento.
 // O betclic.pt injeta a resposta do /me no HTML inicial (transfer-state do
 // Angular), algo como ...,"username":"ronkzinho","identity":{...}. É a fonte
-// mais fiável (sem fetch, sem CORS). Lemos assim que o DOM está pronto — antes
+// mais fiável (sem fetch, sem CORS). Lemos assim que o DOM está pronto - antes
 // da hidratação poder remover o script de estado.
 // ------------------------------------------------------------
 // Sessão betclic ativa? A betclic mostra um link para /login ("Aceder") apenas
@@ -21,7 +21,7 @@ function extractBetclicUsername() {
   const specific = /"username"\s*:\s*"([^"\\]{1,64})"\s*,\s*"identity"/;
   const generic = /"username"\s*:\s*"([^"\\]{1,64})"/;
 
-  // 1) CacheServiceLogin: username da sessão ATUAL (runtime) — atualiza logo no
+  // 1) CacheServiceLogin: username da sessão ATUAL (runtime) - atualiza logo no
   //    login, sem navegar. É a fonte preferida.
   try {
     const raw = window.localStorage.getItem("CacheServiceLogin");
@@ -31,7 +31,7 @@ function extractBetclicUsername() {
     }
   } catch (_) {}
 
-  // 2) Estado SSR embebido (congelado no load) — fallback.
+  // 2) Estado SSR embebido (congelado no load) - fallback.
   try {
     const scripts = document.querySelectorAll('script[type="application/json"], script[id*="state"]');
     for (const s of scripts) {

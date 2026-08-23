@@ -4,10 +4,10 @@
 -- (O número 008 fica reservado: pertence à migração de recuperação de
 -- password, revertida mas recuperável do histórico do git.)
 --
--- IDEMPOTENTE — pode ser executada várias vezes em segurança.
+-- IDEMPOTENTE - pode ser executada várias vezes em segurança.
 --
 -- As dicas do dia são geradas UMA vez (Gemini + Google Search) e todos os
--- utilizadores leem a mesma linha — o UNIQUE em insight_date garante isso
+-- utilizadores leem a mesma linha - o UNIQUE em insight_date garante isso
 -- mesmo com pedidos concorrentes (ON CONFLICT DO NOTHING na aplicação).
 -- ============================================================
 

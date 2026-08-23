@@ -1,12 +1,12 @@
 // src/mobile/lib/backStack.ts
 // Pilha (LIFO) de handlers do botão "voltar" do Android. Elementos que se
-// sobrepõem à navegação — bottom sheets, painéis, modais — registam um
+// sobrepõem à navegação - bottom sheets, painéis, modais - registam um
 // handler enquanto estão abertos. O listener global do botão back (montado
 // em MobileApp) chama `runTopBackHandler()`: se houver um handler no topo,
 // fecha esse elemento e consome o evento; caso contrário, o MobileApp aplica
 // a navegação por separadores / sair da app.
 //
-// Independente do Capacitor — na web o hook também funciona (só não há
+// Independente do Capacitor - na web o hook também funciona (só não há
 // nenhum listener nativo a disparar), o que mantém as primitivas testáveis
 // no browser.
 

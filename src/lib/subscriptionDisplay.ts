@@ -15,7 +15,7 @@ export interface SubscriptionDisplay {
   /** Chave do estado a mostrar no crachá. */
   stateKey: TKey;
   tone: SubscriptionTone;
-  /** Linha secundária já traduzida (renovação, fim da experiência…). */
+  /** Linha secundária já traduzida (renovação, fim da experiência...). */
   detail: string | null;
   /** Aviso extra quando algo precisa de atenção. */
   warning: string | null;
@@ -62,7 +62,7 @@ export function describeSubscription(
   if (status.source === "subscription" && subscription) {
     const manual = subscription.source === "manual";
     // Cancelada mas ainda a correr: o acesso vai até ao fim do período pago.
-    // A data vai no aviso, por isso a linha de detalhe fica de fora — dizer
+    // A data vai no aviso, por isso a linha de detalhe fica de fora - dizer
     // "renova a 31 de agosto" logo por cima de "cancelada" era contraditório.
     const ending = subscription.cancelAtPeriodEnd;
     const pastDue = subscription.status === "past_due";

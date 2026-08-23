@@ -2,7 +2,7 @@
 // Contrato partilhado entre a UI desktop (AIInsights) e a mobile
 // (MobileInsights) para a avaliação de apostas por IA. O servidor
 // (routes/insightsRoutes.ts, POST /api/insights/evaluate) faz a pesquisa e a
-// estimativa de probabilidade e calcula os números (EV, edge, Kelly…); aqui
+// estimativa de probabilidade e calcula os números (EV, edge, Kelly...); aqui
 // só se descrevem os tipos e se faz o pedido.
 
 import { authFetch, parseJsonResponse } from "./authApi";
@@ -60,7 +60,7 @@ export function formatEvPct(pct: number): string {
 
 /**
  * Pede a avaliação ao servidor. Lança SessionExpiredError (via authFetch) num
- * 401 — cada shell trata-o com o seu onSessionExpired.
+ * 401 - cada shell trata-o com o seu onSessionExpired.
  */
 // `fallbackError` vem traduzido de quem chama: este modulo nao e um hook e
 // por isso nao tem acesso ao useI18n().

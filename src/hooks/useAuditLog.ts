@@ -1,5 +1,5 @@
 // src/hooks/useAuditLog.ts
-// Registo de auditoria APENAS em memória — reflete as operações efetuadas
+// Registo de auditoria APENAS em memória - reflete as operações efetuadas
 // nesta sessão. Os logs deixaram de ser persistidos no browser.
 
 import { useState } from "react";

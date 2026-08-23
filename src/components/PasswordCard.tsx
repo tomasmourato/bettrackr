@@ -1,6 +1,6 @@
 // src/components/PasswordCard.tsx
 // Mudar a palavra-passe, nas Definições do desktop. A lógica toda vive no
-// useChangePassword, partilhado com o ecrã mobile — aqui é só a forma.
+// useChangePassword, partilhado com o ecrã mobile - aqui é só a forma.
 
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";

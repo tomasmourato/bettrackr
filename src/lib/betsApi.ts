@@ -1,6 +1,6 @@
 // src/lib/betsApi.ts
 // Camada de API para as apostas (bets). O PostgreSQL é a única fonte de
-// verdade — estas funções falam com as rotas /api/bets protegidas por JWT
+// verdade - estas funções falam com as rotas /api/bets protegidas por JWT
 // e traduzem entre o formato snake_case da BD e o modelo Bet do frontend.
 
 import { authFetch, parseJsonResponse } from "./authApi";
@@ -175,7 +175,7 @@ export async function updateBet(bet: Bet): Promise<Bet> {
 // ------------------------------------------------------------
 // PATCH /api/bets/:id/ignore -> marca/desmarca a aposta como ignorada
 // (excluída das estatísticas) com um comentário/motivo opcional. Endpoint
-// dedicado e leve — não passa pela substituição completa do PUT.
+// dedicado e leve - não passa pela substituição completa do PUT.
 // ------------------------------------------------------------
 export async function setBetIgnored(
   id: string,

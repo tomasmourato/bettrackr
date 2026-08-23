@@ -2,7 +2,7 @@
 // O conteúdo do perfil de outro utilizador no mobile: estatísticas (o
 // MobileDashboard com as apostas dele) e a lista read-only das recentes.
 //
-// Só o conteúdo — a SheetPage à volta fica de fora de propósito, porque o
+// Só o conteúdo - a SheetPage à volta fica de fora de propósito, porque o
 // cabeçalho e o rodapé mudam consoante quem abre: o social tem "remover
 // amigo", o painel de gestão não tem ação nenhuma.
 //
@@ -109,7 +109,7 @@ export default function MobileMemberProfile({
                   <span>{t("bets.field.stake")} {money(safeNum(bet.stake))}</span>
                   <span>{t("bets.field.odd")} {safeNum(bet.odd).toFixed(2)}</span>
                   <span className={`ml-auto font-bold ${bet.status === "POR_LIQUIDAR" ? "" : safeNum(bet.netProfit) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                    {bet.status === "POR_LIQUIDAR" ? "—" : formatSignedMoney(safeNum(bet.netProfit), currency)}
+                    {bet.status === "POR_LIQUIDAR" ? "-" : formatSignedMoney(safeNum(bet.netProfit), currency)}
                   </span>
                 </div>
               </div>

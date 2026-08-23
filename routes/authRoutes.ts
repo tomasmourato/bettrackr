@@ -29,7 +29,7 @@ function setSessionCookie(res: any, token: string) {
 }
 
 // Hash pré-calculado de um valor aleatório. Usado no login quando o email não
-// existe, para que o pedido demore o mesmo tempo que uma comparação real —
+// existe, para que o pedido demore o mesmo tempo que uma comparação real -
 // senão a diferença de tempos revelava quais os emails registados.
 const DUMMY_HASH = "$2b$12$N8eQ/Iq6zWr0kJfw.5gQCekaPVYadHUlGBDikr.Qg3ChTNIW6gQUa";
 
@@ -43,7 +43,7 @@ function isValidEmail(email: string): boolean {
   return typeof email === "string" && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// 3–32 caracteres: letras, números, ponto, hífen e underscore.
+// 3-32 caracteres: letras, números, ponto, hífen e underscore.
 function isValidUsername(username: string): boolean {
   return typeof username === "string" && /^[A-Za-z0-9_.-]{3,32}$/.test(username);
 }
@@ -192,7 +192,7 @@ router.post("/logout", (_req, res) => {
 });
 
 // ============================================================
-// GET /api/auth/me  (rota protegida — devolve o utilizador atual)
+// GET /api/auth/me  (rota protegida - devolve o utilizador atual)
 // ============================================================
 router.get("/me", authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {

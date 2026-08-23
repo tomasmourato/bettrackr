@@ -1,13 +1,13 @@
-// mapper-solverde.js — traduz uma aposta da API interna da Solverde
+// mapper-solverde.js - traduz uma aposta da API interna da Solverde
 // (sportswidget.solverde.pt/bets) para o modelo Bet do BetTrackr.
 //
 // A Solverde já devolve `funds.payoutNet` (retorno líquido de imposto de
-// jogo) e `funds.payoutTax`, por isso não recalculamos o imposto — usamos
+// jogo) e `funds.payoutTax`, por isso não recalculamos o imposto - usamos
 // os valores da própria casa e derivamos apenas o lucro líquido.
 //
 // Estados confirmados em dados reais: WON, LOST. Os restantes (cashout,
 // anulada, meio-ganha/perdida, em aberto) são a melhor correspondência
-// possível a partir do nome dos campos, sem amostra real — apostas com um
+// possível a partir do nome dos campos, sem amostra real - apostas com um
 // estado "settled" desconhecido são ignoradas (unsupported) em vez de
 // arriscar um resultado errado.
 
@@ -48,7 +48,7 @@ function isCashoutStatus(status) {
 }
 
 // `settled` só vem preenchido depois de a aposta estar decidida (à
-// semelhança do `Settled` booleano do Betano) — sem ele, tratamos sempre
+// semelhança do `Settled` booleano do Betano) - sem ele, tratamos sempre
 // como em aberto, independentemente do que `status` diga.
 function mapStatus(bet) {
   if (!bet.settled) return "POR_LIQUIDAR";

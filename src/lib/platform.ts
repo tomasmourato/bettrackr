@@ -28,12 +28,12 @@ function readOverride(): UiOverride {
     const stored = localStorage.getItem(UI_OVERRIDE_KEY);
     if (stored === "mobile" || stored === "desktop") return stored;
   } catch {
-    /* localStorage/URL indisponível — sem override. */
+    /* localStorage/URL indisponível - sem override. */
   }
   return null;
 }
 
-/** Cálculo síncrono (sem hooks) — útil fora de componentes. */
+/** Cálculo síncrono (sem hooks) - útil fora de componentes. */
 export function shouldUseMobileUI(): boolean {
   const override = readOverride();
   if (override) return override === "mobile";
