@@ -35,7 +35,7 @@ async function deliverTextFile(filename: string, content: string, mime: string):
       return;
     } catch (err) {
       // Utilizador cancelou o share, ou plugin indisponível: sem crash.
-      // (Cancelar o share sheet rejeita a promessa — é esperado.)
+      // (Cancelar o share sheet rejeita a promessa - é esperado.)
       return;
     }
   }
@@ -339,7 +339,7 @@ export function importBetsFromFile(
           // confiamos neles em vez de recalcular. Recalcular a partir da odd e
           // do tipo de freebet fazia o lucro divergir em meios-ganhos com
           // retorno manual e em freebets sem tipo guardado (ver bug reportado).
-          // Só se recalcula quando faltam — CSVs antigos ou editados à mão.
+          // Só se recalcula quando faltam - CSVs antigos ou editados à mão.
           let potentialReturn: number;
           let finalReturn: number;
           let netProfit: number;
@@ -350,9 +350,18 @@ export function importBetsFromFile(
           if (hasStoredResults) {
             finalReturn = Number(returnVal.toFixed(2));
             netProfit = Number(netProfitVal.toFixed(2));
-            // potentialReturn é sempre stake × odd (determinístico), não é
-            // exportado numa coluna própria.
-            potentialReturn = Number((stakeNumVal * totalOdd).toFixed(2));
+            // potentialReturn não vem numa coluna própria do CSV, por isso
+            // deriva-se sempre com a mesma regra da app - numa freebet SNR a
+            // stake é promocional e não volta, logo não é stake × odd.
+            potentialReturn = calculateBetReturnAndProfit(
+              stakeNumVal,
+              totalOdd,
+              "POR_LIQUIDAR",
+              isFreebet,
+              undefined,
+              freebetType,
+              isRiskFree,
+            ).potentialReturn;
           } else {
             ({ potentialReturn, finalReturn, netProfit } = calculateBetReturnAndProfit(
               stakeNumVal,

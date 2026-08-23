@@ -184,7 +184,7 @@ describe("desktop integrated selection rail", () => {
 
     assert.match(source, /flex flex-wrap items-center justify-between gap-2[^`]*md:flex-nowrap md:gap-1/);
     assert.match(source, /flex items-center gap-2 md:shrink-0 md:gap-1/);
-    assert.match(source, /Cancelar seleção/);
+    assert.match(source, /t\("bets\.cancelSelection"\)/);
     assert.match(source, /flex flex-wrap items-center gap-2[^`]*md:flex-nowrap md:shrink-0 md:gap-1/);
     assert.match(source, /px-3 py-1\.5[^`]*md:px-2 md:py-1 md:text-\[11px\] md:gap-1/);
     assert.match(source, /inline-flex items-center gap-2[^`]*md:gap-1 md:shrink-0 md:text-\[11px\]/);
@@ -194,22 +194,22 @@ describe("desktop integrated selection rail", () => {
     const source = readFileSync(new URL("../../src/components/BetsManager.tsx", import.meta.url), "utf8");
     const toolbar = source.slice(source.indexOf("id=\"bets-toolbar\""), source.indexOf("<FilteredBetsSummary"));
     const summary = source.slice(source.indexOf("<FilteredBetsSummary"), source.indexOf("{/* Painel: editar em massa"));
-    const cancelLabelIndex = summary.indexOf("Cancelar seleção");
+    const cancelLabelIndex = summary.indexOf('t("bets.cancelSelection")');
     const cancelButton = summary.slice(summary.lastIndexOf("<button", cancelLabelIndex), summary.indexOf("</button>", cancelLabelIndex) + 9);
 
-    assert.doesNotMatch(toolbar, /Cancelar seleção/);
-    assert.match(toolbar, /Selecionar várias/);
-    assert.match(toolbar, /Selecionar filtradas/);
-    assert.match(summary, /Cancelar seleção/);
+    assert.doesNotMatch(toolbar, /t\("bets\.cancelSelection"\)/);
+    assert.match(toolbar, /t\("bets\.selectMultiple"\)/);
+    assert.match(toolbar, /t\("bets\.selectFiltered"/);
+    assert.match(summary, /t\("bets\.cancelSelection"\)/);
     assert.match(summary, /footer=\{\s*isSelecting\s*\?/);
     assert.match(cancelButton, /border-zinc-200/);
     assert.doesNotMatch(cancelButton, /bg-emerald-|(?<!hover:)text-emerald-/);
     assert.match(summary, /<CheckSquare size=\{13\} \/>/);
     assert.match(summary, /<Edit size=\{13\} \/>/);
-    assert.match(summary, /allSelectedIgnored \? <>\s*<Eye size=\{13\} \/> Repor\s*<\/> : <>\s*<EyeOff size=\{13\} \/> Ignorar/);
+    assert.match(summary, /allSelectedIgnored \? <>\s*<Eye size=\{13\} \/> \{t\("bets\.restore"\)\}\s*<\/> : <>\s*<EyeOff size=\{13\} \/> \{t\("bets\.ignore"\)\}/);
     assert.match(summary, /<Copy size=\{13\} \/>/);
     assert.match(summary, /<Trash2 size=\{13\} \/>/);
-    assert.match(summary, /aria-label="Cancelar eliminação"[\s\S]*?<X size=\{14\} \/>/);
+    assert.match(summary, /aria-label=\{t\("bets\.cancelDeleteAria"\)\}[\s\S]*?<X size=\{14\} \/>/);
   });
 
   it("uses desktop-only 180 ms typography transitions without FLIP or positional rail motion", () => {

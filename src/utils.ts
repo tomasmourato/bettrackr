@@ -8,7 +8,7 @@ export function safeNum(value: any, defaultValue = 0): number {
 }
 
 // Calculation formulas for individual bets.
-// cashoutReturn: só usado quando status === "CASHOUT" — é o valor pelo qual a
+// cashoutReturn: só usado quando status === "CASHOUT" - é o valor pelo qual a
 // aposta foi encerrada antecipadamente (arbitrário, não deriva de stake*odd).
 export function calculateBetReturnAndProfit(
   stake: number,
@@ -20,8 +20,14 @@ export function calculateBetReturnAndProfit(
   isRiskFree?: boolean
 ): { potentialReturn: number; finalReturn: number; netProfit: number } {
 
-  // 1. Calculate Potential Return (For freebets, profit is stake * odd, so potential is stake * odd)
-  let potentialReturn = stake * odd;
+  // SR (Stake Returned) devolve a stake alem do lucro; SNR (Stake Not
+  // Returned) so paga o lucro. O default e SR para preservar o valor
+  // historico das apostas gravadas antes da coluna freebet_type existir.
+  const isSrFreebet = (freebetType ?? "SR") === "SR";
+
+  // 1. Retorno potencial. Numa freebet SNR a stake e promocional e nunca
+  // volta, por isso o maximo a receber e so o lucro: (odd - 1) * stake.
+  let potentialReturn = isFreebet && !isSrFreebet ? (odd - 1) * stake : stake * odd;
 
   // 2. Calculate Final Return and Net Profit based on actual Status
   let finalReturn = 0;
@@ -47,7 +53,7 @@ export function calculateBetReturnAndProfit(
   }
 
   // Aposta sem risco: a stake é dinheiro REAL e conta para o lucro exatamente
-  // como uma aposta normal — uma derrota perde a stake (net -stake). A freebet
+  // como uma aposta normal - uma derrota perde a stake (net -stake). A freebet
   // de reembolso, quando existe, é dinheiro promocional registado à parte e não
   // entra aqui. Por isso não há ramo dedicado: como isRiskFree implica
   // isFreebet=false, cai no cálculo de aposta normal (!isFreebet) abaixo.
@@ -83,10 +89,9 @@ export function calculateBetReturnAndProfit(
     //  SR  (Stake Returned)     -> ganho = odd * stake     (variante Betclic)
     //  SNR (Stake Not Returned) -> ganho = (odd - 1) * stake  (padrão da indústria)
     // Por omissão SR, para preservar o comportamento histórico da app.
-    const isSR = (freebetType ?? "SR") === "SR";
     switch (status) {
       case "GANHA":
-        finalReturn = isSR ? stake * odd : (odd - 1) * stake;
+        finalReturn = isSrFreebet ? stake * odd : (odd - 1) * stake;
         netProfit = finalReturn; // sem cash arriscado, o lucro é o retorno
         break;
       case "PERDIDA":
@@ -98,11 +103,18 @@ export function calculateBetReturnAndProfit(
         netProfit = 0; // 0 cash profit/loss
         break;
       case "MEIO_GANHA":
-        finalReturn = (stake / 2) * odd + (stake / 2);
+        // Metade ganha a odd, metade devolvida. Na SR a metade devolvida volta
+        // em dinheiro; na SNR a stake e promocional e nao volta, por isso so
+        // conta o lucro da metade vencedora.
+        finalReturn = isSrFreebet
+          ? (stake / 2) * odd + (stake / 2)
+          : (stake / 2) * (odd - 1);
         netProfit = finalReturn;
         break;
       case "MEIO_PERDIDA":
-        finalReturn = stake / 2;
+        // Metade perdida, metade devolvida: na SR volta stake/2 em dinheiro,
+        // na SNR nao volta nada porque a stake nunca foi dinheiro real.
+        finalReturn = isSrFreebet ? stake / 2 : 0;
         netProfit = finalReturn;
         break;
     }

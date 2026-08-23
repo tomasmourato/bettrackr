@@ -1,13 +1,15 @@
-// mapper.js — traduz uma aposta da API do Betclic (begmedia) para o modelo
+// mapper.js - traduz uma aposta da API do Betclic (begmedia) para o modelo
 // Bet do BetTrackr. É um módulo ES puro (sem DOM), reutilizado pelo service
 // worker.
 //
 // A função calc() é um espelho fiel de calculateBetReturnAndProfit em
-// src/utils.ts — mantém a matemática de retorno/lucro idêntica à das apostas
+// src/utils.ts - mantém a matemática de retorno/lucro idêntica à das apostas
 // introduzidas à mão. Se a do app mudar, atualiza aqui também.
 
 function calc(stake, odd, status, isFreebet, cashoutReturn, freebetType) {
-  const potentialReturn = stake * odd;
+  // Espelha src/utils.ts: SR devolve a stake alem do lucro, SNR so o lucro.
+  const isSrFreebet = (freebetType ?? "SR") === "SR";
+  const potentialReturn = isFreebet && !isSrFreebet ? (odd - 1) * stake : stake * odd;
   let finalReturn = 0;
   let netProfit = 0;
 
@@ -35,13 +37,12 @@ function calc(stake, odd, status, isFreebet, cashoutReturn, freebetType) {
     }
   } else {
     // Freebet: SR (Betclic) devolve odd*stake; SNR devolve (odd-1)*stake.
-    const isSR = (freebetType ?? "SR") === "SR";
     switch (status) {
-      case "GANHA": finalReturn = isSR ? stake * odd : (odd - 1) * stake; netProfit = finalReturn; break;
+      case "GANHA": finalReturn = isSrFreebet ? stake * odd : (odd - 1) * stake; netProfit = finalReturn; break;
       case "PERDIDA": finalReturn = 0; netProfit = 0; break;
       case "ANULADA": finalReturn = stake; netProfit = 0; break;
-      case "MEIO_GANHA": finalReturn = (stake / 2) * odd + (stake / 2); netProfit = finalReturn; break;
-      case "MEIO_PERDIDA": finalReturn = stake / 2; netProfit = finalReturn; break;
+      case "MEIO_GANHA": finalReturn = isSrFreebet ? (stake / 2) * odd + (stake / 2) : (stake / 2) * (odd - 1); netProfit = finalReturn; break;
+      case "MEIO_PERDIDA": finalReturn = isSrFreebet ? stake / 2 : 0; netProfit = finalReturn; break;
     }
   }
 
@@ -220,7 +221,7 @@ export function mapBet(bet) {
     // seria uma alteração de 1 linha no app, se quiseres o badge.)
     origin: "CSV",
     selections,
-    // metadata é guardada opaca pela API — serve de chave de deduplicação e
+    // metadata é guardada opaca pela API - serve de chave de deduplicação e
     // preserva os números originais do Betclic para refinamento futuro.
     metadata: {
       source: "betclic",

@@ -32,7 +32,7 @@ describe("selection display result", () => {
     const tintSource = source.slice(source.indexOf("const selectionDetailClass"), source.indexOf("const betTitleClass"));
 
     assert.match(badgeSource, /case "DESCONHECIDO":/);
-    assert.match(badgeSource, /Desconhecido/);
+    assert.match(badgeSource, /t\("status\.unknown"\)/);
     assert.doesNotMatch(badgeSource, /case "GANHA"|case "PERDIDA"|case "ANULADA"|case "POR_LIQUIDAR"|case "MEIO_GANHA"|case "MEIO_PERDIDA"/);
     assert.match(tintSource, /result === "PERDIDA" \|\| result === "MEIO_PERDIDA"/);
     assert.match(tintSource, /result === "GANHA" \|\| result === "MEIO_GANHA"/);
