@@ -186,10 +186,9 @@ export function calculateDashboardStats(bets: Bet[]): DashboardStats {
     ? ((wonBets + halfWonBets * 0.5) / rateDivisor) * 100 
     : 0;
 
-  // ROI = (netProfit / totalStake) * 100
-  const roi = totalStake > 0 ? (netProfit / totalStake) * 100 : 0;
-  
-  // Yield is netProfit over totalStake
+  // Yield: lucro líquido sobre o volume apostado. O ROI sobre o capital
+  // depositado precisa dos movimentos da banca e por isso vive noutro sítio
+  // (calculateBankroll, em src/lib/bankroll.ts).
   const yieldVal = totalStake > 0 ? (netProfit / totalStake) * 100 : 0;
 
   return {
@@ -204,7 +203,6 @@ export function calculateDashboardStats(bets: Bet[]): DashboardStats {
     totalStake: Number(totalStake.toFixed(2)),
     totalReturn: Number(totalReturn.toFixed(2)),
     netProfit: Number(netProfit.toFixed(2)),
-    roi: Number(roi.toFixed(2)),
     yield: Number(yieldVal.toFixed(2)),
     winRate: Number(winRate.toFixed(2)),
   };

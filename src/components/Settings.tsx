@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Download, 
   Upload, 
@@ -12,11 +12,14 @@ import {
   CheckCircle2,
   DollarSign
 } from "lucide-react";
-import { Preferences, AuditLog, Bet, BetStatus, BookieAccount, FreebetType, Selection, BetType, ThemeMode, Language } from "../types";
+import { Preferences, AuditLog, Bet, BetStatus, BookieAccount, BankrollMovement, FreebetType, Selection, BetType, ThemeMode, Language } from "../types";
 import { calculateBetReturnAndProfit, safeNum } from "../utils";
+import { calculateBankroll } from "../lib/bankroll";
+import type { BankrollMovementInput } from "../lib/bankrollApi";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import BetclicImport from "./BetclicImport";
 import BookieAccountsCard from "./BookieAccountsCard";
+import BankrollCard from "./BankrollCard";
 import EnabledBookmakersCard from "./EnabledBookmakersCard";
 import SubscriptionCard from "./SubscriptionCard";
 import PasswordCard from "./PasswordCard";
@@ -43,6 +46,12 @@ interface SettingsProps {
   onAddAccount: (bookmaker: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onRenameAccount: (id: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onDeleteAccount: (id: string) => Promise<boolean>;
+  bankrollMovements: BankrollMovement[];
+  bankrollError: string | null;
+  clearBankrollError: () => void;
+  onAddMovement: (input: BankrollMovementInput) => Promise<BankrollMovement | null>;
+  onEditMovement: (id: string, input: BankrollMovementInput) => Promise<BankrollMovement | null>;
+  onDeleteMovement: (id: string) => Promise<boolean>;
   // Subscrição (gerida no App para ser partilhada com os ecrãs pagos)
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;
@@ -66,6 +75,12 @@ export default function Settings({
   onAddAccount,
   onRenameAccount,
   onDeleteAccount,
+  bankrollMovements,
+  bankrollError,
+  clearBankrollError,
+  onAddMovement,
+  onEditMovement,
+  onDeleteMovement,
   subscription,
   subscriptionLoading,
   refreshSubscription,
@@ -73,6 +88,12 @@ export default function Settings({
 }: SettingsProps) {
 
   const { t } = useI18n();
+
+  // O saldo não é guardado: sai destes movimentos mais o lucro das apostas.
+  const bankrollSummary = useMemo(
+    () => calculateBankroll(bankrollMovements, bets),
+    [bankrollMovements, bets],
+  );
 
   // Local preferences fields
   const [localCurrency, setLocalCurrency] = useState(preferences.currency);
@@ -336,6 +357,18 @@ export default function Settings({
             onAdd={onAddAccount}
             onRename={onRenameAccount}
             onDelete={onDeleteAccount}
+          />
+
+          {/* Banca - o saldo sai destes movimentos mais o lucro das apostas */}
+          <BankrollCard
+            movements={bankrollMovements}
+            summary={bankrollSummary}
+            currency={preferences.currency}
+            error={bankrollError}
+            clearError={clearBankrollError}
+            onAdd={onAddMovement}
+            onEdit={onEditMovement}
+            onDelete={onDeleteMovement}
           />
 
           {/* Importação via extensão de browser - funcionalidade paga. O

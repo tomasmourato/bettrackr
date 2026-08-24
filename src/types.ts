@@ -79,6 +79,54 @@ export interface BookieAccount {
   createdAt?: string;
 }
 
+// ------------------------------------------------------------
+// Banca. Só entra aqui dinheiro real a entrar e a sair das casas - o saldo é
+// derivado destes movimentos mais o lucro das apostas já liquidadas, por isso
+// uma aposta nunca precisa de ser lançada à mão. Ver src/lib/bankroll.ts.
+// ------------------------------------------------------------
+export type BankrollMovementKind = 'DEPOSITO' | 'LEVANTAMENTO' | 'AJUSTE';
+
+export interface BankrollMovement {
+  id: string;
+  kind: BankrollMovementKind;
+  // Efeito com sinal na banca: depósito positivo, levantamento negativo.
+  // O AJUSTE é o único que pode ir nos dois sentidos.
+  amount: number;
+  // "YYYY-MM-DD HH:mm", o mesmo formato de Bet.dateTime.
+  occurredAt: string;
+  note?: string;
+  // Reservado para a banca por conta; hoje fica sempre undefined.
+  accountId?: string;
+  createdAt?: string;
+}
+
+/** Um ponto da evolução do saldo, já com o acumulado. */
+export interface BankrollPoint {
+  at: string;
+  balance: number;
+  delta: number;
+  source: 'MOVEMENT' | 'BET';
+}
+
+export interface BankrollSummary {
+  balance: number;
+  deposited: number;
+  withdrawn: number;
+  adjustments: number;
+  betsProfit: number;
+  /** Dinheiro real preso em apostas por liquidar. */
+  exposure: number;
+  available: number;
+  /** Lucro sobre o capital depositado. null quando não há depósitos. */
+  roi: number | null;
+  /** Maior queda pico-a-vale, em dinheiro e positiva. */
+  maxDrawdown: number;
+  maxDrawdownPct: number | null;
+  /** false quando não há movimentos nenhuns: a UI mostra o estado vazio. */
+  hasData: boolean;
+  series: BankrollPoint[];
+}
+
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type Language = 'pt' | 'en';
 
@@ -138,8 +186,9 @@ export interface DashboardStats {
   totalStake: number;
   totalReturn: number;
   netProfit: number;
-  roi: number; // Return on Investment (netProfit / totalStake) * 100
-  yield: number; // (netProfit / totalStake) * 100 or yield formula (lucro liquido / stake total) * 100. Actually ROI and Yield are often used interchangeably or slightly differently. Yield is typically net profit / total stakes. ROI is typically profit / total risk or capital. Let's use standard definitions.
+  // Lucro líquido sobre o volume apostado. O ROI sobre o capital depositado
+  // vive na banca (BankrollSummary.roi), que é a única que sabe os depósitos.
+  yield: number; // (netProfit / totalStake) * 100
   winRate: number; // (won + 0.5 * halfWon) / settled bets * 100
 }
 

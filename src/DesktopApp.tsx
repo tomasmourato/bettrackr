@@ -58,6 +58,13 @@ export default function DesktopApp({
   onAddAccount,
   onRenameAccount,
   onDeleteAccount,
+  bankrollMovements,
+  bankrollBalance,
+  bankrollError,
+  clearBankrollError,
+  onAddMovement,
+  onEditMovement,
+  onDeleteMovement,
   auditLogs,
 }: ShellProps) {
   const navItems = navItemsFor(subscription?.role);
@@ -216,6 +223,7 @@ export default function DesktopApp({
                     onOpenBets={navigateToFilteredBets}
                     accounts={accounts}
                     initialSearch={locationSearch}
+                    bankrollMovements={bankrollMovements}
                   />
                 )}
                 {activeTab === "BETS" && (
@@ -245,7 +253,11 @@ export default function DesktopApp({
                   />
                 )}
                 {activeTab === "INSIGHTS" && !blockedByPaywall && (
-                  <AIInsights onSessionExpired={onSessionExpired} />
+                  <AIInsights
+                    onSessionExpired={onSessionExpired}
+                    bankrollBalance={bankrollBalance}
+                    currency={preferences.currency}
+                  />
                 )}
                 {activeTab === "SOCIAL" && (
                   <Social currency={preferences.currency} isDark={isDark} />
@@ -274,6 +286,12 @@ export default function DesktopApp({
                     onAddAccount={onAddAccount}
                     onRenameAccount={onRenameAccount}
                     onDeleteAccount={onDeleteAccount}
+                    bankrollMovements={bankrollMovements}
+                    bankrollError={bankrollError}
+                    clearBankrollError={clearBankrollError}
+                    onAddMovement={onAddMovement}
+                    onEditMovement={onEditMovement}
+                    onDeleteMovement={onDeleteMovement}
                     subscription={subscription}
                     subscriptionLoading={subscriptionLoading}
                     refreshSubscription={refreshSubscription}

@@ -4,7 +4,7 @@
 // lógica do desktop - dataTransfer.ts para CSV/backup e os handlers do
 // ShellProps para o resto. Ações destrutivas confirmam em bottom sheet.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
   Upload,
@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   History,
   Wallet,
+  PiggyBank,
   Plus,
   Pencil,
   X,
@@ -23,7 +24,10 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { Preferences, AuditLog, Bet, BookieAccount, ThemeMode, Language } from "../../types";
+import { Preferences, AuditLog, Bet, BookieAccount, BankrollMovement, ThemeMode, Language } from "../../types";
+import { calculateBankroll } from "../../lib/bankroll";
+import type { BankrollMovementInput } from "../../lib/bankrollApi";
+import BankrollCard from "../../components/BankrollCard";
 import { AVAILABLE_BOOKMAKERS } from "../../utils";
 import { exportBetsCSV, exportBackupJSON, importBetsFromFile } from "../../lib/dataTransfer";
 import { getBundleVersion, initLiveUpdate } from "../../lib/liveUpdate";
@@ -60,6 +64,12 @@ interface MobileSettingsProps {
   onAddAccount: (bookmaker: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onRenameAccount: (id: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onDeleteAccount: (id: string) => Promise<boolean>;
+  bankrollMovements: BankrollMovement[];
+  bankrollError: string | null;
+  clearBankrollError: () => void;
+  onAddMovement: (input: BankrollMovementInput) => Promise<BankrollMovement | null>;
+  onEditMovement: (id: string, input: BankrollMovementInput) => Promise<BankrollMovement | null>;
+  onDeleteMovement: (id: string) => Promise<boolean>;
   // Subscrição (gerida no App para ser partilhada com os ecrãs pagos)
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;
@@ -86,12 +96,24 @@ export default function MobileSettings({
   onAddAccount,
   onRenameAccount,
   onDeleteAccount,
+  bankrollMovements,
+  bankrollError,
+  clearBankrollError,
+  onAddMovement,
+  onEditMovement,
+  onDeleteMovement,
   subscription,
   subscriptionLoading,
   refreshSubscription,
   onSessionExpired,
 }: MobileSettingsProps) {
-  const { t } = useI18n();
+  const { t, formatMoney } = useI18n();
+
+  // O saldo sai destes movimentos mais o lucro das apostas liquidadas.
+  const bankrollSummary = useMemo(
+    () => calculateBankroll(bankrollMovements, bets),
+    [bankrollMovements, bets],
+  );
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,6 +126,7 @@ export default function MobileSettings({
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
+  const [bankrollOpen, setBankrollOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -394,6 +417,13 @@ export default function MobileSettings({
           onClick={() => setAccountsOpen(true)}
         />
         <ListItem
+          icon={PiggyBank}
+          title={t("settings.bankroll.title")}
+          subtitle={formatMoney(bankrollSummary.balance, preferences.currency)}
+          chevron
+          onClick={() => setBankrollOpen(true)}
+        />
+        <ListItem
           icon={History}
           title={t("settings.audit.title")}
           subtitle={t("settings.audit.count", { n: auditLogs.length })}
@@ -523,6 +553,23 @@ export default function MobileSettings({
       </BottomSheet>
 
       {/* Sheet: contas por casa */}
+      <BottomSheet open={bankrollOpen} onClose={() => setBankrollOpen(false)} title={t("settings.bankroll.title")}>
+        {/* O BankrollCard ja e responsivo (form em coluna em ecras estreitos),
+            por isso reutiliza-se em vez de haver duas UIs a divergir. */}
+        <div className="pb-2">
+          <BankrollCard
+            movements={bankrollMovements}
+            summary={bankrollSummary}
+            currency={preferences.currency}
+            error={bankrollError}
+            clearError={clearBankrollError}
+            onAdd={onAddMovement}
+            onEdit={onEditMovement}
+            onDelete={onDeleteMovement}
+          />
+        </div>
+      </BottomSheet>
+
       <BottomSheet open={accountsOpen} onClose={() => setAccountsOpen(false)} title={t("settings.accounts.title")}>
         <div className="space-y-4 pb-2">
           {accounts.length > 0 ? (

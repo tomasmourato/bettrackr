@@ -12,10 +12,12 @@ import {
   Award,
   Percent,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  PiggyBank
 } from "lucide-react";
-import { Bet, BetStatus, BookieAccount, DashboardStats } from "../types";
+import { Bet, BetStatus, BookieAccount, BankrollMovement, DashboardStats } from "../types";
 import { calculateDashboardStats, safeNum } from "../utils";
+import { calculateBankroll } from "../lib/bankroll";
 import { useI18n } from "../lib/i18n";
 import FilterDropdown from "./FilterDropdown";
 import FiltersBar from "./FiltersBar";
@@ -59,6 +61,9 @@ interface DashboardProps {
   onOpenBets?: (filters: DashboardBetsFilters) => void;
   // Query string inicial ("?account=..."), vinda do SSR ou do URL no arranque.
   initialSearch?: string;
+  // Movimentos da banca. Ausente na vista de um amigo: o saldo é privado e a
+  // secção da banca simplesmente não aparece.
+  bankrollMovements?: BankrollMovement[];
 }
 
 export interface DashboardBetsFilters {
@@ -75,7 +80,7 @@ export interface DashboardBetsFilters {
   dateTo?: string;
 }
 
-export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch }: DashboardProps) {
+export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch, bankrollMovements }: DashboardProps) {
   const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   // Filtros do dashboard (D2): recalculam TODAS as estatísticas/gráficos para o
   // subconjunto escolhido. As opções vêm da lista completa; o cálculo usa a
@@ -237,6 +242,21 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
   );
 
   // 1. Prepare data for profit history chart
+  // A banca é dinheiro global: usa TODAS as apostas, não o subconjunto
+  // filtrado. Filtrar por casa não muda o saldo que se tem no bolso.
+  const bankroll = useMemo(
+    () => (bankrollMovements ? calculateBankroll(bankrollMovements, allBets) : null),
+    [bankrollMovements, allBets],
+  );
+
+  const bankrollChartData = useMemo(() => {
+    if (!bankroll) return [];
+    return [
+      { data: t("bet.start"), balance: 0 },
+      ...bankroll.series.map((point) => ({ data: point.at, balance: point.balance })),
+    ];
+  }, [bankroll, t]);
+
   const profitChartData = useMemo(() => {
     // Sort settled bets chronologically by dateTime
     // "YYYY-MM-DD HH:mm" só é aceite pelo Date com o "T" - sem o replace o
@@ -593,6 +613,78 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         </div>
 
       </div>
+
+      {/* Banca. Só aparece a quem tem banca registada (e nunca na vista de um
+          amigo, que não recebe os movimentos). */}
+      {bankroll?.hasData && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between" id="card-bankroll">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{t("dashboard.bankroll.title")}</p>
+                <h3 className="text-2xl font-bold mt-1.5 tracking-tight font-mono text-zinc-900 dark:text-zinc-100">
+                  {formatMoney(bankroll.balance, currency)}
+                </h3>
+              </div>
+              <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <PiggyBank size={18} />
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="flex items-center justify-between">
+                <span>{t("dashboard.bankroll.available")}</span>
+                <strong className="text-zinc-700 dark:text-zinc-200 font-medium font-mono">{formatMoney(bankroll.available, currency)}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>{t("dashboard.bankroll.exposure")}</span>
+                <strong className="text-zinc-700 dark:text-zinc-200 font-medium font-mono">{formatMoney(bankroll.exposure, currency)}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>{t("dashboard.bankroll.roi")}</span>
+                <strong className={`font-medium font-mono ${bankroll.roi === null ? "text-zinc-400 dark:text-zinc-500" : bankroll.roi >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {bankroll.roi === null ? "-" : `${bankroll.roi >= 0 ? "+" : ""}${bankroll.roi.toFixed(2)}%`}
+                </strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>{t("dashboard.bankroll.drawdown")}</span>
+                <strong className="text-zinc-700 dark:text-zinc-200 font-medium font-mono">
+                  {formatMoney(bankroll.maxDrawdown, currency)}
+                  {bankroll.maxDrawdownPct !== null && ` (${bankroll.maxDrawdownPct.toFixed(1)}%)`}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-[380px] lg:col-span-2" id="chart-bankroll-evolution">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">{t("dashboard.bankroll.chartTitle")}</h4>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("dashboard.bankroll.chartDesc")}</p>
+              </div>
+            </div>
+            <div className="flex-1 w-full min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={bankrollChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBankroll" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chart.grid} />
+                  <XAxis dataKey="data" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: chart.axis }} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: chart.axis }} tickFormatter={(v) => `${v}${currency}`} />
+                  <Tooltip
+                    formatter={(value: any) => [formatMoney(Number(value), currency), t("dashboard.bankroll.title")]}
+                    contentStyle={chart.tooltip}
+                  />
+                  <Area type="monotone" dataKey="balance" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorBankroll)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Charts Row */}
       <div className={`grid grid-cols-1 gap-6 ${showMonthlyPerformance ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>

@@ -57,6 +57,10 @@ interface InsightsResponse {
 
 interface MobileInsightsProps {
   onSessionExpired: () => void;
+  // Saldo da banca, para o Kelly poder ser dito em dinheiro em vez de so em
+  // percentagem. Ausente/zero -> mostra-se apenas a percentagem.
+  bankrollBalance?: number;
+  currency: string;
 }
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -152,8 +156,8 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function MobileInsights({ onSessionExpired }: MobileInsightsProps) {
-  const { t, lang, formatDate, formatTime } = useI18n();
+export default function MobileInsights({ onSessionExpired, bankrollBalance, currency }: MobileInsightsProps) {
+  const { t, lang, formatDate, formatTime, formatMoney } = useI18n();
   const toast = useToast();
   const [mode, setMode] = useState<"picks" | "evaluate">("picks");
 
@@ -566,7 +570,12 @@ export default function MobileInsights({ onSessionExpired }: MobileInsightsProps
                   <div className="px-4 pb-3 -mt-1">
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                       {t("insights.kellyLabel")}{" "}
-                      {t("insights.kellyNote", { pct: halfKellyPct })}
+                      {bankrollBalance && bankrollBalance > 0
+                        ? t("insights.kellyNoteAmount", {
+                            amount: formatMoney(bankrollBalance * bet.kellyFraction * 0.5, currency),
+                            pct: halfKellyPct,
+                          })
+                        : t("insights.kellyNote", { pct: halfKellyPct })}
                     </p>
                   </div>
                 )}

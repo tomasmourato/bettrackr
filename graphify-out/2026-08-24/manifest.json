@@ -36,21 +36,21 @@
     "semantic_hash": ""
   },
   "extension/manifest.json": {
-    "mtime": 1787526386.956928,
-    "seen": 1787526519.162463,
-    "ast_hash": "d30f8019dbb38b8de323549805c7b6f8",
+    "mtime": 1787527953.353225,
+    "seen": 1787528054.218777,
+    "ast_hash": "c5a32cd1f53cc9634eadda3a2fa957d0",
     "semantic_hash": ""
   },
   "extension/popup.js": {
-    "mtime": 1787526337.267044,
-    "seen": 1787526519.1624637,
-    "ast_hash": "0555d4cb856d79399df0c123ce05d447",
+    "mtime": 1787527953.3542242,
+    "seen": 1787528054.218779,
+    "ast_hash": "aa17aab2380042f9b6e08b0078e315fb",
     "semantic_hash": ""
   },
   "extension/src/background.js": {
-    "mtime": 1787526337.2690501,
-    "seen": 1787526519.1624646,
-    "ast_hash": "74eb1c30a83b0ad19955fe2260a7fe80",
+    "mtime": 1787527953.3542242,
+    "seen": 1787528054.218781,
+    "ast_hash": "c53cd6298be0e3008dd2cfb5fd0f1db3",
     "semantic_hash": ""
   },
   "extension/src/betano-history.js": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "src/lib/bookmakers.ts": {
-    "mtime": 1787526337.3247762,
-    "seen": 1787526519.162549,
-    "ast_hash": "1e9f12b4ac2856b384a64978156dc096",
+    "mtime": 1787527970.8273766,
+    "seen": 1787528054.2189465,
+    "ast_hash": "a766b4b4b265de4a1c21362f96becd5c",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -504,9 +504,9 @@
     "semantic_hash": ""
   },
   "extension/test/bettrackr-identity.test.js": {
-    "mtime": 1787526157.0946302,
-    "seen": 1787526519.1624799,
-    "ast_hash": "57ee5802060b265fe9e4f6c8f213b5db",
+    "mtime": 1787527953.3552241,
+    "seen": 1787528054.2188091,
+    "ast_hash": "894c22d2f2cfdfeaf1e0bc3123a045b1",
     "semantic_hash": ""
   },
   "extension/test/filter-params.test.ts": {
@@ -630,9 +630,9 @@
     "semantic_hash": ""
   },
   "src/lib/apiBase.ts": {
-    "mtime": 1787526157.0906272,
-    "seen": 1787526519.162543,
-    "ast_hash": "4af6e5b3332d63f0ee1f35057ce3bfa1",
+    "mtime": 1787527953.3552241,
+    "seen": 1787528054.2189357,
+    "ast_hash": "ddc040e89624da557a9a9b950957c1b7",
     "semantic_hash": ""
   },
   "src/lib/filterParams.ts": {
@@ -1259,12 +1259,6 @@
     "ast_hash": "b638312fc65b46d7e80053e02384adb5",
     "semantic_hash": ""
   },
-  "docs/superpowers/plans/betano-account-switch.md": {
-    "mtime": 1787526337.263527,
-    "seen": 1787526519.162607,
-    "ast_hash": "acf0deb69b88f6da615895cf0045d153",
-    "semantic_hash": ""
-  },
   "extension/test/bet-selection.test.ts": {
     "mtime": 1787446545.5612235,
     "seen": 1787526519.162478,
@@ -1317,132 +1311,6 @@
     "mtime": 1787446545.7341404,
     "seen": 1787526519.1625588,
     "ast_hash": "feb285c1646bb8ba1e36e75b6d6bc379",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/final-fix-report.md": {
-    "mtime": 1787526337.243883,
-    "seen": 1787526519.1625898,
-    "ast_hash": "68d138988fd4a5cff027001bdeaca068",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/progress.md": {
-    "mtime": 1787446545.4945,
-    "seen": 1787526519.1625905,
-    "ast_hash": "65b45d275f150ef984ca3353e40d61b2",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-1-brief.md": {
-    "mtime": 1787446545.4945,
-    "seen": 1787526519.1625912,
-    "ast_hash": "65f01a5c7f300ed7fab5b958f01574a6",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-1-report.md": {
-    "mtime": 1787526337.244883,
-    "seen": 1787526519.162592,
-    "ast_hash": "99719ac2d2814ba4aa3cefc6b12ccabc",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-2-brief.md": {
-    "mtime": 1787526337.2458844,
-    "seen": 1787526519.1625926,
-    "ast_hash": "476880ede9429cd10e0bf04683c4dcfb",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-2-report.md": {
-    "mtime": 1787526337.2458844,
-    "seen": 1787526519.1625936,
-    "ast_hash": "3de118db19d95612a5391aff3c86d24f",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-3-brief.md": {
-    "mtime": 1787526337.2470112,
-    "seen": 1787526519.1625943,
-    "ast_hash": "8fb4c767cbcd92ded70388f767e2fd5d",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-3-report.md": {
-    "mtime": 1787526337.2470112,
-    "seen": 1787526519.162595,
-    "ast_hash": "db7e574b879e45b782f6a79a0ac516ff",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-4-brief.md": {
-    "mtime": 1787526337.2480173,
-    "seen": 1787526519.1625957,
-    "ast_hash": "5bc194a4b8f7910893d0d47e8ed28c47",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-4-report.md": {
-    "mtime": 1787526337.2480173,
-    "seen": 1787526519.1625967,
-    "ast_hash": "6c4905775f80a84fc8690c22e3c383a3",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-5-brief.md": {
-    "mtime": 1787526337.2490165,
-    "seen": 1787526519.1625972,
-    "ast_hash": "3a43dc94621dcb4584bcba3b0953e188",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-5-report.md": {
-    "mtime": 1787526337.2490165,
-    "seen": 1787526519.1625981,
-    "ast_hash": "d21ec17203efbed81c26c658eed7b800",
-    "semantic_hash": ""
-  },
-  ".superpowers/sdd/task-6-report.md": {
-    "mtime": 1787526337.2500174,
-    "seen": 1787526519.1625988,
-    "ast_hash": "9c5a1408ff67d12fadf02a3804c1e549",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-24-bets-filtered-financial-summary.md": {
-    "mtime": 1787526337.2605255,
-    "seen": 1787526519.1626034,
-    "ast_hash": "7189254b2474787ad456b50294887efb",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-24-bets-selection-interactions.md": {
-    "mtime": 1787526337.2615273,
-    "seen": 1787526519.1626043,
-    "ast_hash": "042dfd9afb8cf6c54cea900c0e40405c",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-24-selection-detail-and-card-motion.md": {
-    "mtime": 1787526337.2615273,
-    "seen": 1787526519.162605,
-    "ast_hash": "999163c946150b8c6cf050de1d17b5a3",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-24-stable-summary-selection-layout.md": {
-    "mtime": 1787526337.2625277,
-    "seen": 1787526519.162606,
-    "ast_hash": "6ce7e6863c3b842ac61877554beec145",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-24-bets-filtered-financial-summary-design.md": {
-    "mtime": 1787526337.2645278,
-    "seen": 1787526519.1626077,
-    "ast_hash": "a0a42ce190b5473e31aa3df5aa910cb9",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-24-bets-selection-interactions-design.md": {
-    "mtime": 1787446545.5544937,
-    "seen": 1787526519.1626084,
-    "ast_hash": "81b980d01979ce9447b98cf65bb2b095",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-24-selection-detail-and-card-motion-design.md": {
-    "mtime": 1787446545.5544937,
-    "seen": 1787526519.162609,
-    "ast_hash": "82f886409ee6e3c7b1a051494fc0111e",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-24-stable-summary-selection-layout-design.md": {
-    "mtime": 1787526337.2645278,
-    "seen": 1787526519.1626098,
-    "ast_hash": "8f341016c96a53504a583bc1aba74f91",
     "semantic_hash": ""
   },
   "db/migrations/013_user_language.sql": {

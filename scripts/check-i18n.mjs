@@ -31,6 +31,7 @@ const MIGRATED = [
   "src/components/Settings.tsx",
   "src/components/EnabledBookmakersCard.tsx",
   "src/components/BookieAccountsCard.tsx",
+  "src/components/BankrollCard.tsx",
   "src/mobile/screens/MobileSettings.tsx",
 
   // Fase 2 - Painel e histórico de apostas (desktop + mobile)

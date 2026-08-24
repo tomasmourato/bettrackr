@@ -58,6 +58,10 @@ interface InsightsResponse {
 
 interface AIInsightsProps {
   onSessionExpired: () => void;
+  // Saldo da banca, para o Kelly poder ser dito em dinheiro em vez de só em
+  // percentagem. Ausente/zero -> mostra-se apenas a percentagem.
+  bankrollBalance?: number;
+  currency: string;
 }
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -100,8 +104,8 @@ function toneClasses(bet: EvaluatedBet) {
   };
 }
 
-export default function AIInsights({ onSessionExpired }: AIInsightsProps) {
-  const { t, lang, formatDate, formatTime } = useI18n();
+export default function AIInsights({ onSessionExpired, bankrollBalance, currency }: AIInsightsProps) {
+  const { t, lang, formatDate, formatTime, formatMoney } = useI18n();
   const [mode, setMode] = useState<"picks" | "evaluate">("picks");
 
   // ---- Dicas de hoje ----
@@ -516,7 +520,18 @@ aria-label={t("insights.removeImage")}
                       <div className="px-4 pb-3 -mt-1">
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                           {t("insights.kellyLabel")}{" "}
-                          {t("insights.kellyNote", { pct: halfKellyPct })}
+                          {/* Sem banca registada não há valor em euros para
+                              mostrar, e "0,00" seria pior que nada: fica só a
+                              percentagem, como era antes. */}
+                          {bankrollBalance && bankrollBalance > 0
+                            ? t("insights.kellyNoteAmount", {
+                                amount: formatMoney(
+                                  bankrollBalance * bet.kellyFraction * 0.5,
+                                  currency,
+                                ),
+                                pct: halfKellyPct,
+                              })
+                            : t("insights.kellyNote", { pct: halfKellyPct })}
                         </p>
                       </div>
                     )}

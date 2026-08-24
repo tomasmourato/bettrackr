@@ -62,6 +62,13 @@ function MobileShell(props: ShellProps) {
     onAddAccount,
     onRenameAccount,
     onDeleteAccount,
+    bankrollMovements,
+    bankrollBalance,
+    bankrollError,
+    clearBankrollError,
+    onAddMovement,
+    onEditMovement,
+    onDeleteMovement,
     auditLogs,
   } = props;
 
@@ -175,7 +182,7 @@ function MobileShell(props: ShellProps) {
               >
                 {activeTab === "DASHBOARD" && (
                   <PullToRefresh onRefresh={onRefresh}>
-                    <MobileDashboard bets={bets} currency={preferences.currency} isDark={isDark} accounts={accounts} onOpenBets={navigateToFilteredBets} />
+                    <MobileDashboard bankrollMovements={bankrollMovements} bets={bets} currency={preferences.currency} isDark={isDark} accounts={accounts} onOpenBets={navigateToFilteredBets} />
                   </PullToRefresh>
                 )}
                 {activeTab === "BETS" && (
@@ -194,7 +201,11 @@ function MobileShell(props: ShellProps) {
                   <MobileImport currency={preferences.currency} onAddBet={onAddBet} />
                 )}
                 {activeTab === "INSIGHTS" && !blockedByPaywall && (
-                  <MobileInsights onSessionExpired={onSessionExpired} />
+                  <MobileInsights
+                    onSessionExpired={onSessionExpired}
+                    bankrollBalance={bankrollBalance}
+                    currency={preferences.currency}
+                  />
                 )}
                 {activeTab === "SOCIAL" && <MobileSocial currency={preferences.currency} isDark={isDark} />}
                 {activeTab === "ADMIN" && (
@@ -221,6 +232,12 @@ function MobileShell(props: ShellProps) {
                     onAddAccount={onAddAccount}
                     onRenameAccount={onRenameAccount}
                     onDeleteAccount={onDeleteAccount}
+                    bankrollMovements={bankrollMovements}
+                    bankrollError={bankrollError}
+                    clearBankrollError={clearBankrollError}
+                    onAddMovement={onAddMovement}
+                    onEditMovement={onEditMovement}
+                    onDeleteMovement={onDeleteMovement}
                     subscription={subscription}
                     subscriptionLoading={subscriptionLoading}
                     refreshSubscription={refreshSubscription}

@@ -15,7 +15,8 @@ import {
   Lightbulb,
 } from "lucide-react";
 
-import type { Bet, Preferences, BookieAccount, AuditLog } from "./types";
+import type { Bet, Preferences, BookieAccount, AuditLog, BankrollMovement } from "./types";
+import type { BankrollMovementInput } from "./lib/bankrollApi";
 import type { DashboardBetsFilters } from "./components/Dashboard";
 import type { getStoredUser } from "./lib/authApi";
 import type { BillingStatus } from "./lib/billingApi";
@@ -163,6 +164,17 @@ export interface ShellProps {
   onAddAccount: (bookmaker: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onRenameAccount: (id: string, label: string, username?: string | null) => Promise<BookieAccount | null>;
   onDeleteAccount: (id: string) => Promise<boolean>;
+
+  // Banca. Só movimentos de dinheiro real; o saldo é derivado destes mais o
+  // lucro das apostas liquidadas (calculateBankroll, src/lib/bankroll.ts).
+  bankrollMovements: BankrollMovement[];
+  /** Saldo já derivado, para o Kelly dos insights falar em dinheiro. */
+  bankrollBalance: number;
+  bankrollError: string | null;
+  clearBankrollError: () => void;
+  onAddMovement: (input: BankrollMovementInput) => Promise<BankrollMovement | null>;
+  onEditMovement: (id: string, input: BankrollMovementInput) => Promise<BankrollMovement | null>;
+  onDeleteMovement: (id: string) => Promise<boolean>;
 
   // Auditoria
   auditLogs: AuditLog[];

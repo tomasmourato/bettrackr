@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, Suspense, lazy } from "react";
+﻿import { useState, useEffect, useMemo, Suspense, lazy } from "react";
 
 import { Bet, Preferences } from "./types";
 import { INITIAL_BETS, safeNum } from "./utils";
@@ -14,6 +14,8 @@ import { useTheme } from "./hooks/useTheme";
 import { useAuditLog } from "./hooks/useAuditLog";
 import { useBets } from "./hooks/useBets";
 import { useAccounts } from "./hooks/useAccounts";
+import { useBankroll } from "./hooks/useBankroll";
+import { calculateBankroll } from "./lib/bankroll";
 import { useLanguageSync } from "./hooks/useLanguageSync";
 import { useSubscription } from "./hooks/useSubscription";
 import { I18nProvider, translate, type TFn } from "./lib/i18n";
@@ -170,6 +172,16 @@ export default function App({ initialData }: AppProps) {
     editAccount: renameAccount,
     removeAccount,
   } = useAccounts(authed, handleSessionExpired);
+
+  // Banca (movimentos de dinheiro real; o saldo é derivado destes + apostas)
+  const {
+    movements: bankrollMovements,
+    error: bankrollError,
+    clearError: clearBankrollError,
+    addMovement,
+    editMovement,
+    removeMovement,
+  } = useBankroll(authed, handleSessionExpired);
 
   // Online status
   const [isOnline, setIsOnline] = useState(() =>
@@ -395,6 +407,13 @@ export default function App({ initialData }: AppProps) {
     activeTab === "ADMIN" && subscription && !canSeeAdmin(subscription.role) ? "DASHBOARD" : activeTab;
 
   // Contrato partilhado injetado no shell escolhido.
+  // Calculado uma vez aqui para as duas shells (e o Kelly dos insights) verem
+  // o mesmo número.
+  const bankrollBalance = useMemo(
+    () => calculateBankroll(bankrollMovements, bets).balance,
+    [bankrollMovements, bets],
+  );
+
   const shellProps: ShellProps = {
     activeTab: effectiveTab,
     locationSearch,
@@ -434,6 +453,14 @@ export default function App({ initialData }: AppProps) {
     onAddAccount: addAccount,
     onRenameAccount: renameAccount,
     onDeleteAccount: removeAccount,
+
+    bankrollMovements,
+    bankrollBalance,
+    bankrollError,
+    clearBankrollError,
+    onAddMovement: addMovement,
+    onEditMovement: editMovement,
+    onDeleteMovement: removeMovement,
     auditLogs,
   };
 

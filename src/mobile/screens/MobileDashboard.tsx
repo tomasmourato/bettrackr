@@ -13,6 +13,7 @@ import {
   TrendingUp,
   TrendingDown,
   Percent,
+  PiggyBank,
   Layers,
   Award,
   Clock,
@@ -32,7 +33,8 @@ import {
   XAxis,
   Tooltip,
 } from "recharts";
-import { Bet, BetStatus, BookieAccount } from "../../types";
+import { Bet, BetStatus, BookieAccount, BankrollMovement } from "../../types";
+import { calculateBankroll } from "../../lib/bankroll";
 import type { DashboardBetsFilters } from "../../components/Dashboard";
 import { calculateDashboardStats, safeNum } from "../../utils";
 import { useI18n, type TKey } from "../../lib/i18n";
@@ -44,6 +46,8 @@ interface MobileDashboardProps {
   isDark: boolean;
   accounts?: BookieAccount[];
   onOpenBets?: (filters: DashboardBetsFilters) => void;
+  // Movimentos da banca. Ausente na vista de um amigo: o saldo e privado.
+  bankrollMovements?: BankrollMovement[];
 }
 
 type Timeframe = "ALL" | "7_DAYS" | "30_DAYS" | "90_DAYS" | "THIS_MONTH" | "THIS_YEAR" | "CUSTOM";
@@ -91,6 +95,7 @@ export default function MobileDashboard({
   isDark,
   accounts = [],
   onOpenBets,
+  bankrollMovements,
 }: MobileDashboardProps) {
   const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -172,6 +177,13 @@ export default function MobileDashboard({
   };
 
   const stats = useMemo(() => calculateDashboardStats(bets), [bets]);
+
+  // A banca e dinheiro global: usa TODAS as apostas, nao o subconjunto
+  // filtrado. Filtrar por casa nao muda o saldo que se tem no bolso.
+  const bankroll = useMemo(
+    () => (bankrollMovements ? calculateBankroll(bankrollMovements, allBets) : null),
+    [bankrollMovements, allBets],
+  );
   const settledCount = useMemo(() => bets.filter((b) => b.status !== "POR_LIQUIDAR").length, [bets]);
 
   // Drill-down mantendo os filtros ativos, como no desktop.
@@ -398,6 +410,29 @@ export default function MobileDashboard({
           value={money(stats.totalStake)}
           footer={<span>{t("dashboard.return")} {money(stats.totalReturn)}</span>}
         />
+        {/* Banca: dois cartoes para a grelha de 2 colunas nao ficar coxa. */}
+        {bankroll?.hasData && (
+          <>
+            <KpiCard
+              label={t("dashboard.bankroll.title")}
+              icon={PiggyBank}
+              tone="neutral"
+              value={money(bankroll.balance)}
+              footer={<span>{t("dashboard.bankroll.available")} <strong className="text-zinc-700 dark:text-zinc-200">{money(bankroll.available)}</strong></span>}
+            />
+            <KpiCard
+              label={t("dashboard.bankroll.roi")}
+              icon={Percent}
+              tone={bankroll.roi !== null && bankroll.roi >= 0 ? "positive" : "negative"}
+              value={
+                bankroll.roi === null
+                  ? "-"
+                  : `${bankroll.roi >= 0 ? "+" : ""}${bankroll.roi.toFixed(2)}%`
+              }
+              footer={<span>{t("dashboard.bankroll.drawdown")} <strong className="text-zinc-700 dark:text-zinc-200">{money(bankroll.maxDrawdown)}</strong></span>}
+            />
+          </>
+        )}
       </div>
 
       {/* Distribuição de resultados */}

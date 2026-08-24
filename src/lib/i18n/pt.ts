@@ -710,6 +710,8 @@ export const PT = {
   "insights.kellyNote":
     "{pct}% do banco. Kelly é agressivo, por isso usa fração e nunca apostes mais do que podes perder.",
   "insights.error.notImage": "Seleciona um ficheiro de imagem (PNG, JPG, WEBP).",
+  "insights.kellyNoteAmount":
+    "{amount} ({pct}% do banco). Kelly é agressivo, por isso usa fração e nunca apostes mais do que podes perder.",
   "insights.kellyLabel": "Stake sugerida (½ Kelly):",
   "insights.verdictLineShort": "{verdict}: EV {ev} por unidade",
   "insights.error.tooLargePrint": "A imagem excede 3MB. Recorta o print e tenta novamente.",
@@ -831,6 +833,39 @@ export const PT = {
     "As {n} apostas ficam sem conta. Apagar?",
   "settings.accounts.deleteHint":
     "Apagar uma conta não apaga as apostas, ficam apenas \"sem conta\", associadas à casa.",
+
+  // ----------------------------------------------------------------
+  // Configurações: banca (depósitos e levantamentos)
+  // ----------------------------------------------------------------
+  "dashboard.bankroll.title": "Banca",
+  "dashboard.bankroll.available": "Disponível",
+  "dashboard.bankroll.exposure": "Em jogo",
+  "dashboard.bankroll.roi": "ROI da banca",
+  "dashboard.bankroll.drawdown": "Queda máxima",
+  "dashboard.bankroll.chartTitle": "Evolução da banca",
+  "dashboard.bankroll.chartDesc": "Depósitos, levantamentos e o resultado das apostas ao longo do tempo.",
+
+  "settings.bankroll.title": "Banca",
+  "settings.bankroll.desc":
+    "Regista só o dinheiro que entra e sai das casas. O efeito das apostas no saldo é calculado a partir do teu histórico.",
+  "settings.bankroll.balance": "Saldo",
+  "settings.bankroll.deposited": "Depositado",
+  "settings.bankroll.withdrawn": "Levantado",
+  "settings.bankroll.available": "Disponível",
+  "settings.bankroll.kindDeposit": "Depósito",
+  "settings.bankroll.kindWithdrawal": "Levantamento",
+  "settings.bankroll.kindAdjustment": "Ajuste",
+  "settings.bankroll.kindAria": "Tipo de movimento",
+  "settings.bankroll.amountPlaceholder": "Valor",
+  "settings.bankroll.amountAria": "Valor do movimento",
+  "settings.bankroll.dateAria": "Data do movimento",
+  "settings.bankroll.notePlaceholder": "Nota (opcional)",
+  "settings.bankroll.noteAria": "Nota do movimento",
+  "settings.bankroll.addShort": "Registar",
+  "settings.bankroll.empty": "Ainda não registaste nenhum movimento.",
+  "settings.bankroll.deleteConfirm": "Apagar?",
+  "settings.bankroll.hint":
+    "O ajuste serve para o que a conta automática não vê: bónus, correções ou apostas marcadas como ignoradas.",
 
   // ----------------------------------------------------------------
   // Configurações: registo de alterações (auditoria)

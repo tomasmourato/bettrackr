@@ -705,6 +705,8 @@ export const EN: Record<TKey, Entry> = {
   "insights.kellyNote":
     "{pct}% of the bankroll. Kelly is aggressive, so use a fraction and never bet more than you can afford to lose.",
   "insights.error.notImage": "Select an image file (PNG, JPG, WEBP).",
+  "insights.kellyNoteAmount":
+    "{amount} ({pct}% of the bankroll). Kelly is aggressive, so use a fraction and never bet more than you can afford to lose.",
   "insights.kellyLabel": "Suggested stake (½ Kelly):",
   "insights.verdictLineShort": "{verdict}: EV {ev} per unit",
   "insights.error.tooLargePrint": "The image exceeds 3MB. Crop the screenshot and try again.",
@@ -825,6 +827,39 @@ export const EN: Record<TKey, Entry> = {
     "The {n} linked bets will be left without an account. Delete?",
   "settings.accounts.deleteHint":
     "Deleting an account does not delete its bets, they are just left \"without an account\", still linked to the bookmaker.",
+
+  // ----------------------------------------------------------------
+  // Settings: bankroll (deposits and withdrawals)
+  // ----------------------------------------------------------------
+  "dashboard.bankroll.title": "Bankroll",
+  "dashboard.bankroll.available": "Available",
+  "dashboard.bankroll.exposure": "In play",
+  "dashboard.bankroll.roi": "Bankroll ROI",
+  "dashboard.bankroll.drawdown": "Max drawdown",
+  "dashboard.bankroll.chartTitle": "Bankroll over time",
+  "dashboard.bankroll.chartDesc": "Deposits, withdrawals and how your bets settled, over time.",
+
+  "settings.bankroll.title": "Bankroll",
+  "settings.bankroll.desc":
+    "Record only money moving in and out of the bookmakers. What your bets do to the balance is worked out from your own history.",
+  "settings.bankroll.balance": "Balance",
+  "settings.bankroll.deposited": "Deposited",
+  "settings.bankroll.withdrawn": "Withdrawn",
+  "settings.bankroll.available": "Available",
+  "settings.bankroll.kindDeposit": "Deposit",
+  "settings.bankroll.kindWithdrawal": "Withdrawal",
+  "settings.bankroll.kindAdjustment": "Adjustment",
+  "settings.bankroll.kindAria": "Movement type",
+  "settings.bankroll.amountPlaceholder": "Amount",
+  "settings.bankroll.amountAria": "Movement amount",
+  "settings.bankroll.dateAria": "Movement date",
+  "settings.bankroll.notePlaceholder": "Note (optional)",
+  "settings.bankroll.noteAria": "Movement note",
+  "settings.bankroll.addShort": "Record",
+  "settings.bankroll.empty": "You have not recorded any movement yet.",
+  "settings.bankroll.deleteConfirm": "Delete?",
+  "settings.bankroll.hint":
+    "Use an adjustment for what the automatic calculation cannot see: bonuses, corrections, or bets you marked as ignored.",
 
   // ----------------------------------------------------------------
   // Settings: change log (audit)

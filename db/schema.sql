@@ -123,6 +123,32 @@ CREATE UNIQUE INDEX IF NOT EXISTS bookie_accounts_username_key
   WHERE username IS NOT NULL;
 
 -- ------------------------------------------------------------
+-- Banca - dinheiro real a entrar e a sair das casas. O saldo não é guardado:
+-- é derivado destes movimentos mais o lucro líquido das apostas liquidadas.
+-- O amount tem sinal (depósito positivo, levantamento negativo) para o saldo
+-- ser um SUM directo. Ver migração 018.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS bankroll_movements (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  amount DECIMAL NOT NULL,
+  occurred_at TIMESTAMP NOT NULL,
+  note TEXT,
+  -- Reservado para a banca por conta; hoje fica sempre NULL.
+  account_id UUID REFERENCES bookie_accounts(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  CONSTRAINT bankroll_movements_kind_check
+    CHECK (kind IN ('DEPOSITO', 'LEVANTAMENTO', 'AJUSTE')),
+  CONSTRAINT bankroll_movements_amount_sign_check CHECK (
+    (kind = 'DEPOSITO'     AND amount > 0) OR
+    (kind = 'LEVANTAMENTO' AND amount < 0) OR
+    (kind = 'AJUSTE'       AND amount <> 0)
+  )
+);
+
+-- ------------------------------------------------------------
 -- Apostas (bets) - PostgreSQL é a única fonte de verdade.
 --
 -- Notas de modelação:
@@ -203,6 +229,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_username_key ON users(username);
 CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
 CREATE INDEX IF NOT EXISTS idx_bets_account_id ON bets(account_id);
 CREATE INDEX IF NOT EXISTS bookie_accounts_user_idx ON bookie_accounts (user_id, bookmaker);
+CREATE INDEX IF NOT EXISTS bankroll_movements_user_idx ON bankroll_movements (user_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS friendships_addressee_idx ON friendships (addressee_id, status);
 CREATE INDEX IF NOT EXISTS friendships_requester_idx ON friendships (requester_id, status);
 CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions (status);
