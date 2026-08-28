@@ -174,9 +174,9 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1787915420.0146966,
-    "seen": 1787915681.3879004,
-    "ast_hash": "616c45d47f0b74a1f7e75c3c9389e191",
+    "mtime": 1787784431.1356857,
+    "seen": 1787914803.7237985,
+    "ast_hash": "ed118a2b62f7ff4021f15ad329b8ad1b",
     "semantic_hash": ""
   },
   "src/components/AuthPage.tsx": {
@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "src/components/Settings.tsx": {
-    "mtime": 1787915436.7336576,
-    "seen": 1787915681.3879237,
-    "ast_hash": "770836f8684921ffb51325047cd66ce9",
+    "mtime": 1787569315.5962148,
+    "seen": 1787570007.4281688,
+    "ast_hash": "de71cee9af93f6aa72131a3f0bf707dd",
     "semantic_hash": ""
   },
   "src/hooks/useAuditLog.ts": {
@@ -1050,9 +1050,9 @@
     "semantic_hash": ""
   },
   "src/DesktopApp.tsx": {
-    "mtime": 1787915446.6259642,
-    "seen": 1787915681.3879018,
-    "ast_hash": "48aeaf7bb279b534a0b20ba0194d59f6",
+    "mtime": 1787569683.9318385,
+    "seen": 1787570007.4281495,
+    "ast_hash": "abcf877380c56ad16713c6496bb9089f",
     "semantic_hash": ""
   },
   "src/components/BrandMark.tsx": {
@@ -1068,9 +1068,9 @@
     "semantic_hash": ""
   },
   "src/lib/dataTransfer.ts": {
-    "mtime": 1787915400.4592326,
-    "seen": 1787915681.3879592,
-    "ast_hash": "d61927f5c6223c37ee7998888d89c26c",
+    "mtime": 1787531792.4971554,
+    "seen": 1787570007.4282014,
+    "ast_hash": "57608ae3e6399d5423fa3a64263b3aae",
     "semantic_hash": ""
   },
   "src/lib/haptics.ts": {
@@ -1104,9 +1104,9 @@
     "semantic_hash": ""
   },
   "src/mobile/MobileApp.tsx": {
-    "mtime": 1787915446.6259642,
-    "seen": 1787915681.3879817,
-    "ast_hash": "85f3b4701dcf3233250779bfefa941d3",
+    "mtime": 1787569862.5540452,
+    "seen": 1787570007.428219,
+    "ast_hash": "7ca721574ea61e294368f881bbd6071c",
     "semantic_hash": ""
   },
   "src/mobile/lib/backStack.ts": {
@@ -1146,9 +1146,9 @@
     "semantic_hash": ""
   },
   "src/mobile/screens/MobileSettings.tsx": {
-    "mtime": 1787915436.7336576,
-    "seen": 1787915681.387992,
-    "ast_hash": "6ce6af8ec0ace84e12ecbf99cb657dbd",
+    "mtime": 1787569785.01568,
+    "seen": 1787570007.4282284,
+    "ast_hash": "23b984207f4d3c5de0c2e111cb4b4748",
     "semantic_hash": ""
   },
   "src/mobile/screens/MobileSocial.tsx": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "src/navigation.ts": {
-    "mtime": 1787915420.0146966,
-    "seen": 1787915681.3880072,
-    "ast_hash": "90a130c21ff68ee5dbed495fd26e48dc",
+    "mtime": 1787569674.7635152,
+    "seen": 1787570007.4282415,
+    "ast_hash": "83832e4aac070de5b152bda2d30bbd12",
     "semantic_hash": ""
   },
   "db/migrations/012_risk_free_real_money.sql": {
@@ -1434,9 +1434,9 @@
     "semantic_hash": ""
   },
   "src/lib/i18n/en.ts": {
-    "mtime": 1787915454.4620974,
-    "seen": 1787915681.387962,
-    "ast_hash": "99ddaa3e272784ef8b5a6410646bc24d",
+    "mtime": 1787569633.5739305,
+    "seen": 1787570007.428204,
+    "ast_hash": "67bdad8df2a14dd3597bde7c49c78be8",
     "semantic_hash": ""
   },
   "src/lib/i18n/index.tsx": {
@@ -1452,9 +1452,9 @@
     "semantic_hash": ""
   },
   "src/lib/i18n/pt.ts": {
-    "mtime": 1787915454.4608846,
-    "seen": 1787915681.3879652,
-    "ast_hash": "c71d5f902e47f22d837cce096016ed07",
+    "mtime": 1787569628.8607943,
+    "seen": 1787570007.428207,
+    "ast_hash": "a5e8fc1f00176ba9976e650614953305",
     "semantic_hash": ""
   },
   "src/lib/subscriptionDisplay.ts": {
@@ -1581,12 +1581,6 @@
     "mtime": 1787531906.8102033,
     "seen": 1787570007.4281945,
     "ast_hash": "14dba87fb96617e457b6be65c43ecd09",
-    "semantic_hash": ""
-  },
-  "extension/test/bankroll-backup.test.ts": {
-    "mtime": 1787915502.2347858,
-    "seen": 1787915681.3878565,
-    "ast_hash": "81a8e502bbceca9a532723f4b7e3ff62",
     "semantic_hash": ""
   }
 }
