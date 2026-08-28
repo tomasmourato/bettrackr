@@ -70,6 +70,7 @@ interface MobileSettingsProps {
   onAddMovement: (input: BankrollMovementInput) => Promise<BankrollMovement | null>;
   onEditMovement: (id: string, input: BankrollMovementInput) => Promise<BankrollMovement | null>;
   onDeleteMovement: (id: string) => Promise<boolean>;
+  onImportBankroll: (movements: BankrollMovement[]) => Promise<void>;
   // Subscrição (gerida no App para ser partilhada com os ecrãs pagos)
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;
@@ -102,6 +103,7 @@ export default function MobileSettings({
   onAddMovement,
   onEditMovement,
   onDeleteMovement,
+  onImportBankroll,
   subscription,
   subscriptionLoading,
   refreshSubscription,
@@ -226,7 +228,9 @@ export default function MobileSettings({
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    importBetsFromFile(file, accounts, onImportCSV)
+    importBetsFromFile(file, accounts, onImportCSV, (movements) => {
+      void onImportBankroll(movements);
+    })
       .then((message) => toast.show(message, "success"))
       .catch((err: Error) => toast.show(err.message, "error"));
     e.target.value = "";
@@ -450,7 +454,7 @@ export default function MobileSettings({
           subtitle={t("settings.export.backup.desc")}
           onClick={() => {
             if (bets.length === 0) return toast.show(t("settings.export.emptyToast"), "info");
-            void exportBackupJSON(bets, preferences);
+            void exportBackupJSON(bets, preferences, bankrollMovements);
           }}
         />
         <ListItem icon={Upload} title={t("settings.import.title")} subtitle={t("settings.import.desc")} onClick={() => fileInputRef.current?.click()} />

@@ -69,6 +69,7 @@ function MobileShell(props: ShellProps) {
     onAddMovement,
     onEditMovement,
     onDeleteMovement,
+    onImportBankroll,
     auditLogs,
   } = props;
 
@@ -238,6 +239,7 @@ function MobileShell(props: ShellProps) {
                     onAddMovement={onAddMovement}
                     onEditMovement={onEditMovement}
                     onDeleteMovement={onDeleteMovement}
+                    onImportBankroll={onImportBankroll}
                     subscription={subscription}
                     subscriptionLoading={subscriptionLoading}
                     refreshSubscription={refreshSubscription}

@@ -52,6 +52,7 @@ interface SettingsProps {
   onAddMovement: (input: BankrollMovementInput) => Promise<BankrollMovement | null>;
   onEditMovement: (id: string, input: BankrollMovementInput) => Promise<BankrollMovement | null>;
   onDeleteMovement: (id: string) => Promise<boolean>;
+  onImportBankroll: (movements: BankrollMovement[]) => Promise<void>;
   // Subscrição (gerida no App para ser partilhada com os ecrãs pagos)
   subscription: BillingStatus | null;
   subscriptionLoading: boolean;
@@ -81,6 +82,7 @@ export default function Settings({
   onAddMovement,
   onEditMovement,
   onDeleteMovement,
+  onImportBankroll,
   subscription,
   subscriptionLoading,
   refreshSubscription,
@@ -197,7 +199,9 @@ export default function Settings({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    importBetsFromFile(file, accounts, onImportCSV)
+    importBetsFromFile(file, accounts, onImportCSV, (movements) => {
+      void onImportBankroll(movements);
+    })
       .then((message) => {
         setSuccessMsg(message);
         setTimeout(() => setSuccessMsg(null), 4000);
@@ -210,7 +214,7 @@ export default function Settings({
 
   // Full backup JSON export
   const handleExportBackup = () => {
-    exportBackupJSON(bets, preferences);
+    exportBackupJSON(bets, preferences, bankrollMovements);
   };
 
   return (

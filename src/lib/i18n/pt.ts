@@ -892,7 +892,7 @@ export const PT = {
   "settings.export.csv.desc": "Todas as apostas em formato CSV",
   "settings.export.csvButton": "Descarregar CSV (.csv)",
   "settings.export.backup.title": "Backup completo (JSON)",
-  "settings.export.backup.desc": "Apostas + preferências",
+  "settings.export.backup.desc": "Apostas + banca + preferências",
   "settings.export.backupButton": "Descarregar backup JSON",
   "settings.export.empty": "Sem apostas para exportar",
   "settings.export.emptyToast": "Não há apostas para exportar.",

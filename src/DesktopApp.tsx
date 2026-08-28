@@ -65,6 +65,7 @@ export default function DesktopApp({
   onAddMovement,
   onEditMovement,
   onDeleteMovement,
+  onImportBankroll,
   auditLogs,
 }: ShellProps) {
   const navItems = navItemsFor(subscription?.role);
@@ -292,6 +293,7 @@ export default function DesktopApp({
                     onAddMovement={onAddMovement}
                     onEditMovement={onEditMovement}
                     onDeleteMovement={onDeleteMovement}
+                    onImportBankroll={onImportBankroll}
                     subscription={subscription}
                     subscriptionLoading={subscriptionLoading}
                     refreshSubscription={refreshSubscription}

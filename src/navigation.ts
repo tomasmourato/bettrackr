@@ -175,6 +175,8 @@ export interface ShellProps {
   onAddMovement: (input: BankrollMovementInput) => Promise<BankrollMovement | null>;
   onEditMovement: (id: string, input: BankrollMovementInput) => Promise<BankrollMovement | null>;
   onDeleteMovement: (id: string) => Promise<boolean>;
+  /** Restauro dos movimentos vindos de um backup JSON (versão "1.1" para cima). */
+  onImportBankroll: (movements: BankrollMovement[]) => Promise<void>;
 
   // Auditoria
   auditLogs: AuditLog[];

@@ -886,7 +886,7 @@ export const EN: Record<TKey, Entry> = {
   "settings.export.csv.desc": "Every bet in CSV format",
   "settings.export.csvButton": "Download CSV (.csv)",
   "settings.export.backup.title": "Full backup (JSON)",
-  "settings.export.backup.desc": "Bets + preferences",
+  "settings.export.backup.desc": "Bets + bankroll + preferences",
   "settings.export.backupButton": "Download JSON backup",
   "settings.export.empty": "No bets to export",
   "settings.export.emptyToast": "There are no bets to export.",

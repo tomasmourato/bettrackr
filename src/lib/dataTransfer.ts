@@ -4,7 +4,7 @@
 // cópia fiel: mesmo cabeçalho/formato de CSV, mesma deteção de JSON vs CSV,
 // mesma normalização de estados, freebets, contas e seleções múltiplas.
 
-import { Bet, BookieAccount, Preferences, Selection, BetStatus, BetType, FreebetType } from "../types";
+import { Bet, BankrollMovement, BankrollMovementKind, BookieAccount, Preferences, Selection, BetStatus, BetType, FreebetType } from "../types";
 import { calculateBetReturnAndProfit, safeNum } from "../utils";
 import { defaultFreebetTypeFor } from "./bookmakers";
 import { normalizeBetStatus } from "./betStatus";
@@ -127,12 +127,63 @@ export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Pro
   await deliverTextFile("apostas_export.csv", csvContent, "text/csv;charset=utf-8;");
 }
 
-/** Backup JSON completo (apostas + preferências). */
-export async function exportBackupJSON(bets: Bet[], preferences: Preferences): Promise<void> {
+const BANKROLL_KINDS: BankrollMovementKind[] = ["DEPOSITO", "LEVANTAMENTO", "AJUSTE"];
+
+/**
+ * Movimentos da banca lidos de um backup. Só passa o que é reconstruível:
+ * tipo conhecido, valor numérico diferente de zero e data.
+ *
+ * O id e o accountId do ficheiro são deitados fora de propósito - o servidor
+ * gera um id novo, e um accountId de outra instalação não corresponde a conta
+ * nenhuma desta (a banca é global, o campo está reservado para o futuro).
+ */
+function sanitizeBankrollMovements(raw: unknown): BankrollMovement[] {
+  if (!Array.isArray(raw)) return [];
+
+  const movements: BankrollMovement[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+
+    const kind = String((entry as any).kind ?? "").trim().toUpperCase();
+    if (!(BANKROLL_KINDS as string[]).includes(kind)) continue;
+
+    const amount = Number((entry as any).amount);
+    if (!Number.isFinite(amount) || amount === 0) continue;
+
+    const occurredAt = String((entry as any).occurredAt ?? "").trim();
+    if (!occurredAt) continue;
+
+    const note = (entry as any).note;
+    movements.push({
+      id: `bk_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`,
+      kind: kind as BankrollMovementKind,
+      amount,
+      occurredAt,
+      note: note ? String(note) : undefined,
+    });
+  }
+  return movements;
+}
+
+/**
+ * Backup JSON completo (apostas + banca + preferências).
+ *
+ * A banca vive num registo à parte das apostas (depósitos, levantamentos e
+ * ajustes) e sem ela o saldo, o ROI real e a queda máxima não se reconstroem
+ * a partir do ficheiro - o "backup completo" perdia-os em silêncio. Os
+ * backups versão "1.0" não a trazem; o import trata a ausência como "nada a
+ * restaurar", por isso continuam a importar.
+ */
+export async function exportBackupJSON(
+  bets: Bet[],
+  preferences: Preferences,
+  bankrollMovements: BankrollMovement[] = [],
+): Promise<void> {
   const backupData = {
     bets,
+    bankrollMovements,
     preferences,
-    version: "1.0",
+    version: "1.1",
     exportTime: new Date().toISOString(),
   };
   const str = JSON.stringify(backupData, null, 2);
@@ -173,11 +224,16 @@ function parseCSVRow(rowText: string): string[] {
  * Lê um ficheiro de importação (backup JSON ou CSV), constrói as apostas e
  * entrega-as a `onImport`. Resolve com a mensagem de sucesso; rejeita com
  * Error de mensagem legível.
+ *
+ * `onImportBankroll` recebe os movimentos da banca quando o ficheiro é um
+ * backup que os traz (versão "1.1" para cima). Um CSV nunca os tem, e um
+ * backup antigo também não - nesses casos não é chamado.
  */
 export function importBetsFromFile(
   file: File,
   accounts: BookieAccount[],
   onImport: (bets: Bet[]) => void,
+  onImportBankroll?: (movements: BankrollMovement[]) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -202,6 +258,16 @@ export function importBetsFromFile(
 
           if (Array.isArray(parsed.bets)) {
             onImport(sanitizeAccounts(parsed.bets));
+
+            // A banca só existe nos backups a partir da versão "1.1"; sem ela
+            // o restauro é o de sempre, só com as apostas.
+            const movements = sanitizeBankrollMovements(parsed.bankrollMovements);
+            if (movements.length > 0 && onImportBankroll) {
+              onImportBankroll(movements);
+              resolve(`Backup importado com sucesso (apostas e ${movements.length} movimento(s) da banca)!`);
+              return;
+            }
+
             resolve("Backup importado com sucesso!");
           } else if (Array.isArray(parsed)) {
             onImport(sanitizeAccounts(parsed));

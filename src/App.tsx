@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useMemo, Suspense, lazy } from "react";
 
-import { Bet, Preferences } from "./types";
+import { Bet, BankrollMovement, Preferences } from "./types";
 import { INITIAL_BETS, safeNum } from "./utils";
 
 import type { DashboardBetsFilters } from "./components/Dashboard";
@@ -337,6 +337,46 @@ export default function App({ initialData }: AppProps) {
     }
   };
 
+  // Movimentos da banca vindos de um backup. Segue a mesma regra do import de
+  // apostas: é aditivo e o que já existe não entra outra vez, para reimportar
+  // o mesmo ficheiro não duplicar o saldo. Dois movimentos são o mesmo quando
+  // coincidem o tipo, o instante e o valor.
+  const handleImportBankroll = async (importedMovements: BankrollMovement[]) => {
+    const alreadyKnown = (movement: BankrollMovement) =>
+      bankrollMovements.some(
+        (existing) =>
+          existing.kind === movement.kind &&
+          existing.occurredAt === movement.occurredAt &&
+          Math.abs(safeNum(existing.amount) - safeNum(movement.amount)) < 0.01
+      );
+
+    const newMovements = importedMovements.filter((m) => !alreadyKnown(m));
+    if (newMovements.length === 0) return;
+
+    // Um de cada vez: são poucos e assim o servidor continua a ser quem valida
+    // e assina cada movimento, como em qualquer outra escrita da banca.
+    let imported = 0;
+    for (const movement of newMovements) {
+      // O amount vai com o sinal do ficheiro: o servidor volta a aplicar o
+      // sinal que o kind implica, por isso um levantamento negativo continua
+      // negativo e um ajuste mantém o sentido que tinha.
+      const created = await addMovement({
+        kind: movement.kind,
+        amount: movement.amount,
+        occurredAt: movement.occurredAt,
+        note: movement.note ?? null,
+      });
+      if (created) imported++;
+    }
+
+    if (imported > 0) {
+      addLog(
+        "IMPORTACAO",
+        `${imported} ${imported === 1 ? "movimento importado" : "movimentos importados"} para a banca a partir do backup.`
+      );
+    }
+  };
+
   const handleImportCSV = async (importedBets: Bet[]) => {
     if (importedBets.length === 0) {
       addLog("IMPORTACAO", "Nenhum boletim de aposta importado (lista vazia).");
@@ -461,6 +501,7 @@ export default function App({ initialData }: AppProps) {
     onAddMovement: addMovement,
     onEditMovement: editMovement,
     onDeleteMovement: removeMovement,
+    onImportBankroll: handleImportBankroll,
     auditLogs,
   };
 
