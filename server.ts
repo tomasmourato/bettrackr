@@ -102,6 +102,11 @@ app.use((req, res, next) => {
 // assets de https://localhost, por isso as chamadas à API são cross-origin.
 // A web normal (mesma origem) não é afetada - o browser nem consulta CORS.
 // A autenticação é por header Bearer (sem cookies), logo sem credenciais CORS.
+//
+// Hoje a app faz os pedidos pelo HTTP nativo (CapacitorHttp), que não passa
+// por aqui - chega sem Origin e é autenticado só pelo Bearer. Esta lista fica
+// como rede de segurança para builds com o HTTP nativo desligado e para as
+// versões antigas já instaladas.
 const NATIVE_APP_ORIGINS = new Set([
   "https://localhost",     // Capacitor Android (androidScheme: https)
   "capacitor://localhost", // Capacitor iOS, se um dia existir

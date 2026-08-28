@@ -6,6 +6,16 @@
 //
 // Prioridade: VITE_API_BASE_URL (definida no build) > produção quando corre
 // dentro do Capacitor > relativo (web).
+//
+// ATENÇÃO ao mexer neste domínio: ele fica gravado dentro do APK e as apps já
+// instaladas continuam a chamá-lo para sempre. Se ele deixar de servir a API,
+// essas apps ficam sem base de dados E sem o /app-version.json que as
+// atualizaria - não há como as consertar à distância. Já aconteceu: renomear o
+// projeto na Vercel deixou o domínio antigo a devolver só 301. Por isso a app
+// nativa faz os pedidos pelo HTTP nativo (CapacitorHttp em capacitor.config.ts),
+// que segue redirecionamentos e ignora CORS; um domínio que redirecione para o
+// novo continua a funcionar. Um domínio próprio (que sobrevive a mudanças de
+// nome do projeto) seria mais seguro do que este *.vercel.app.
 
 const PRODUCTION_API = "https://betrackr.vercel.app";
 
