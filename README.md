@@ -59,7 +59,16 @@ db/               pool de conexões, schema e migrações
 
    - Instalações novas: executar [db/schema.sql](db/schema.sql).
    - Bases de dados existentes: executar, por ordem, as migrações idempotentes
-     em [db/migrations](db/migrations) (`001` até à mais recente).
+     em [db/migrations](db/migrations) (`001` até à mais recente). Sem `psql`
+     à mão, [scripts/run-migration.mjs](scripts/run-migration.mjs) aplica uma
+     migração usando o mesmo `.env` que o servidor (branch incluída):
+
+     ```bash
+     node scripts/run-migration.mjs db/migrations/019_clv_closing_odd.sql
+     ```
+
+     O deploy da Vercel **não** corre SQL: uma funcionalidade com tabela ou
+     coluna nova fica morta no ar até a migração ser aplicada à mão.
 
 4. Arrancar em modo de desenvolvimento:
 

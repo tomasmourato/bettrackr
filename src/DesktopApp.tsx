@@ -47,6 +47,7 @@ export default function DesktopApp({
   onAddBet,
   onUpdateBet,
   onIgnoreBet,
+  onSetClosingOdd,
   onDeleteBet,
   onDuplicateBets,
   onImportCSV,
@@ -225,6 +226,7 @@ export default function DesktopApp({
                     accounts={accounts}
                     initialSearch={locationSearch}
                     bankrollMovements={bankrollMovements}
+                    onSetClosingOdd={onSetClosingOdd}
                   />
                 )}
                 {activeTab === "BETS" && (

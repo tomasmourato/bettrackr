@@ -99,6 +99,7 @@ export default function App({ initialData }: AppProps) {
       sport: filters.sport ?? "ALL",
       type: filters.type ?? "ALL",
       money: filters.money ?? "ALL",
+      clv: filters.clv ?? "ALL",
       search: "",
       timeframe: {
         timeframe: filters.timeframe ?? "ALL",
@@ -146,6 +147,7 @@ export default function App({ initialData }: AppProps) {
     importBets,
     editBet,
     ignoreBet,
+    setClosingOdd,
     removeBet,
     clearAllBets,
     replaceAllBets
@@ -184,6 +186,19 @@ export default function App({ initialData }: AppProps) {
   } = useBankroll(authed, handleSessionExpired);
 
   // Online status
+  // Saldo da banca, calculado uma vez aqui para as duas shells (e o Kelly dos
+  // insights) verem o mesmo número.
+  //
+  // Fica AQUI, entre os outros hooks, e não junto ao shellProps que o consome:
+  // lá em baixo já passou o gate `if (!authed)`, e um hook depois de um return
+  // condicional muda de contagem no instante em que o utilizador entra - o
+  // React aborta o render com "Rendered more hooks than during the previous
+  // render" e remonta a app toda pelo ErrorBoundary.
+  const bankrollBalance = useMemo(
+    () => calculateBankroll(bankrollMovements, bets).balance,
+    [bankrollMovements, bets],
+  );
+
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
   );
@@ -275,6 +290,18 @@ export default function App({ initialData }: AppProps) {
       addLog(
         ignored ? "IGNORAR_APOSTA" : "REPOR_APOSTA",
         `Aposta #${updated.id.substring(0, 8)} ${ignored ? "ignorada (excluída das estatísticas)" : "reposta nas estatísticas"}.`
+      );
+    }
+  };
+
+  const handleSetClosingOdd = async (id: string, closingOdd: number | null) => {
+    const updated = await setClosingOdd(id, closingOdd);
+    if (updated) {
+      addLog(
+        "ODD_DE_FECHO",
+        closingOdd === null
+          ? `Aposta #${updated.id.substring(0, 8)}: odd de fecho removida.`
+          : `Aposta #${updated.id.substring(0, 8)}: odd de fecho ${closingOdd}.`
       );
     }
   };
@@ -446,14 +473,6 @@ export default function App({ initialData }: AppProps) {
   const effectiveTab: AppTab =
     activeTab === "ADMIN" && subscription && !canSeeAdmin(subscription.role) ? "DASHBOARD" : activeTab;
 
-  // Contrato partilhado injetado no shell escolhido.
-  // Calculado uma vez aqui para as duas shells (e o Kelly dos insights) verem
-  // o mesmo número.
-  const bankrollBalance = useMemo(
-    () => calculateBankroll(bankrollMovements, bets).balance,
-    [bankrollMovements, bets],
-  );
-
   const shellProps: ShellProps = {
     activeTab: effectiveTab,
     locationSearch,
@@ -482,6 +501,7 @@ export default function App({ initialData }: AppProps) {
     onAddBet: handleAddBet,
     onUpdateBet: handleUpdateBet,
     onIgnoreBet: handleIgnoreBet,
+    onSetClosingOdd: handleSetClosingOdd,
     onDeleteBet: handleDeleteBet,
     onDuplicateBets: handleDuplicateBets,
     onImportCSV: handleImportCSV,

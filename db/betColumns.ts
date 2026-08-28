@@ -10,6 +10,7 @@
 export const BET_SELECT_COLUMNS = `
   id, type, status,
   stake::float8 AS stake, odd::float8 AS odd,
+  closing_odd::float8 AS closing_odd,
   is_freebet, freebet_type, is_risk_free, is_ignored,
   potential_return::float8 AS potential_return,
   final_return::float8 AS final_return,

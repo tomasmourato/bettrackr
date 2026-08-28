@@ -376,6 +376,8 @@ export const PT = {
   "bets.form.submit": "Registar aposta",
   "bets.error.stake": "Por favor insere uma stake válida.",
   "bets.error.bookmaker": "Por favor define a casa de apostas.",
+  "bets.form.closingOddPlaceholder": "2.00",
+  "bets.error.closingOdd": "A odd de fecho tem de ser maior que 1 (ou deixa-a em branco).",
   "bets.error.selections":
     "Por favor preenche todos os campos das seleções com valores válidos (odds devem ser maiores que 1.0).",
 
@@ -866,6 +868,58 @@ export const PT = {
   "settings.bankroll.deleteConfirm": "Apagar?",
   "settings.bankroll.hint":
     "O ajuste serve para o que a conta automática não vê: bónus, correções ou apostas marcadas como ignoradas.",
+
+  // ----------------------------------------------------------------
+  // CLV (Closing Line Value): a odd apanhada contra a odd de fecho.
+  // Ver src/lib/clv.ts para as regras de quem entra na conta.
+  // ----------------------------------------------------------------
+  "clv.title": "CLV",
+  "clv.titleLong": "Valor da linha de fecho",
+  "clv.avg": "CLV médio",
+  "clv.weighted": "CLV ponderado",
+  "clv.beatRate": "Bateu a linha",
+  "clv.money": "CLV em dinheiro",
+  "clv.coverage": "Cobertura",
+  "clv.coverageValue": "{tracked} de {eligible}",
+  "clv.chartTitle": "CLV acumulado",
+  "clv.chartDesc":
+    "O valor esperado acumulado das tuas apostas medido contra a linha de fecho.",
+  "clv.byBookmaker": "CLV por casa",
+  "clv.help":
+    "A odd de fecho é usada tal como a registas, com a margem da casa incluída - por isso estes números pecam por defeito. O que interessa é a tendência e a comparação entre casas.",
+  "clv.empty.title": "Ainda não há CLV para mostrar",
+  "clv.empty.desc":
+    "Regista a odd de fecho das tuas apostas (a última odd antes de o jogo começar) e a app diz-te se estás a apanhar melhores preços do que o mercado - sem esperar pelos resultados.",
+
+  // Odd de fecho: campo do formulário e detalhe da aposta
+  "clv.closingOdd": "Odd de fecho",
+  "clv.closingOddOptional": "Odd de fecho (opcional)",
+  "clv.closingOddAria": "Odd de fecho da aposta",
+  "clv.closingOddHint": "A última odd antes de o evento começar.",
+
+  // Caixa de entrada: preencher as odds em falta
+  "clv.fill.title": "Preencher odds de fecho",
+  "clv.fill.desc":
+    "Eventos que já começaram e ainda não têm odd de fecho registada. Escreve a odd e carrega em Enter.",
+  "clv.fill.cta": {
+    one: "Preencher {n} odd de fecho",
+    other: "Preencher {n} odds de fecho",
+  },
+  "clv.fill.pending": {
+    one: "{n} por preencher",
+    other: "{n} por preencher",
+  },
+  "clv.fill.empty": "Não há odds de fecho por preencher. Bom trabalho.",
+  "clv.fill.oddTaken": "Apanhada",
+  "clv.fill.saved": "Guardada",
+  "clv.fill.close": "Fechar",
+
+  // Filtro e ordenação
+  "clv.filter.all": "CLV: todas",
+  "clv.filter.tracked": "Com odd de fecho",
+  "clv.filter.missing": "Por preencher",
+  "clv.filterAria": "Filtrar por odd de fecho",
+  "bets.sort.clv": "CLV",
 
   // ----------------------------------------------------------------
   // Configurações: registo de alterações (auditoria)

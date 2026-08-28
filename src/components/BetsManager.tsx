@@ -27,6 +27,7 @@ import { hasCashoutSignal } from "../lib/betStatus";
 import FilterDropdown from "./FilterDropdown";
 import FilteredBetsSummary from "./FilteredBetsSummary";
 import FiltersBar from "./FiltersBar";
+import { betClv, needsClosingOdd } from "../lib/clv";
 import TimeframeFilter, {
   EMPTY_TIMEFRAME_FILTER,
   resolveTimeframeRange,
@@ -58,7 +59,7 @@ interface BetsManagerProps {
   initialSearch?: string;
 }
 
-type SortField = "date" | "stake" | "odd" | "profit";
+type SortField = "date" | "stake" | "odd" | "profit" | "clv";
 type SortDirection = "asc" | "desc";
 
 // Edição em massa: só se aplicam os campos alterados. "Manter" (KEEP) deixa
@@ -112,6 +113,8 @@ export default function BetsManager({
   // "ALL" | "NONE" (sem conta) | id de uma conta - também chega via drill-down (?account=)
   const [accountFilter, setAccountFilter] = useState<string>(initialFilters.account);
   const [sportFilter, setSportFilter] = useState<string>(initialFilters.sport);
+  // "ALL" | "TRACKED" | "MISSING". Chega por drill-down do painel (?clv=MISSING).
+  const [clvFilter, setClvFilter] = useState<string>(initialFilters.clv);
   const [timeframeFilter, setTimeframeFilter] = useState<TimeframeFilterValue>(initialFilters.timeframe);
 
   // Filtros <-> URL. A pesquisa só entra no URL quando é confirmada por Enter
@@ -124,10 +127,11 @@ export default function BetsManager({
       sport: sportFilter,
       type: typeFilter,
       money: freebetFilter,
+      clv: clvFilter,
       search: committedSearch,
       timeframe: timeframeFilter,
     }),
-    [statusFilter, bookmakerFilter, accountFilter, sportFilter, typeFilter, freebetFilter, committedSearch, timeframeFilter]
+    [statusFilter, bookmakerFilter, accountFilter, sportFilter, typeFilter, freebetFilter, clvFilter, committedSearch, timeframeFilter]
   );
 
   const commitSearch = () => {
@@ -147,6 +151,7 @@ export default function BetsManager({
       setSportFilter(next.sport);
       setTypeFilter(next.type);
       setFreebetFilter(next.money);
+      setClvFilter(next.clv);
       setSearch(next.search);
       setCommittedSearch(next.search);
       setTimeframeFilter(next.timeframe);
@@ -196,6 +201,8 @@ export default function BetsManager({
   const [formCustomBookmaker, setFormCustomBookmaker] = useState("");
   const [formAccountId, setFormAccountId] = useState(""); // "" = sem conta
   const [formStake, setFormStake] = useState<string>("10.00");
+  // Odd de fecho: string vazia = "ainda não se sabe". Nunca é obrigatória.
+  const [formClosingOdd, setFormClosingOdd] = useState<string>("");
   const [formIsFreebet, setFormIsFreebet] = useState(false);
   const [formIsRiskFree, setFormIsRiskFree] = useState(false);
   const [formFreebetType, setFormFreebetType] = useState<FreebetType>("SNR");
@@ -307,6 +314,12 @@ export default function BetsManager({
       if (freebetFilter === "RISK_FREE") matchesFreebet = !!bet.isRiskFree;
       if (freebetFilter === "NORMAL") matchesFreebet = !bet.isFreebet && !bet.isRiskFree;
 
+      // "MISSING" é a caixa de entrada do CLV: só o que já começou e continua
+      // sem odd de fecho (uma aposta de amanhã ainda não tem linha de fecho).
+      let matchesClv = true;
+      if (clvFilter === "TRACKED") matchesClv = betClv(bet) !== null;
+      if (clvFilter === "MISSING") matchesClv = needsClosingOdd(bet);
+
       const matchesBookmaker = bookmakerFilter === "ALL" || bet.bookmaker === bookmakerFilter;
       const matchesAccount =
         accountFilter === "ALL" ||
@@ -316,7 +329,7 @@ export default function BetsManager({
       const matchesDateFrom = !timeframeRange.start || Boolean(betDate && betDate >= timeframeRange.start);
       const matchesDateTo = !timeframeRange.end || Boolean(betDate && betDate <= timeframeRange.end);
 
-      return matchesSearch && matchesStatus && matchesType && matchesFreebet && matchesBookmaker && matchesAccount && matchesSport && matchesDateFrom && matchesDateTo;
+      return matchesSearch && matchesStatus && matchesType && matchesFreebet && matchesClv && matchesBookmaker && matchesAccount && matchesSport && matchesDateFrom && matchesDateTo;
     });
 
     return visibleBets.sort((a, b) => {
@@ -332,6 +345,17 @@ export default function BetsManager({
         case "profit":
           comparison = safeNum(a.netProfit) - safeNum(b.netProfit);
           break;
+        case "clv": {
+          // Sem odd de fecho não há CLV: essas ficam no fundo da lista em
+          // qualquer direção, senão ordenar por CLV enchia o topo de vazios.
+          const clvA = betClv(a);
+          const clvB = betClv(b);
+          if (!clvA && !clvB) comparison = 0;
+          else if (!clvA) return 1;
+          else if (!clvB) return -1;
+          else comparison = clvA.clvPct - clvB.clvPct;
+          break;
+        }
         case "date":
         default:
           comparison = new Date(a.dateTime.replace(" ", "T")).getTime() - new Date(b.dateTime.replace(" ", "T")).getTime();
@@ -339,7 +363,7 @@ export default function BetsManager({
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [bets, search, statusFilter, typeFilter, freebetFilter, bookmakerFilter, accountFilter, sportFilter, timeframeRange, sortField, sortDirection]);
+  }, [bets, search, statusFilter, typeFilter, freebetFilter, clvFilter, bookmakerFilter, accountFilter, sportFilter, timeframeRange, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -649,6 +673,7 @@ export default function BetsManager({
     setFormCustomBookmaker("");
     setFormAccountId("");
     setFormStake("10.00");
+    setFormClosingOdd("");
     setFormIsFreebet(false);
     setFormIsRiskFree(false);
     setFormFreebetType(defaultFreebetTypeFor("Betano"));
@@ -683,6 +708,7 @@ export default function BetsManager({
     
     setFormAccountId(bet.accountId ?? "");
     setFormStake(bet.stake.toString());
+    setFormClosingOdd(bet.closingOdd ? String(bet.closingOdd) : "");
     setFormIsFreebet(bet.isFreebet);
     setFormIsRiskFree(bet.isRiskFree ?? false);
     setFormFreebetType(bet.freebetType ?? defaultFreebetTypeFor(bet.bookmaker));
@@ -778,6 +804,18 @@ export default function BetsManager({
       return;
     }
 
+    // Odd de fecho: opcional, mas se estiver preenchida tem de ser uma odd a
+    // sério - o servidor rejeita <= 1 e um 400 aqui perdia o formulário todo.
+    let closingOddNum: number | undefined;
+    if (formClosingOdd.trim() !== "") {
+      const parsedClosing = parseFloat(formClosingOdd.replace(",", "."));
+      if (!Number.isFinite(parsedClosing) || parsedClosing <= 1) {
+        setFormError(t("bets.error.closingOdd"));
+        return;
+      }
+      closingOddNum = Number(parsedClosing.toFixed(3));
+    }
+
     setFormError(null);
 
     // Reutiliza o memo (já inclui cashout, tipo de freebet e o retorno
@@ -805,6 +843,7 @@ export default function BetsManager({
       selections: selections,
       stake: stakeNum,
       odd: calculatedOdd,
+      closingOdd: closingOddNum,
       isFreebet: formIsFreebet,
       freebetType: formIsFreebet ? formFreebetType : undefined,
       isRiskFree: formIsRiskFree,
@@ -885,12 +924,13 @@ export default function BetsManager({
     return "text-zinc-900 dark:text-zinc-100";
   };
 
-  const activeFilterCount = [statusFilter, typeFilter, freebetFilter, bookmakerFilter, accountFilter, sportFilter]
+  const activeFilterCount = [statusFilter, typeFilter, freebetFilter, clvFilter, bookmakerFilter, accountFilter, sportFilter]
     .filter(value => value !== "ALL").length + (timeframeFilter.timeframe !== "ALL" ? 1 : 0);
   const clearFilters = () => {
     setStatusFilter("ALL");
     setTypeFilter("ALL");
     setFreebetFilter("ALL");
+    setClvFilter("ALL");
     setBookmakerFilter("ALL");
     setAccountFilter("ALL");
     setSportFilter("ALL");
@@ -1041,6 +1081,18 @@ export default function BetsManager({
             ]}
             onChange={setFreebetFilter}
             ariaLabel={t("filters.moneyAria")}
+          />
+
+          <FilterDropdown
+            className="flex-1 min-w-40"
+            value={clvFilter}
+            options={[
+              { value: "ALL", label: t("clv.filter.all") },
+              { value: "TRACKED", label: t("clv.filter.tracked") },
+              { value: "MISSING", label: t("clv.filter.missing") }
+            ]}
+            onChange={setClvFilter}
+            ariaLabel={t("clv.filterAria")}
           />
 
           <TimeframeFilter
@@ -1424,6 +1476,27 @@ title={t("bets.ignoredTitle")}
                       {safeNum(bet.odd).toFixed(2)}
                     </span>
                   </div>
+                  {/* CLV: "-" quando ainda não há odd de fecho. A coluna existe
+                      sempre para o cabeçalho poder ordenar por ela. */}
+                  <div className="hidden sm:flex flex-col min-w-[48px]">
+                    {sortButton("bets.sort.clv", "clv", "self-end")}
+                    {(() => {
+                      const clv = betClv(bet);
+                      if (!clv) {
+                        return (
+                          <span className="text-xs font-mono text-zinc-300 dark:text-zinc-600 mt-0.5">-</span>
+                        );
+                      }
+                      return (
+                        <span
+                          className={`text-xs font-mono font-bold mt-0.5 ${clv.clvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
+                          title={t("clv.closingOdd") + " " + safeNum(bet.closingOdd).toFixed(2)}
+                        >
+                          {clv.clvPct >= 0 ? "+" : ""}{clv.clvPct.toFixed(1)}%
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div className="flex flex-col min-w-[75px]">
                     {sortButton(isSettled ? "bets.sort.profit" : "bets.sort.potential", "profit", "self-end")}
                     <span className={`text-xs font-bold font-mono mt-0.5 ${
@@ -1619,6 +1692,39 @@ aria-label={t("bets.details.close")}
                   </div>
                 ))}
               </section>
+
+              {/* Odd de fecho e CLV: só aparece quando há uma linha registada */}
+              {(() => {
+                const clv = betClv(detailBet);
+                if (!clv) return null;
+                return (
+                  <section>
+                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                      {t("clv.titleLong")}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="rounded-sm border border-zinc-200 p-3 dark:border-zinc-800">
+                        <p className="text-[9px] font-bold uppercase text-zinc-400">{t("clv.closingOdd")}</p>
+                        <p className="mt-1 font-mono text-sm font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                          {safeNum(detailBet.closingOdd).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-zinc-200 p-3 dark:border-zinc-800">
+                        <p className="text-[9px] font-bold uppercase text-zinc-400">{t("clv.title")}</p>
+                        <p className={`mt-1 font-mono text-sm font-bold tabular-nums ${clv.clvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          {clv.clvPct >= 0 ? "+" : ""}{clv.clvPct.toFixed(2)}%
+                        </p>
+                      </div>
+                      <div className="col-span-2 rounded-sm border border-zinc-200 p-3 dark:border-zinc-800 sm:col-span-1">
+                        <p className="text-[9px] font-bold uppercase text-zinc-400">{t("clv.money")}</p>
+                        <p className={`mt-1 font-mono text-sm font-bold tabular-nums ${clv.moneyClv >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          {formatSignedMoney(clv.moneyClv, currency)}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
 
               <section>
                 <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
@@ -1947,7 +2053,7 @@ placeholder={t("bets.form.whichPlaceholder")}
                 )}
               </div>
 
-              {/* Stake & Notes */}
+              {/* Stake, odd de fecho & notas */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.stake")}</label>
@@ -1961,7 +2067,22 @@ placeholder={t("bets.form.whichPlaceholder")}
                     onChange={(e) => setFormStake(e.target.value)}
                   />
                 </div>
+                {/* Odd de fecho: opcional, é o que dá o CLV (ver src/lib/clv.ts) */}
                 <div>
+                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("clv.closingOddOptional")}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1.01"
+                    className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200 font-mono"
+                    placeholder={t("bets.form.closingOddPlaceholder")}
+                    aria-label={t("clv.closingOddAria")}
+                    value={formClosingOdd}
+                    onChange={(e) => setFormClosingOdd(e.target.value)}
+                  />
+                  <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.closingOddHint")}</p>
+                </div>
+                <div className="col-span-2">
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.notes")}</label>
                   <input
                     type="text"

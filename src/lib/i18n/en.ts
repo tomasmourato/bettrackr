@@ -370,6 +370,8 @@ export const EN: Record<TKey, Entry> = {
   "bets.form.submit": "Add bet",
   "bets.error.stake": "Please enter a valid stake.",
   "bets.error.bookmaker": "Please set the bookmaker.",
+  "bets.form.closingOddPlaceholder": "2.00",
+  "bets.error.closingOdd": "The closing odd must be greater than 1 (or leave it blank).",
   "bets.error.selections":
     "Please fill in every selection field with valid values (odds must be greater than 1.0).",
 
@@ -863,6 +865,56 @@ export const EN: Record<TKey, Entry> = {
 
   // ----------------------------------------------------------------
   // Settings: change log (audit)
+  // ----------------------------------------------------------------
+  // CLV (Closing Line Value)
+  // ----------------------------------------------------------------
+  "clv.title": "CLV",
+  "clv.titleLong": "Closing line value",
+  "clv.avg": "Average CLV",
+  "clv.weighted": "Weighted CLV",
+  "clv.beatRate": "Beat the close",
+  "clv.money": "CLV in money",
+  "clv.coverage": "Coverage",
+  "clv.coverageValue": "{tracked} of {eligible}",
+  "clv.chartTitle": "Cumulative CLV",
+  "clv.chartDesc": "The expected value of your bets so far, measured against the closing line.",
+  "clv.byBookmaker": "CLV by bookmaker",
+  "clv.help":
+    "The closing odd is used exactly as you record it, bookmaker margin included - so these numbers understate your edge. What matters is the trend and the comparison between bookmakers.",
+  "clv.empty.title": "No CLV to show yet",
+  "clv.empty.desc":
+    "Record the closing odd of your bets (the last odd before kick-off) and the app will tell you whether you are getting better prices than the market - without waiting for results.",
+
+  // Closing odd: form field and bet detail
+  "clv.closingOdd": "Closing odd",
+  "clv.closingOddOptional": "Closing odd (optional)",
+  "clv.closingOddAria": "Closing odd of the bet",
+  "clv.closingOddHint": "The last odd before the event starts.",
+
+  // Inbox: fill in the missing odds
+  "clv.fill.title": "Fill in closing odds",
+  "clv.fill.desc":
+    "Events that have already started and still have no closing odd. Type the odd and press Enter.",
+  "clv.fill.cta": {
+    one: "Fill in {n} closing odd",
+    other: "Fill in {n} closing odds",
+  },
+  "clv.fill.pending": {
+    one: "{n} to fill in",
+    other: "{n} to fill in",
+  },
+  "clv.fill.empty": "No closing odds left to fill in. Nice work.",
+  "clv.fill.oddTaken": "Taken",
+  "clv.fill.saved": "Saved",
+  "clv.fill.close": "Close",
+
+  // Filter and sorting
+  "clv.filter.all": "CLV: all",
+  "clv.filter.tracked": "With closing odd",
+  "clv.filter.missing": "To fill in",
+  "clv.filterAria": "Filter by closing odd",
+  "bets.sort.clv": "CLV",
+
   // ----------------------------------------------------------------
   "settings.audit.title": "Change log",
   "settings.audit.desc": "Detailed record of the operations done in this session",

@@ -41,6 +41,11 @@ export interface Bet {
   selections: Selection[];
   stake: number; // For normal bets, this is real cash. For freebets, it's the freebet value.
   odd: number; // Multiplied odds of all selections
+  // Odd de fecho: a última odd antes de o evento começar, registada à mão.
+  // undefined = ainda não se sabe (e "ainda não sei" é diferente de "não bati
+  // a linha" - é isso que a cobertura do CLV mede). Numa múltipla é a odd de
+  // fecho combinada, tal como `odd`. Ver src/lib/clv.ts.
+  closingOdd?: number;
   isFreebet: boolean;
   freebetType?: FreebetType; // só relevante quando isFreebet; default resolvido pela casa
   // Aposta sem risco: stake é dinheiro REAL e conta para o lucro como uma

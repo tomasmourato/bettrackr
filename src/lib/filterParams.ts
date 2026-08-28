@@ -21,6 +21,9 @@ export interface BetFilters {
   sport: string;
   type: string;
   money: string;
+  // "ALL" | "TRACKED" (com odd de fecho) | "MISSING" (por preencher). É o que
+  // liga o atalho do painel à lista de apostas que falta preencher.
+  clv: string;
   search: string;
   timeframe: TimeframeFilterValue;
 }
@@ -32,6 +35,7 @@ export const EMPTY_BET_FILTERS: BetFilters = {
   sport: "ALL",
   type: "ALL",
   money: "ALL",
+  clv: "ALL",
   search: "",
   timeframe: EMPTY_TIMEFRAME_FILTER,
 };
@@ -51,6 +55,7 @@ export function readFilters(params: URLSearchParams): BetFilters {
     sport: single("sport"),
     type: single("type"),
     money: single("money"),
+    clv: single("clv"),
     search: params.get("search") || "",
     timeframe: {
       // Um intervalo explícito sem `timeframe` (ex.: drill-down antigo) conta
@@ -80,6 +85,7 @@ export function serializeFilters(filters: BetFilters): string {
   set("sport", filters.sport);
   set("type", filters.type);
   set("money", filters.money);
+  set("clv", filters.clv);
   set("search", filters.search.trim());
   set("timeframe", filters.timeframe.timeframe);
 

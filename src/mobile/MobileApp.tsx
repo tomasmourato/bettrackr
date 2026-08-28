@@ -51,6 +51,7 @@ function MobileShell(props: ShellProps) {
     onAddBet,
     onUpdateBet,
     onIgnoreBet,
+    onSetClosingOdd,
     onDeleteBet,
     onDuplicateBets,
     onImportCSV,
@@ -183,7 +184,7 @@ function MobileShell(props: ShellProps) {
               >
                 {activeTab === "DASHBOARD" && (
                   <PullToRefresh onRefresh={onRefresh}>
-                    <MobileDashboard bankrollMovements={bankrollMovements} bets={bets} currency={preferences.currency} isDark={isDark} accounts={accounts} onOpenBets={navigateToFilteredBets} />
+                    <MobileDashboard bankrollMovements={bankrollMovements} bets={bets} currency={preferences.currency} isDark={isDark} accounts={accounts} onOpenBets={navigateToFilteredBets} onSetClosingOdd={onSetClosingOdd} />
                   </PullToRefresh>
                 )}
                 {activeTab === "BETS" && (

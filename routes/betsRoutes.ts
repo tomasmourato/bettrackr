@@ -111,6 +111,23 @@ function parseBetPayload(body: any): ParsedPayload {
     if (netProfit && typeof netProfit === "object")
         return { error: netProfit.error };
 
+    // closingOdd: a odd de fecho, opcional. Ausente/vazia -> null ("ainda não
+    // se sabe"); nunca 0, senão o CLV passava a dividir por zero. O limite é 1
+    // e não 0 porque uma odd decimal abaixo de 1 pagaria menos do que a stake.
+    const closingOddRaw = b.closingOdd;
+    let closingOdd: number | null = null;
+    if (
+        closingOddRaw !== undefined &&
+        closingOddRaw !== null &&
+        closingOddRaw !== ""
+    ) {
+        const n = Number(closingOddRaw);
+        if (!Number.isFinite(n) || n <= 1) {
+            return { error: "closingOdd tem de ser um número maior que 1." };
+        }
+        closingOdd = n;
+    }
+
     const isRiskFree = b.isRiskFree === true || b.isRiskFree === "true";
     // Freebet e "sem risco" são mutuamente exclusivos; sem risco tem prioridade.
     const isFreebet =
@@ -156,7 +173,8 @@ function parseBetPayload(body: any): ParsedPayload {
 
     // Ordem: type, status, stake, odd, is_freebet, potential_return,
     // final_return, net_profit, bookmaker, date_time, notes, origin,
-    // selections, comment, tags, metadata
+    // selections, comment, tags, metadata, freebet_type, is_risk_free,
+    // account_id, closing_odd
     return {
         values: [
             type,
@@ -178,6 +196,7 @@ function parseBetPayload(body: any): ParsedPayload {
             freebetType,
             isRiskFree,
             accountId,
+            closingOdd,
         ],
         accountId,
     };
@@ -247,8 +266,9 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
             `INSERT INTO bets
          (user_id, type, status, stake, odd, is_freebet, potential_return,
           final_return, net_profit, bookmaker, date_time, notes, origin,
-          selections, comment, tags, metadata, freebet_type, is_risk_free, account_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          selections, comment, tags, metadata, freebet_type, is_risk_free,
+          account_id, closing_odd)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        RETURNING ${BET_COLUMNS}`,
             [req.user!.id, ...parsed.values!],
         );
@@ -316,8 +336,9 @@ router.post("/bulk", async (req: AuthenticatedRequest, res) => {
                 `INSERT INTO bets
            (user_id, type, status, stake, odd, is_freebet, potential_return,
             final_return, net_profit, bookmaker, date_time, notes, origin,
-            selections, comment, tags, metadata, freebet_type, is_risk_free, account_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+            selections, comment, tags, metadata, freebet_type, is_risk_free,
+            account_id, closing_odd)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
          RETURNING ${BET_COLUMNS}`,
                 [req.user!.id, ...values],
             );
@@ -376,8 +397,9 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
            bookmaker = $9, date_time = $10, notes = $11, origin = $12,
            selections = $13, comment = $14, tags = $15, metadata = $16,
            freebet_type = $17, is_risk_free = $18, account_id = $19,
+           closing_odd = $20,
            updated_at = timezone('utc', now())
-       WHERE id = $20 AND user_id = $21
+       WHERE id = $21 AND user_id = $22
        RETURNING ${BET_COLUMNS}`,
             [...parsed.values!, id, req.user!.id],
         );
@@ -439,6 +461,57 @@ router.patch("/:id/ignore", async (req: AuthenticatedRequest, res) => {
         }
         console.error("Erro ao ignorar bet:", error);
         res.status(500).json({ error: "Erro ao ignorar a aposta." });
+    }
+});
+
+// ============================================================
+// PATCH /api/bets/:id/closing-odd  -> grava (ou limpa) a odd de fecho
+//
+// Endpoint dedicado e leve, como o /ignore acima: a caixa de entrada do CLV
+// preenche dezenas de apostas de seguida e o PUT obrigaria a mandar a aposta
+// inteira de volta - revalidando estado, seleções e metadata só para escrever
+// um número. `closingOdd: null` limpa o valor (volta a "ainda não se sabe").
+// ============================================================
+router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
+    const raw = req.body?.closingOdd;
+    let closingOdd: number | null = null;
+    if (raw !== undefined && raw !== null && raw !== "") {
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n <= 1) {
+            res.status(400).json({
+                error: "closingOdd tem de ser um número maior que 1.",
+            });
+            return;
+        }
+        closingOdd = n;
+    }
+
+    try {
+        const result = await pool.query(
+            `UPDATE bets
+       SET closing_odd = $1, updated_at = timezone('utc', now())
+       WHERE id = $2 AND user_id = $3
+       RETURNING ${BET_COLUMNS}`,
+            [closingOdd, req.params.id, req.user!.id],
+        );
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ error: "Bet não encontrada." });
+            return;
+        }
+        res.json({ success: true, bet: result.rows[0] });
+    } catch (error: any) {
+        if (error?.code === "22P02") {
+            res.status(404).json({ error: "Bet não encontrada." });
+            return;
+        }
+        const payloadError = dbErrorMessage(error);
+        if (payloadError) {
+            res.status(400).json({ error: payloadError });
+            return;
+        }
+        console.error("Erro ao gravar a odd de fecho:", error);
+        res.status(500).json({ error: "Erro ao gravar a odd de fecho." });
     }
 });
 

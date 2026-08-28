@@ -58,6 +58,10 @@ const MIGRATED = [
   "src/hooks/useLoadingSteps.ts",
   "src/lib/betEvaluation.ts",
 
+  // CLV (odd de fecho) - componentes nascidos já traduzidos
+  "src/components/ClosingOddsModal.tsx",
+  "src/mobile/components/ClosingOddsSheet.tsx",
+
   // Merge do PR #8 - componente novo, traduzido ao integrar
   "src/components/FilteredBetsSummary.tsx",
 

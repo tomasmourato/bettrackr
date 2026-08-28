@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS bankroll_movements (
 --  * status inclui CASHOUT; o valor do cashout usa a coluna final_return.
 --  * freebet_type (SNR|SR) tem de ser persistido porque o tipo não é
 --    recuperável a partir dos números numa freebet pendente/perdida.
+--  * closing_odd é NULL enquanto ninguém a registar: "ainda não sei" e "não
+--    bati a linha" são coisas diferentes, e a cobertura do CLV mede isso.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -167,6 +169,10 @@ CREATE TABLE IF NOT EXISTS bets (
     ),
   stake DECIMAL NOT NULL,
   odd DECIMAL NOT NULL,
+  -- Odd de fecho: a última odd antes de o evento começar, registada à mão.
+  -- NULL = ainda não se sabe. É a base do CLV (ver src/lib/clv.ts).
+  closing_odd DECIMAL
+    CONSTRAINT bets_closing_odd_check CHECK (closing_odd IS NULL OR closing_odd > 1),
   is_freebet BOOLEAN DEFAULT FALSE,
   freebet_type TEXT
     CONSTRAINT bets_freebet_type_check CHECK (freebet_type IS NULL OR freebet_type IN ('SNR', 'SR')),

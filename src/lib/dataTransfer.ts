@@ -61,7 +61,9 @@ export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Pro
   // freebet, o que fazia o lucro divergir em meios-ganhos manuais e freebets
   // sem tipo guardado. A leitura é por nome de coluna, por isso CSVs antigos
   // (sem NET_PROFIT) continuam a importar.
-  let csvContent = "DATE;TIME;GAME;BET;STAKE;ODDS;STATUS;RETURN;NET_PROFIT;SPORT;BOOKIE;BETTYPE;FREEBET;FREEBET_TYPE;RISK_FREE;ACCOUNT;COMMENT;TAGS\n";
+  // CLOSING_ODDS fica vazia enquanto ninguém registar a odd de fecho: no CSV
+  // "" e "ainda não sei" são a mesma coisa, e é assim que o import a lê.
+  let csvContent = "DATE;TIME;GAME;BET;STAKE;ODDS;CLOSING_ODDS;STATUS;RETURN;NET_PROFIT;SPORT;BOOKIE;BETTYPE;FREEBET;FREEBET_TYPE;RISK_FREE;ACCOUNT;COMMENT;TAGS\n";
 
   bets.forEach((b) => {
     let dateVal = "";
@@ -76,6 +78,7 @@ export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Pro
     const betVal = b.selections.map((s) => s.choice).join(" + ");
     const stakeVal = safeNum(b.stake).toFixed(2);
     const oddsVal = safeNum(b.odd).toFixed(3);
+    const closingOddsVal = b.closingOdd ? safeNum(b.closingOdd).toFixed(3) : "";
 
     let statusVal = "PENDING";
     if (b.status === "GANHA") statusVal = "WON";
@@ -121,7 +124,7 @@ export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Pro
     const riskFreeVal = b.isRiskFree ? "SIM" : "NAO";
     const accountVal = b.accountId ? (accountLabelById.get(b.accountId) || "") : "";
 
-    csvContent += `${dateVal};${timeVal};${escapeField(gameVal)};${escapeField(betVal)};${stakeVal};${oddsVal};${statusVal};${returnVal};${netProfitVal};${sportVal};${bookieVal};${betTypeVal};${freebetVal};${freebetTypeVal};${riskFreeVal};${escapeField(accountVal)};${escapeField(commentVal)};${escapeField(tagsVal)}\n`;
+    csvContent += `${dateVal};${timeVal};${escapeField(gameVal)};${escapeField(betVal)};${stakeVal};${oddsVal};${closingOddsVal};${statusVal};${returnVal};${netProfitVal};${sportVal};${bookieVal};${betTypeVal};${freebetVal};${freebetTypeVal};${riskFreeVal};${escapeField(accountVal)};${escapeField(commentVal)};${escapeField(tagsVal)}\n`;
   });
 
   await deliverTextFile("apostas_export.csv", csvContent, "text/csv;charset=utf-8;");
@@ -291,6 +294,10 @@ export function importBetsFromFile(
         const betIdx = idx("BET");
         const stakeIdx = idx("STAKE");
         const oddsIdx = idx("ODDS");
+        // Lida por nome: um CSV antigo, sem esta coluna, continua a importar.
+        const closingOddsIdx = headerRow.findIndex((h) =>
+          ["CLOSING_ODDS", "CLOSING_ODD", "CLV_ODD"].includes(h.toUpperCase())
+        );
         const statusIdx = idx("STATUS");
         const returnIdx = headerRow.findIndex((h) => ["RETURN", "FINAL_RETURN", "CASHOUT_RETURN"].includes(h.toUpperCase()));
         const netProfitIdx = headerRow.findIndex((h) => ["NET_PROFIT", "PROFIT", "NETPROFIT"].includes(h.toUpperCase()));
@@ -325,6 +332,15 @@ export function importBetsFromFile(
 
           const rawOdds = oddsIdx !== -1 && row[oddsIdx] ? row[oddsIdx] : "1.00";
           const oddsVal = parseFloat(rawOdds.replace(",", "."));
+
+          const rawClosingOdds =
+            closingOddsIdx !== -1 && row[closingOddsIdx] ? row[closingOddsIdx] : "";
+          const parsedClosingOdds = parseFloat(rawClosingOdds.replace(",", "."));
+          // Só uma odd decimal a sério conta; o resto é "ainda não sei".
+          const closingOdd =
+            Number.isFinite(parsedClosingOdds) && parsedClosingOdds > 1
+              ? parsedClosingOdds
+              : undefined;
 
           const statusRaw = statusIdx !== -1 && row[statusIdx] ? row[statusIdx].toUpperCase() : "PENDING";
           const rawReturn = returnIdx !== -1 && row[returnIdx] ? row[returnIdx] : "";
@@ -447,6 +463,7 @@ export function importBetsFromFile(
             selections,
             stake: stakeNumVal,
             odd: totalOdd,
+            closingOdd,
             isFreebet,
             freebetType,
             isRiskFree,

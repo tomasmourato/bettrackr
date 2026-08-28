@@ -15,7 +15,7 @@ describe("filter params", () => {
   });
 
   test("round-trips the full drill-down param set", () => {
-    const search = "?status=GANHA&bookmaker=Betano&account=acc-1&sport=Futebol&type=SIMPLES&money=FREEBET&timeframe=30_DAYS&search=Arbitragem Portugal";
+    const search = "?status=GANHA&bookmaker=Betano&account=acc-1&sport=Futebol&type=SIMPLES&money=FREEBET&clv=MISSING&timeframe=30_DAYS&search=Arbitragem Portugal";
     const filters = parse(search);
 
     expect(filters.status).toBe("GANHA");
@@ -24,6 +24,7 @@ describe("filter params", () => {
     expect(filters.sport).toBe("Futebol");
     expect(filters.type).toBe("SIMPLES");
     expect(filters.money).toBe("FREEBET");
+    expect(filters.clv).toBe("MISSING");
     expect(filters.search).toBe("Arbitragem Portugal");
     expect(filters.timeframe.timeframe).toBe("30_DAYS");
 
@@ -63,6 +64,17 @@ describe("filter params", () => {
     const filters = parse("?search=Portugal%20Cro%C3%A1cia");
     expect(filters.search).toBe("Portugal Croácia");
     expect(serializeFilters(filters)).toBe("?search=Portugal+Cro%C3%A1cia");
+  });
+
+  test("round-trips the CLV filter", () => {
+    // O atalho "N por preencher" do painel navega para a lista com este
+    // parâmetro; sem o round-trip o back/forward do browser perdia-o.
+    for (const value of ["TRACKED", "MISSING"]) {
+      const filters: BetFilters = { ...EMPTY_BET_FILTERS, clv: value };
+      expect(serializeFilters(filters)).toBe(`?clv=${value}`);
+      expect(parse(serializeFilters(filters)).clv).toBe(value);
+    }
+    expect(serializeFilters({ ...EMPTY_BET_FILTERS, clv: "ALL" })).toBe("");
   });
 
   test("omits filters left at ALL", () => {

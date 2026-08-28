@@ -36,6 +36,8 @@ export function useBetForm(accounts: BookieAccount[]) {
   const [customBookmaker, setCustomBookmaker] = useState("");
   const [accountId, setAccountId] = useState(""); // "" = sem conta
   const [stake, setStake] = useState<string>("10.00");
+  // Odd de fecho: string vazia = "ainda não se sabe". Nunca é obrigatória.
+  const [closingOdd, setClosingOdd] = useState<string>("");
   const [isFreebet, setIsFreebet] = useState(false);
   const [isRiskFree, setIsRiskFree] = useState(false);
   const [freebetType, setFreebetType] = useState<FreebetType>("SNR");
@@ -98,6 +100,7 @@ export function useBetForm(accounts: BookieAccount[]) {
     setCustomBookmaker("");
     setAccountId("");
     setStake("10.00");
+    setClosingOdd("");
     setIsFreebet(false);
     setIsRiskFree(false);
     setFreebetType(defaultFreebetTypeFor("Betano"));
@@ -131,6 +134,7 @@ export function useBetForm(accounts: BookieAccount[]) {
 
     setAccountId(bet.accountId ?? "");
     setStake(bet.stake.toString());
+    setClosingOdd(bet.closingOdd ? String(bet.closingOdd) : "");
     setIsFreebet(bet.isFreebet);
     setIsRiskFree(bet.isRiskFree ?? false);
     setFreebetType(bet.freebetType ?? defaultFreebetTypeFor(bet.bookmaker));
@@ -218,6 +222,18 @@ export function useBetForm(accounts: BookieAccount[]) {
 
     setError(null);
 
+    // Odd de fecho: opcional, mas se estiver preenchida tem de ser uma odd a
+    // sério - o servidor rejeita <= 1 e um 400 aqui perdia o formulário todo.
+    let closingOddNum: number | undefined;
+    if (closingOdd.trim() !== "") {
+      const parsed = parseFloat(closingOdd.replace(",", "."));
+      if (!Number.isFinite(parsed) || parsed <= 1) {
+        setError(t("bets.error.closingOdd"));
+        return null;
+      }
+      closingOddNum = Number(parsed.toFixed(3));
+    }
+
     const { potentialReturn, finalReturn, netProfit } = potentialWinnings;
 
     const preservedMetadata = (() => {
@@ -235,6 +251,7 @@ export function useBetForm(accounts: BookieAccount[]) {
       selections: built,
       stake: stakeNum,
       odd: calculatedOdd,
+      closingOdd: closingOddNum,
       isFreebet,
       freebetType: isFreebet ? freebetType : undefined,
       isRiskFree,
@@ -267,6 +284,7 @@ export function useBetForm(accounts: BookieAccount[]) {
     customBookmaker, setCustomBookmaker,
     accountId, setAccountId,
     stake, setStake,
+    closingOdd, setClosingOdd,
     isFreebet, setIsFreebet,
     isRiskFree, setIsRiskFree,
     freebetType, setFreebetType,

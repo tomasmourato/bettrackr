@@ -20,6 +20,7 @@ import {
   Filter,
   CheckCircle2,
   ArrowUpRight,
+  Crosshair,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -35,6 +36,8 @@ import {
 } from "recharts";
 import { Bet, BetStatus, BookieAccount, BankrollMovement } from "../../types";
 import { calculateBankroll } from "../../lib/bankroll";
+import { calculateClv } from "../../lib/clv";
+import ClosingOddsSheet from "../components/ClosingOddsSheet";
 import type { DashboardBetsFilters } from "../../components/Dashboard";
 import { calculateDashboardStats, safeNum } from "../../utils";
 import { useI18n, type TKey } from "../../lib/i18n";
@@ -48,6 +51,9 @@ interface MobileDashboardProps {
   onOpenBets?: (filters: DashboardBetsFilters) => void;
   // Movimentos da banca. Ausente na vista de um amigo: o saldo e privado.
   bankrollMovements?: BankrollMovement[];
+  // Gravar a odd de fecho a partir da caixa de entrada do CLV. Ausente na
+  // vista de um amigo, que e so de leitura.
+  onSetClosingOdd?: (id: string, closingOdd: number | null) => Promise<void>;
 }
 
 type Timeframe = "ALL" | "7_DAYS" | "30_DAYS" | "90_DAYS" | "THIS_MONTH" | "THIS_YEAR" | "CUSTOM";
@@ -96,6 +102,7 @@ export default function MobileDashboard({
   accounts = [],
   onOpenBets,
   bankrollMovements,
+  onSetClosingOdd,
 }: MobileDashboardProps) {
   const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -107,6 +114,7 @@ export default function MobileDashboard({
   const [filterTimeframe, setFilterTimeframe] = useState<Timeframe>("ALL");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const [isClosingOddsOpen, setIsClosingOddsOpen] = useState(false);
 
   const money = (n: number) => formatMoney(safeNum(n), currency);
   const signed = (n: number) => formatSignedMoney(safeNum(n), currency);
@@ -185,6 +193,18 @@ export default function MobileDashboard({
     [bankrollMovements, allBets],
   );
   const settledCount = useMemo(() => bets.filter((b) => b.status !== "POR_LIQUIDAR").length, [bets]);
+
+  // O CLV e por aposta, por isso - ao contrario da banca, que e dinheiro
+  // global - usa o subconjunto FILTRADO.
+  const clv = useMemo(() => calculateClv(bets), [bets]);
+
+  const clvSeries = useMemo(() => {
+    if (!clv.hasData) return [];
+    return [
+      { at: t("bet.start"), clv: 0 },
+      ...clv.series.map((point) => ({ at: point.at, clv: point.cumulative })),
+    ];
+  }, [clv, t]);
 
   // Drill-down mantendo os filtros ativos, como no desktop.
   const openBetsForStatus = (status: BetStatus) => {
@@ -433,6 +453,33 @@ export default function MobileDashboard({
             />
           </>
         )}
+        {/* CLV: dois cartoes, pelo mesmo motivo da banca - a grelha e de duas
+            colunas e um cartao sozinho ficava coxo. */}
+        {clv.hasData && (
+          <>
+            <KpiCard
+              label={t("clv.avg")}
+              icon={Crosshair}
+              tone={clv.avgClvPct >= 0 ? "positive" : "negative"}
+              value={`${clv.avgClvPct >= 0 ? "+" : ""}${clv.avgClvPct.toFixed(2)}%`}
+              footer={<span>{t("clv.beatRate")} <strong className="text-zinc-700 dark:text-zinc-200">{clv.beatCloseRate.toFixed(0)}%</strong></span>}
+            />
+            <KpiCard
+              label={t("clv.money")}
+              icon={clv.moneyClv >= 0 ? TrendingUp : TrendingDown}
+              tone={clv.moneyClv >= 0 ? "positive" : "negative"}
+              value={signed(clv.moneyClv)}
+              footer={
+                <span>
+                  {t("clv.coverage")}{" "}
+                  <strong className="text-zinc-700 dark:text-zinc-200">
+                    {t("clv.coverageValue", { tracked: clv.trackedBets, eligible: clv.eligibleBets })}
+                  </strong>
+                </span>
+              }
+            />
+          </>
+        )}
       </div>
 
       {/* Distribuição de resultados */}
@@ -488,6 +535,83 @@ export default function MobileDashboard({
             </div>
           </MobileCard>
         </>
+      )}
+
+      {/* CLV: a odd apanhada contra a linha de fecho. Ao contrario do resto do
+          painel, inclui as apostas por liquidar - e essa a graca da metrica. */}
+      {(clv.hasData || (clv.pendingFill > 0 && onSetClosingOdd)) && (
+        <>
+          <SectionHeader>{t("clv.titleLong")}</SectionHeader>
+          <MobileCard>
+            {clv.hasData ? (
+              <>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={clvSeries} margin={{ top: 6, right: 0, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id="mobileClvGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="at" tick={{ fontSize: 10, fill: axisColor }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={tooltipStyle} formatter={(v) => [signed(Number(v)), t("clv.money")]} />
+                      <Area type="monotone" dataKey="clv" stroke="#8b5cf6" strokeWidth={2} fill="url(#mobileClvGradient)" isAnimationActive={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.help")}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("clv.empty.title")}</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{t("clv.empty.desc")}</p>
+              </>
+            )}
+          </MobileCard>
+          {/* Por casa: so faz sentido quando ha mais do que uma para comparar. */}
+          {clv.byBookmaker.length > 1 && (
+            <div className="mt-2">
+              <SectionHeader>{t("clv.byBookmaker")}</SectionHeader>
+              <ListGroup>
+                {clv.byBookmaker.slice(0, 5).map((row) => (
+                  <ListItem
+                    key={row.bookmaker}
+                    title={row.bookmaker || t("bet.otherBookmaker")}
+                    subtitle={t("dashboard.statResolved", { n: row.bets })}
+                    trailing={
+                      <span className={row.avgClvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                        {row.avgClvPct >= 0 ? "+" : ""}{row.avgClvPct.toFixed(2)}%
+                      </span>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            </div>
+          )}
+          {clv.pendingFill > 0 && onSetClosingOdd && (
+            <div className="mt-2">
+              <ListGroup>
+                <ListItem
+                  icon={Crosshair}
+                  title={t("clv.fill.title")}
+                  subtitle={t("clv.fill.pending", { n: clv.pendingFill })}
+                  chevron
+                  onClick={() => setIsClosingOddsOpen(true)}
+                />
+              </ListGroup>
+            </div>
+          )}
+        </>
+      )}
+
+      {onSetClosingOdd && (
+        <ClosingOddsSheet
+          open={isClosingOddsOpen}
+          bets={allBets}
+          onClose={() => setIsClosingOddsOpen(false)}
+          onSetClosingOdd={onSetClosingOdd}
+        />
       )}
 
       {/* Lucro por mês */}

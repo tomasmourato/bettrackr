@@ -13,11 +13,14 @@ import {
   Percent,
   Layers,
   ArrowUpRight,
-  PiggyBank
+  PiggyBank,
+  Crosshair
 } from "lucide-react";
 import { Bet, BetStatus, BookieAccount, BankrollMovement, DashboardStats } from "../types";
 import { calculateDashboardStats, safeNum } from "../utils";
 import { calculateBankroll } from "../lib/bankroll";
+import { calculateClv } from "../lib/clv";
+import ClosingOddsModal from "./ClosingOddsModal";
 import { useI18n } from "../lib/i18n";
 import FilterDropdown from "./FilterDropdown";
 import FiltersBar from "./FiltersBar";
@@ -64,23 +67,32 @@ interface DashboardProps {
   // Movimentos da banca. Ausente na vista de um amigo: o saldo é privado e a
   // secção da banca simplesmente não aparece.
   bankrollMovements?: BankrollMovement[];
+  // Gravar a odd de fecho a partir da caixa de entrada do CLV. Ausente na
+  // vista de um amigo, que é só de leitura - aí a secção mostra os números
+  // mas não oferece o preenchimento.
+  onSetClosingOdd?: (id: string, closingOdd: number | null) => Promise<void>;
 }
 
 export interface DashboardBetsFilters {
   // "RESOLVED" é um pseudo-estado (todas menos POR_LIQUIDAR) usado pelo
   // drill-down do gráfico "Resolvidas"; o histórico trata-o em matchesStatus.
-  status: BetStatus | "RESOLVED";
+  // "ALL" é a ausência de filtro de estado, para drill-downs que filtram por
+  // outra coisa (ex.: as apostas sem odd de fecho, de qualquer estado).
+  status: BetStatus | "RESOLVED" | "ALL";
   bookmaker?: string;
   sport?: string;
   type?: string;
   money?: string;
+  // "TRACKED" (com odd de fecho) | "MISSING" (por preencher) - o atalho da
+  // secção de CLV leva o utilizador direto às apostas que faltam preencher.
+  clv?: string;
   timeframe?: Timeframe;
   account?: string;
   dateFrom?: string;
   dateTo?: string;
 }
 
-export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch, bankrollMovements }: DashboardProps) {
+export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch, bankrollMovements, onSetClosingOdd }: DashboardProps) {
   const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   // Filtros do dashboard (D2): recalculam TODAS as estatísticas/gráficos para o
   // subconjunto escolhido. As opções vêm da lista completa; o cálculo usa a
@@ -97,6 +109,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
   const [filterType, setFilterType] = useState(initialFilters.type);
   const [filterFreebet, setFilterFreebet] = useState(initialFilters.money);
   const [timeframeFilter, setTimeframeFilter] = useState<TimeframeFilterValue>(initialFilters.timeframe);
+  const [isClosingOddsOpen, setIsClosingOddsOpen] = useState(false);
 
   // Filtros <-> URL: cada alteração fica no histórico do browser e o
   // back/forward volta a aplicá-la sem remontar o dashboard.
@@ -248,6 +261,31 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
     () => (bankrollMovements ? calculateBankroll(bankrollMovements, allBets) : null),
     [bankrollMovements, allBets],
   );
+
+  // O CLV é por aposta, por isso - ao contrário da banca, que é dinheiro
+  // global - usa o subconjunto FILTRADO: faz todo o sentido perguntar "e na
+  // Betano, estou a bater a linha?".
+  const clv = useMemo(() => calculateClv(bets), [bets]);
+
+  const clvChartData = useMemo(() => {
+    if (!clv.hasData) return [];
+    return [
+      { data: t("bet.start"), clv: 0 },
+      ...clv.series.map((point) => ({ data: point.at, clv: point.cumulative })),
+    ];
+  }, [clv, t]);
+
+  const openClvPendingBets = () => {
+    onOpenBets?.({
+      status: "ALL",
+      clv: "MISSING",
+      bookmaker: filterBookmaker !== "ALL" ? filterBookmaker : undefined,
+      account: filterAccount !== "ALL" ? filterAccount : undefined,
+      sport: filterSport !== "ALL" ? filterSport : undefined,
+      type: filterType !== "ALL" ? filterType : undefined,
+      money: filterFreebet !== "ALL" ? filterFreebet : undefined,
+    });
+  };
 
   const bankrollChartData = useMemo(() => {
     if (!bankroll) return [];
@@ -684,6 +722,151 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
             </div>
           </div>
         </div>
+      )}
+
+      {/* CLV: a odd apanhada contra a linha de fecho. Ao contrário do resto do
+          painel, inclui as apostas por liquidar - é essa a graça da métrica. */}
+      {clv.hasData ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between" id="card-clv">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{t("clv.avg")}</p>
+                <h3 className={`text-2xl font-bold mt-1.5 tracking-tight font-mono ${clv.avgClvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {clv.avgClvPct >= 0 ? "+" : ""}{clv.avgClvPct.toFixed(2)}%
+                </h3>
+              </div>
+              <div className={`p-2 rounded ${clv.avgClvPct >= 0 ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400" : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"}`}>
+                <Crosshair size={18} />
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="flex items-center justify-between">
+                <span>{t("clv.beatRate")}</span>
+                <strong className="text-zinc-700 dark:text-zinc-200 font-medium font-mono">{clv.beatCloseRate.toFixed(1)}%</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>{t("clv.money")}</span>
+                <strong className={`font-medium font-mono ${clv.moneyClv >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {formatSignedMoney(clv.moneyClv, currency)}
+                </strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>{t("clv.weighted")}</span>
+                <strong className={`font-medium font-mono ${clv.weightedClvPct === null ? "text-zinc-400 dark:text-zinc-500" : clv.weightedClvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {clv.weightedClvPct === null ? "-" : `${clv.weightedClvPct >= 0 ? "+" : ""}${clv.weightedClvPct.toFixed(2)}%`}
+                </strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>{t("clv.coverage")}</span>
+                <strong className="text-zinc-700 dark:text-zinc-200 font-medium font-mono">
+                  {t("clv.coverageValue", { tracked: clv.trackedBets, eligible: clv.eligibleBets })}
+                </strong>
+              </div>
+            </div>
+            {/* Por casa: só faz sentido quando há mais do que uma para
+                comparar - e é a comparação que diz onde vale a pena apostar. */}
+            {clv.byBookmaker.length > 1 && (
+              <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                  {t("clv.byBookmaker")}
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {clv.byBookmaker.slice(0, 4).map((row) => (
+                    <li key={row.bookmaker} className="flex items-center justify-between text-xs">
+                      <span className="truncate text-zinc-500 dark:text-zinc-400">
+                        {row.bookmaker || t("bet.otherBookmaker")}{" "}
+                        <span className="text-zinc-300 dark:text-zinc-600">({row.bets})</span>
+                      </span>
+                      <strong className={`font-mono font-medium ${row.avgClvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                        {row.avgClvPct >= 0 ? "+" : ""}{row.avgClvPct.toFixed(2)}%
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {clv.pendingFill > 0 && onSetClosingOdd && (
+              <button
+                type="button"
+                onClick={() => setIsClosingOddsOpen(true)}
+                className="mt-3 w-full rounded-sm bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+              >
+                {t("clv.fill.cta", { n: clv.pendingFill })}
+              </button>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-[380px] lg:col-span-2" id="chart-clv-evolution">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">{t("clv.chartTitle")}</h4>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("clv.chartDesc")}</p>
+              </div>
+              {clv.pendingFill > 0 && canDrill && (
+                <button
+                  type="button"
+                  onClick={openClvPendingBets}
+                  className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                >
+                  {t("clv.fill.pending", { n: clv.pendingFill })}
+                </button>
+              )}
+            </div>
+            <div className="flex-1 w-full min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={clvChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorClv" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chart.grid} />
+                  <XAxis dataKey="data" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: chart.axis }} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: chart.axis }} tickFormatter={(v) => `${v}${currency}`} />
+                  <Tooltip
+                    formatter={(value: any) => [formatSignedMoney(Number(value), currency), t("clv.money")]}
+                    contentStyle={chart.tooltip}
+                  />
+                  <Area type="monotone" dataKey="clv" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorClv)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.help")}</p>
+          </div>
+        </div>
+      ) : (
+        // Sem uma única odd de fecho a secção seria invisível. Este cartão
+        // explica a métrica e dá o caminho mais curto para a experimentar.
+        clv.pendingFill > 0 && onSetClosingOdd && (
+          <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800" id="card-clv-empty">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 shrink-0">
+                <Crosshair size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight font-display">{t("clv.empty.title")}</h4>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t("clv.empty.desc")}</p>
+                <button
+                  type="button"
+                  onClick={() => setIsClosingOddsOpen(true)}
+                  className="mt-3 rounded-sm bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+                >
+                  {t("clv.fill.cta", { n: clv.pendingFill })}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {isClosingOddsOpen && onSetClosingOdd && (
+        <ClosingOddsModal
+          bets={allBets}
+          onClose={() => setIsClosingOddsOpen(false)}
+          onSetClosingOdd={onSetClosingOdd}
+        />
       )}
 
       {/* Main Charts Row */}

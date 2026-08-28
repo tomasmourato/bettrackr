@@ -27,6 +27,7 @@ import { Bet, BookieAccount, BetStatus } from "../../types";
 import { AVAILABLE_BOOKMAKERS, safeNum, calculateBetReturnAndProfit, selectBetsForFinancialSummary } from "../../utils";
 import FilteredBetsSummary from "../../components/FilteredBetsSummary";
 import { useBetForm } from "../../hooks/useBetForm";
+import { betClv, needsClosingOdd } from "../../lib/clv";
 import { useI18n, type TFn, type TKey } from "../../lib/i18n";
 import { selectionHaptic } from "../../lib/haptics";
 import { createLongPressController } from "../../lib/longPress";
@@ -62,7 +63,7 @@ interface MobileBetsProps {
   onDeleteBet: (id: string) => void | Promise<void>;
 }
 
-type SortField = "date" | "stake" | "odd" | "profit";
+type SortField = "date" | "stake" | "odd" | "profit" | "clv";
 
 // As listas guardam CHAVES; o texto e resolvido no componente (useI18n).
 type KeyOption = { value: string; key: TKey };
@@ -93,11 +94,18 @@ const MONEY_OPTIONS: KeyOption[] = [
   { value: "RISK_FREE", key: "filters.money.riskFree" },
 ];
 
+const CLV_OPTIONS: KeyOption[] = [
+  { value: "ALL", key: "clv.filter.all" },
+  { value: "TRACKED", key: "clv.filter.tracked" },
+  { value: "MISSING", key: "clv.filter.missing" },
+];
+
 const SORT_OPTIONS: KeyOption[] = [
   { value: "date", key: "bets.sort.date" },
   { value: "stake", key: "bets.sort.stake" },
   { value: "odd", key: "bets.sort.odd" },
   { value: "profit", key: "bets.sort.profit" },
+  { value: "clv", key: "bets.sort.clv" },
 ];
 
 // Edição em massa: só se aplicam os campos que o utilizador altera. "Manter"
@@ -179,6 +187,7 @@ export default function MobileBets({
   const [statusFilter, setStatusFilter] = useState(() => initialFilters.get("status") || "ALL");
   const [typeFilter, setTypeFilter] = useState(() => initialFilters.get("type") || "ALL");
   const [moneyFilter, setMoneyFilter] = useState(() => initialFilters.get("money") || "ALL");
+  const [clvFilter, setClvFilter] = useState(() => initialFilters.get("clv") || "ALL");
   const [bookmakerFilter, setBookmakerFilter] = useState(() => initialFilters.get("bookmaker") || "ALL");
   const [accountFilter, setAccountFilter] = useState(() => initialFilters.get("account") || "ALL");
   const [sportFilter, setSportFilter] = useState(() => initialFilters.get("sport") || "ALL");
@@ -283,6 +292,12 @@ export default function MobileBets({
       const matchesStatus = statusFilter === "ALL" || bet.status === statusFilter;
       const matchesType = typeFilter === "ALL" || bet.type === typeFilter;
 
+      // "MISSING" e a caixa de entrada do CLV: so o que ja comecou e continua
+      // sem odd de fecho (uma aposta de amanha ainda nao tem linha de fecho).
+      let matchesClv = true;
+      if (clvFilter === "TRACKED") matchesClv = betClv(bet) !== null;
+      if (clvFilter === "MISSING") matchesClv = needsClosingOdd(bet);
+
       let matchesMoney = true;
       if (moneyFilter === "FREEBET") matchesMoney = bet.isFreebet;
       if (moneyFilter === "RISK_FREE") matchesMoney = !!bet.isRiskFree;
@@ -297,7 +312,7 @@ export default function MobileBets({
       const matchesTo = !dateTo || Boolean(day && day <= dateTo);
 
       return (
-        matchesSearch && matchesStatus && matchesType && matchesMoney && matchesBookmaker && matchesAccount && matchesSport && matchesFrom && matchesTo
+        matchesSearch && matchesStatus && matchesType && matchesMoney && matchesClv && matchesBookmaker && matchesAccount && matchesSport && matchesFrom && matchesTo
       );
     });
 
@@ -307,12 +322,23 @@ export default function MobileBets({
         case "stake": cmp = safeNum(a.stake) - safeNum(b.stake); break;
         case "odd": cmp = safeNum(a.odd) - safeNum(b.odd); break;
         case "profit": cmp = safeNum(a.netProfit) - safeNum(b.netProfit); break;
+        case "clv": {
+          // Sem odd de fecho não há CLV: essas ficam no fundo da lista em
+          // qualquer direção, senão ordenar por CLV enchia o topo de vazios.
+          const ca = betClv(a);
+          const cb = betClv(b);
+          if (!ca && !cb) cmp = 0;
+          else if (!ca) return 1;
+          else if (!cb) return -1;
+          else cmp = ca.clvPct - cb.clvPct;
+          break;
+        }
         default:
           cmp = new Date(a.dateTime.replace(" ", "T")).getTime() - new Date(b.dateTime.replace(" ", "T")).getTime();
       }
       return sortAsc ? cmp : -cmp;
     });
-  }, [bets, search, statusFilter, typeFilter, moneyFilter, bookmakerFilter, accountFilter, sportFilter, dateFrom, dateTo, sortField, sortAsc]);
+  }, [bets, search, statusFilter, typeFilter, moneyFilter, clvFilter, bookmakerFilter, accountFilter, sportFilter, dateFrom, dateTo, sortField, sortAsc]);
 
   // Agrupar por dia (apenas quando ordenado por data; senão lista corrida).
   const groups = useMemo(() => {
@@ -327,13 +353,14 @@ export default function MobileBets({
   }, [filteredBets, sortField]);
 
   const activeFilterCount =
-    [statusFilter, typeFilter, moneyFilter, bookmakerFilter, accountFilter, sportFilter].filter((v) => v !== "ALL").length +
+    [statusFilter, typeFilter, moneyFilter, clvFilter, bookmakerFilter, accountFilter, sportFilter].filter((v) => v !== "ALL").length +
     (dateFrom || dateTo ? 1 : 0);
 
   const clearFilters = () => {
     setStatusFilter("ALL");
     setTypeFilter("ALL");
     setMoneyFilter("ALL");
+    setClvFilter("ALL");
     setBookmakerFilter("ALL");
     setAccountFilter("ALL");
     setSportFilter("ALL");
@@ -927,6 +954,41 @@ label={t("bets.bulk.deleteAria")}
               </div>
             </MobileCard>
 
+            {/* Odd de fecho e CLV: só aparece quando há uma linha registada */}
+            {(() => {
+              const clv = betClv(detailBet);
+              if (!clv) return null;
+              return (
+                <MobileCard className="!p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
+                        {t("clv.closingOdd")}
+                      </p>
+                      <p className="text-sm font-bold font-mono tabular-nums mt-0.5">
+                        {safeNum(detailBet.closingOdd).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
+                        {t("clv.title")}
+                      </p>
+                      <p
+                        className={`text-sm font-bold font-mono tabular-nums mt-0.5 ${
+                          clv.clvPct >= 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        }`}
+                      >
+                        {clv.clvPct >= 0 ? "+" : ""}
+                        {clv.clvPct.toFixed(2)}%
+                      </p>
+                    </div>
+                  </div>
+                </MobileCard>
+              );
+            })()}
+
             <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1 px-1">
               <p>
                 {detailBet.bookmaker}
@@ -1235,6 +1297,7 @@ title={t("bets.filtersSheet.title")}
           )}
           <ChipGroup label={t("filters.type")} options={withLabels(TYPE_OPTIONS, t)} value={typeFilter} onChange={setTypeFilter} />
           <ChipGroup label={t("filters.money")} options={withLabels(MONEY_OPTIONS, t)} value={moneyFilter} onChange={setMoneyFilter} />
+          <ChipGroup label={t("clv.title")} options={withLabels(CLV_OPTIONS, t)} value={clvFilter} onChange={setClvFilter} />
 
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
@@ -1500,6 +1563,23 @@ placeholder={t("bets.field.odd")}
               onChange={(e) => form.setStake(e.target.value)}
               className={inputClasses}
             />
+          </FormField>
+
+          {/* Odd de fecho: opcional, é o que dá o CLV (ver src/lib/clv.ts) */}
+          <FormField label={t("clv.closingOddOptional")}>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="1.01"
+              value={form.closingOdd}
+              onChange={(e) => form.setClosingOdd(e.target.value)}
+              aria-label={t("clv.closingOddAria")}
+              className={inputClasses}
+            />
+            <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+              {t("clv.closingOddHint")}
+            </p>
           </FormField>
 
           <div className="flex flex-wrap gap-2">

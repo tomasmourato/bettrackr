@@ -75,6 +75,10 @@ export function mapBetFromApi(row: ApiBetRow): Bet {
     selections: normalizeSelections(row.selections, String(row.id)),
     stake: safeNum(row.stake),
     odd: safeNum(row.odd),
+    // A odd de fecho é a única odd que pode legitimamente não existir, por
+    // isso não passa pelo safeNum (que devolveria 0 e faria o CLV dividir por
+    // zero): sem valor fica undefined, "ainda não se sabe".
+    closingOdd: row.closing_odd == null ? undefined : safeNum(row.closing_odd),
     isFreebet: row.is_freebet === true,
     freebetType: VALID_FREEBET_TYPES.includes(row.freebet_type)
       ? (row.freebet_type as FreebetType)
@@ -105,6 +109,7 @@ export function mapBetToApi(bet: Bet) {
     status: bet.status,
     stake: bet.stake,
     odd: bet.odd,
+    closingOdd: bet.closingOdd ?? null,
     isFreebet: bet.isFreebet,
     freebetType: bet.freebetType,
     isRiskFree: bet.isRiskFree ?? false,
@@ -190,6 +195,24 @@ export async function setBetIgnored(
   });
   const data = await parseJsonResponse(res);
   if (!res.ok) throw new Error(data.error || "Erro ao ignorar a aposta.");
+  return mapBetFromApi(data.bet);
+}
+
+// ------------------------------------------------------------
+// PATCH /api/bets/:id/closing-odd -> grava (ou limpa, com null) a odd de
+// fecho. Endpoint dedicado e leve, como o /ignore: a caixa de entrada do CLV
+// preenche muitas apostas de seguida e não tem o Bet completo à mão.
+// ------------------------------------------------------------
+export async function setBetClosingOdd(
+  id: string,
+  closingOdd: number | null
+): Promise<Bet> {
+  const res = await authFetch(`/api/bets/${encodeURIComponent(id)}/closing-odd`, {
+    method: "PATCH",
+    body: JSON.stringify({ closingOdd }),
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data.error || "Erro ao gravar a odd de fecho.");
   return mapBetFromApi(data.bet);
 }
 

@@ -13,3 +13,14 @@
 **Configurations**
 - [~] Add different language options - infraestrutura i18n + shell traduzidos
       (`src/lib/i18n.tsx`); falta extrair as strings dos separadores (PLAN.md §C1)
+
+**CLV (odd de fecho)**
+- [x] Registar a odd de fecho e medir o CLV no painel (desktop + mobile), com
+      caixa de entrada para preencher as que faltam, filtro/ordenação no
+      histórico e coluna CLOSING_ODDS no CSV. Migração `019_clv_closing_odd.sql`.
+- [ ] Odds de fecho por perna de múltipla (cabem no `selections` JSONB, sem migração).
+- [ ] Ajuste no-vig: hoje a odd de fecho é usada crua, com a margem da casa lá
+      dentro, o que faz o CLV pecar por defeito em 2-5 pontos percentuais.
+- [ ] Captura automática da linha de fecho (API de odds ou extensão) - hoje a
+      odd de fecho é sempre escrita à mão.
+- [ ] Dar o CLV como contexto à IA dos insights.

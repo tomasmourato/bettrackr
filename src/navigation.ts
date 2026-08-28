@@ -151,6 +151,8 @@ export interface ShellProps {
   onAddBet: (bet: Bet) => Promise<void>;
   onUpdateBet: (bet: Bet) => Promise<void>;
   onIgnoreBet: (id: string, ignored: boolean, comment?: string | null) => Promise<void>;
+  /** Odd de fecho (CLV). null limpa o valor. Ver src/lib/clv.ts. */
+  onSetClosingOdd: (id: string, closingOdd: number | null) => Promise<void>;
   onDeleteBet: (id: string) => Promise<void>;
   onDuplicateBets: (bets: Bet[]) => Promise<void>;
   onImportCSV: (bets: Bet[]) => Promise<void>;
