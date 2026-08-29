@@ -561,6 +561,17 @@ export default function MobileDashboard({
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+                {clv.noVigBets > 0 && (
+                  <div className="mt-2 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-2 text-xs">
+                    <span className="text-zinc-500 dark:text-zinc-400">{t("clv.noVig")}</span>
+                    <span className={`font-mono ${clv.noVigAvgClvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {t("clv.noVigValue", {
+                        n: clv.noVigBets,
+                        pct: `${clv.noVigAvgClvPct >= 0 ? "+" : ""}${clv.noVigAvgClvPct.toFixed(1)}%`,
+                      })}
+                    </span>
+                  </div>
+                )}
                 {clv.promoBets > 0 && (
                   <div className="mt-2 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-2 text-xs">
                     <span className="text-zinc-500 dark:text-zinc-400">{t("clv.promo")}</span>

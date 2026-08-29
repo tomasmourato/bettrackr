@@ -878,6 +878,10 @@ export const EN: Record<TKey, Entry> = {
   "clv.coverageValue": "{tracked} of {eligible}",
   "clv.chartTitle": "Cumulative CLV",
   "clv.chartDesc": "The expected value of your bets so far, measured against the closing line.",
+  "clv.noVig": "No-vig CLV",
+  "clv.noVigValue": "{n} · {pct}",
+  "clv.noVigHelp":
+    "The same CLV, but against the closing line with the bookmaker's margin removed. It is the honest measure and always reads lower: the margin was inflating CLV. Only counts bets where the full market was available.",
   "clv.promo": "Promos",
   "clv.promoValue": "{n} · {pct}",
   "clv.promoHelp":

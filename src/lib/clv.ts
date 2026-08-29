@@ -108,6 +108,14 @@ export interface ClvSummary {
   promoAvgClvPct: number;
   /** CLV em dinheiro só das promocionais. */
   promoMoneyClv: number;
+  /** Seguidas com odd justa (sem margem) apurada - o subconjunto medido abaixo. */
+  noVigBets: number;
+  /** Média do CLV % contra a linha SEM margem. Só sobre as `noVigBets`. */
+  noVigAvgClvPct: number;
+  /** CLV em dinheiro contra a linha sem margem, no mesmo subconjunto. */
+  noVigMoneyClv: number;
+  /** Margem média dos mercados de onde as odds justas saíram, em %. */
+  noVigAvgMarginPct: number;
   /** false quando não há uma única odd de fecho: a UI mostra o estado vazio. */
   hasData: boolean;
   series: ClvPoint[];
@@ -226,6 +234,32 @@ export function betClv(bet: Bet): ClvBetResult | null {
 }
 
 /**
+ * O mesmo CLV, mas contra a linha de fecho SEM a margem da casa.
+ *
+ * É a medida honesta, e vai dar sempre um número MAIS BAIXO do que o cru - a
+ * margem estava a inflacionar o CLV, não a encolhê-lo. Medido num 1X2 real da
+ * Betclic com 9.8% de margem: quem apanhou 1.30 contra um fecho de 1.23 tem
+ * +5.7% de CLV cru e -3.8% de CLV real. Os +5.7% eram a margem da casa.
+ *
+ * null quando não há odd justa - o mercado completo nem sempre está na página.
+ */
+export function betClvNoVig(bet: Bet): ClvBetResult | null {
+  if (!isClvEligible(bet)) return null;
+
+  const odd = validOdd(bet.odd);
+  const close = validOdd(bet.closingOddNoVig);
+  if (odd === null || close === null) return null;
+
+  const ratio = odd / close - 1;
+
+  return {
+    clvPct: round2(ratio * 100),
+    moneyClv: bet.isFreebet ? 0 : round2(safeNum(bet.stake) * ratio),
+    beatClose: odd > close,
+  };
+}
+
+/**
  * A aposta está à espera de que alguém lhe registe a odd de fecho? É isto que
  * alimenta a caixa de entrada: elegível, sem odd de fecho e com o evento já
  * começado - antes disso ainda não existe linha de fecho nenhuma.
@@ -251,6 +285,14 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
   let promoBets = 0;
   let promoSumClvPct = 0;
   let promoMoneyClv = 0;
+  // A medida sem margem anda à parte: só uma parte das pernas tem mercado
+  // completo na página, e misturar as duas numa média só daria um número que
+  // não significa nada - a mesma disciplina dos boosts.
+  let noVigBets = 0;
+  let noVigSumClvPct = 0;
+  let noVigMoneyClv = 0;
+  let marginSum = 0;
+  let marginCount = 0;
 
   interface ClvEvent {
     ts: number;
@@ -286,6 +328,20 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
     ratedBets++;
     sumClvPct += clv.clvPct;
     if (clv.beatClose) beatCount++;
+
+    const semVig = betClvNoVig(bet);
+    if (semVig) {
+      noVigBets++;
+      noVigSumClvPct += semVig.clvPct;
+      if (!bet.isFreebet) noVigMoneyClv += semVig.moneyClv;
+      for (const selection of bet.selections || []) {
+        const margem = selection?.closingOddMargin;
+        if (typeof margem === "number" && Number.isFinite(margem)) {
+          marginSum += margem;
+          marginCount++;
+        }
+      }
+    }
 
     // Só o dinheiro real entra no CLV em euros - e, para a média ponderada
     // fazer sentido, o volume tem de ser exatamente o mesmo subconjunto.
@@ -340,6 +396,10 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
     promoBets,
     promoAvgClvPct: promoBets > 0 ? round2(promoSumClvPct / promoBets) : 0,
     promoMoneyClv: round2(promoMoneyClv),
+    noVigBets,
+    noVigAvgClvPct: noVigBets > 0 ? round2(noVigSumClvPct / noVigBets) : 0,
+    noVigMoneyClv: round2(noVigMoneyClv),
+    noVigAvgMarginPct: marginCount > 0 ? round2(marginSum / marginCount) : 0,
     hasData: trackedBets > 0,
     series,
     byBookmaker: Array.from(byBookmaker.entries())

@@ -13,6 +13,7 @@ import socialRoutes from "./routes/socialRoutes.js";
 import accountsRoutes from "./routes/accountsRoutes.js";
 import bankrollRoutes from "./routes/bankrollRoutes.js";
 import insightsRoutes from "./routes/insightsRoutes.js";
+import clvRoutes from "./routes/clvRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import billingRoutes, { stripeWebhook } from "./routes/billingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
@@ -166,6 +167,9 @@ app.use("/api/social", socialRoutes);
 app.use("/api/accounts", accountsRoutes);
 app.use("/api/bankroll", bankrollRoutes);
 app.use("/api/insights", insightsRoutes);
+// Captura da odd de fecho. So o agendador entra aqui (Bearer CRON_SECRET);
+// nao ha utilizador nem subscricao neste pedido.
+app.use("/api/clv", clvRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/admin", adminRoutes);
