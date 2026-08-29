@@ -621,6 +621,12 @@ function needsUpdate(existing, incoming, accountId) {
     selectionsSignature(existing.selections) !== selectionsSignature(incoming.selections);
 }
 
+// NAO acrescentes `closingOdd` aqui. A casa de apostas nao sabe o que e uma
+// odd de fecho: quem a le e a propria extensao, minutos antes do apito, e quem
+// a guarda e o PATCH /closing-odd. O servidor distingue os dois escritores
+// exatamente por esta chave - um corpo sem ela nao mexe nas odds de fecho ja
+// gravadas, e e assim que reimportar uma aposta liquidada deixou de apagar o
+// CLV. Mandar `closingOdd: null` daqui punha o servidor a limpar tudo.
 function betPayload(bet, accountId) {
   return {
     type: bet.type,

@@ -26,6 +26,98 @@ function combineClosingOdds(
     return Number(product.toFixed(2));
 }
 
+// ============================================================
+// Preservar a odd de fecho quando quem grava não sabe dela
+//
+// A odd de fecho não existe do lado da casa de apostas: é a linha lida pouco
+// antes do apito e guardada pela extensão. A importação, essa, reescreve a
+// aposta inteira a partir do que a casa devolve - e a casa devolve seleções
+// sem odd de fecho nenhuma. Sem as regras abaixo, o PUT da importação apagava
+// o CLV exatamente no momento em que a aposta se resolvia, que é quando a
+// extensão volta a mandá-la por o estado ter mudado.
+//
+// Quem manda a chave `closingOdd` no corpo está a falar de odds de fecho e
+// manda nelas (é o site, que também precisa de as poder LIMPAR). Quem não a
+// manda não lhes toca. É a mesma convenção do PATCH /:id/ignore, que só mexe
+// no comentário quando o campo vem no corpo.
+// ============================================================
+
+/** Marca de captura escrita pelo PATCH /:id/closing-odd, não pela casa. */
+const CLOSING_ODD_META_KEYS = [
+    "closingOddSource",
+    "closingOddCapturedAt",
+    "closingOddLeadMinutes",
+] as const;
+
+export function ownsClosingOdds(body: any): boolean {
+    return Object.prototype.hasOwnProperty.call(body ?? {}, "closingOdd");
+}
+
+/**
+ * Identidade estável de uma perna: o id da casa quando existe, a posição quando
+ * não. Sem o id, uma múltipla que voltasse com as pernas por outra ordem colava
+ * a odd de fecho de um jogo a outro - um erro pior do que não ter odd nenhuma.
+ */
+function legKey(selection: any, index: number): string {
+    const ref = selection?.sourceRef?.selectionId;
+    return ref === undefined || ref === null || ref === ""
+        ? `#${index}`
+        : `id:${String(ref)}`;
+}
+
+function asSelections(raw: unknown): any[] {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+        try {
+            const parsed = JSON.parse(raw || "[]");
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
+/**
+ * O corpo recebido, com as odds de fecho (e a marca de captura) que já estavam
+ * gravadas. Só preenche o que vier vazio: uma perna que traga odd de fecho
+ * própria continua a mandar, e a combinada é derivada a jusante como sempre.
+ */
+export function withStoredClosingOdds(body: any, stored: any): any {
+    const incoming = asSelections(body?.selections);
+    const previous = asSelections(stored?.selections);
+
+    const byKey = new Map<string, number>();
+    previous.forEach((selection, index) => {
+        const odd = Number(selection?.closingOdd);
+        if (Number.isFinite(odd) && odd > 1) byKey.set(legKey(selection, index), odd);
+    });
+
+    const selections = incoming.map((selection, index) => {
+        if (selection?.closingOdd !== undefined && selection?.closingOdd !== null) {
+            return selection;
+        }
+        const odd = byKey.get(legKey(selection, index));
+        return odd === undefined ? selection : { ...selection, closingOdd: odd };
+    });
+
+    // A metadata da aposta é substituída por inteiro pela importação; só a
+    // marca de captura é nossa e é a única que se traz de volta.
+    const storedMeta =
+        stored?.metadata && typeof stored.metadata === "object" ? stored.metadata : {};
+    const carried: Record<string, unknown> = {};
+    for (const key of CLOSING_ODD_META_KEYS) {
+        if (storedMeta[key] !== undefined) carried[key] = storedMeta[key];
+    }
+
+    const metadata =
+        Object.keys(carried).length === 0
+            ? body?.metadata
+            : { ...carried, ...(body?.metadata ?? {}) };
+
+    return { ...body, selections, metadata };
+}
+
 const router = Router();
 
 // Todas as rotas de bets exigem autenticação
@@ -395,16 +487,38 @@ router.post("/bulk", async (req: AuthenticatedRequest, res) => {
 // (o frontend envia sempre a aposta completa)
 // ============================================================
 router.put("/:id", async (req: AuthenticatedRequest, res) => {
+    const { id } = req.params;
+
+    // Só se abre transação quando há odds de fecho a salvar do payload. O
+    // bloqueio da linha é preciso pela mesma razão do PATCH /:id/closing-odd:
+    // a captura automática pode estar a escrever a odd de fecho no preciso
+    // momento em que a importação reescreve a aposta.
+    const client = ownsClosingOdds(req.body) ? null : await pool.connect();
+    let committed = false;
+
     try {
-        const { id } = req.params;
-        const parsed = parseBetPayload(req.body);
+        let body = req.body;
+        if (client) {
+            await client.query("BEGIN");
+            const current = await client.query(
+                "SELECT selections, metadata FROM bets WHERE id = $1 AND user_id = $2 FOR UPDATE",
+                [id, req.user!.id],
+            );
+            if (current.rows.length === 0) {
+                res.status(404).json({ error: "Bet não encontrada." });
+                return;
+            }
+            body = withStoredClosingOdds(req.body, current.rows[0]);
+        }
+
+        const parsed = parseBetPayload(body);
         if (parsed.error) {
             res.status(400).json({ error: parsed.error });
             return;
         }
 
         const accountError = await validateAccountOwnership(
-            pool,
+            client ?? pool,
             req.user!.id,
             [parsed.accountId ?? null],
         );
@@ -415,7 +529,9 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
 
         // A cláusula "AND user_id = $x" garante que um utilizador nunca
         // consegue editar a bet de outro, mesmo que adivinhe o ID.
-        const result = await pool.query(
+        const result = await (client
+            ? client.query.bind(client)
+            : pool.query.bind(pool))(
             `UPDATE bets
        SET type = $1, status = $2, stake = $3, odd = $4, is_freebet = $5,
            potential_return = $6, final_return = $7, net_profit = $8,
@@ -433,6 +549,10 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
             res.status(404).json({ error: "Bet não encontrada." });
             return;
         }
+        if (client) {
+            await client.query("COMMIT");
+            committed = true;
+        }
         res.json({ success: true, bet: result.rows[0] });
     } catch (error: any) {
         const payloadError = dbErrorMessage(error);
@@ -442,6 +562,14 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
         }
         console.error("Erro ao atualizar bet:", error);
         res.status(500).json({ error: "Erro ao atualizar a bet." });
+    } finally {
+        // Qualquer saida que nao tenha chegado ao COMMIT (400, 404, excecao)
+        // desfaz-se aqui - assim nenhum return antecipado deixa a transacao
+        // aberta a segurar o bloqueio da linha.
+        if (client) {
+            if (!committed) await client.query("ROLLBACK").catch(() => {});
+            client.release();
+        }
     }
 });
 
