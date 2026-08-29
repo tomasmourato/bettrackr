@@ -84,6 +84,18 @@ export function pendingLegsFrom(bets, now = Date.now()) {
   return legs;
 }
 
+/** Rota SSR atual da página de jogo da Betclic. */
+export function betclicMatchPath(matchId, event) {
+  const slug = String(event || "evento")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " e ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "evento";
+  return `/futebol-sfootball/evento-c0/${slug}-m${encodeURIComponent(matchId)}`;
+}
+
 /**
  * Quando acordar: o apito mais próximo menos SNAPSHOT_LEAD_MINUTES. Devolve
  * null quando não há nada a vigiar.
@@ -214,7 +226,7 @@ export function collectSelectionOdds(state) {
 export function parseNgState(html) {
   if (typeof html !== "string") return null;
   const match = html.match(
-    /<script id="ng-state" type="application\/json">([\s\S]*?)<\/script>/,
+    /<script\b[^>]*\bid=["']ng-state["'][^>]*>([\s\S]*?)<\/script>/i,
   );
   if (!match) return null;
   try {

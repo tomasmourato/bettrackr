@@ -3,6 +3,7 @@ import {
   SNAPSHOT_LEAD_MINUTES,
   acceptSnapshot,
   collectSelectionOdds,
+  betclicMatchPath,
   leadMinutes,
   legKeyOf,
   nextWakeUp,
@@ -258,10 +259,23 @@ describe("leitura do ng-state da Betclic", () => {
     expect(collectSelectionOdds(estado).get("1")).toBe(2.5);
   });
 
+  test("aceita atributos adicionais e ordem diferente no script", () => {
+    const html = `<script type="application/json" data-x="1" id="ng-state">{"a":{"id":"1","odds":2.5}}</script>`;
+    const estado = parseNgState(html);
+    expect(collectSelectionOdds(estado).get("1")).toBe(2.5);
+  });
+
   test("HTML sem ng-state ou com JSON partido dá null", () => {
     expect(parseNgState("<html></html>")).toBeNull();
     expect(parseNgState(`<script id="ng-state" type="application/json">{isto nao</script>`)).toBeNull();
     expect(parseNgState(undefined)).toBeNull();
+  });
+});
+
+describe("URL atual da página de jogo", () => {
+  test("constrói a rota SSR com slug do evento", () => {
+    expect(betclicMatchPath("123", "Gimnasia Y Tiro de Salta - Chacarita Juniors"))
+      .toBe("/futebol-sfootball/evento-c0/gimnasia-y-tiro-de-salta-chacarita-juniors-m123");
   });
 });
 

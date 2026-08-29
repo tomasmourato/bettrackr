@@ -11,6 +11,7 @@ import { runAfterBettrackrVerification } from "./bettrackr-identity.js";
 import {
   SNAPSHOT_LEAD_MINUTES,
   acceptSnapshot,
+  betclicMatchPath,
   collectSelectionOdds,
   legKeyOf,
   parseNgState,
@@ -404,15 +405,16 @@ async function getSnapshots() {
  * separador, nem raspar o DOM - os botões de odd da página não têm id nenhum e
  * obrigariam a casar por texto do mercado. É um GET a uma página pública.
  *
- * O URL basta ser /m<matchId>: a Betclic aceita-o e serve o jogo certo, sem
- * precisarmos de saber o slug do desporto nem da competição.
+ * A rota inclui o slug do evento porque a Betclic deixou de servir o estado
+ * do jogo no atalho /m<matchId>. O id no fim continua a ser a referência
+ * canónica para encontrar a seleção.
  */
 const MAX_MATCHES_PER_PASS = 8;
 
-async function readMatchOdds(matchId) {
+async function readMatchOdds(matchId, event) {
   // credentials: "omit" de propósito - a página é pública e não há razão para
   // lhe mandar a sessão do utilizador.
-  const res = await fetch(`https://www.betclic.pt/m${encodeURIComponent(matchId)}`, {
+  const res = await fetch(`https://www.betclic.pt${betclicMatchPath(matchId, event)}`, {
     credentials: "omit",
   });
   if (!res.ok) return null;
@@ -438,7 +440,7 @@ async function readCurrentOdds(legs) {
     lidos++;
     let precos = null;
     try {
-      precos = await readMatchOdds(matchId);
+      precos = await readMatchOdds(matchId, grupo[0].event);
     } catch (_) {
       // Um jogo que falhe não pode travar os outros.
       continue;
