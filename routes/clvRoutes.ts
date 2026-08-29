@@ -1,0 +1,363 @@
+// routes/clvRoutes.ts
+// A odd de fecho apanhada pelo servidor, sem o browser de ninguém aberto.
+//
+// A extensão já fazia isto, mas só com o Chrome ligado no momento do apito -
+// quem fecha o portátil ao jantar perdia a linha, e quem só usa a app Android
+// nunca a teve. A página de jogo da Betclic é pública: responde a um fetch sem
+// cookies, sem User-Agent e sem bloqueio geográfico, e custa ~74KB com gzip.
+// O browser do utilizador nunca foi preciso para ler a linha; era só o relógio.
+//
+// O ganho grande é a partilha: um jogo é lido UMA vez por passagem e serve
+// todos os utilizadores que nele apostaram. Com a extensão, cem utilizadores no
+// mesmo Benfica-Porto eram cem pedidos.
+
+import { Router } from "express";
+import pool from "../db/pool.js";
+import { combineClosingOdds } from "../lib/clvClosingOdds.js";
+import {
+    betclicMatchPath,
+    kickoffMs,
+    leadMinutesFrom,
+    readMatchPage,
+} from "../lib/betclicOdds.js";
+
+const router = Router();
+
+// Quão perto do apito se aceita uma leitura. A "linha de fecho" é o último
+// preço antes do jogo começar; com passagens de 5 em 5 minutos, uma janela de
+// 12 dá duas ou três leituras e a última fica a menos de 5 minutos do apito.
+//
+// Regulável por ambiente para se poder afinar (ou alargar, para uma verificação
+// com um jogo real) sem novo deploy. O valor por omissão é o que interessa.
+const CAPTURE_WINDOW_MIN = Number(process.env.CLV_CAPTURE_WINDOW_MIN) || 12;
+
+// Para pernas ainda sem `startsAtUtc`, o apito é estimado a partir do
+// `startsAt` legado (hora local de quem importou, assumida como Lisboa). Uma
+// janela larga dá à auto-cura a hipótese de ler o apito verdadeiro na página e
+// gravá-lo - a partir daí a perna passa a ser tratada com precisão. Nunca menor
+// do que a janela de captura, senão haveria pernas elegíveis que ninguém iria ler.
+const DISCOVERY_WINDOW_MIN = Math.max(150, CAPTURE_WINDOW_MIN);
+
+// Tetos por passagem: não martelar a Betclic e não estourar o maxDuration=60
+// da função da Vercel. Uma página estabiliza em ~0.8s.
+const MAX_MATCHES_PER_RUN = 25;
+const TIME_BUDGET_MS = 40_000;
+const FETCH_TIMEOUT_MS = 8_000;
+
+const UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+
+interface Leg {
+    betId: string;
+    index: number;
+    matchId: string;
+    selectionId: string;
+    event: string;
+    /** Apito estimado (ms UTC) a partir do que está gravado na perna. */
+    kickoff: number;
+    /** true quando o apito veio de `startsAtUtc` e não de uma suposição. */
+    exact: boolean;
+    /** A perna já tem odd de fecho gravada? */
+    filled: boolean;
+}
+
+interface BetRow {
+    id: string;
+    selections: unknown;
+    metadata: any;
+}
+
+function asArray(raw: unknown): any[] {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+        try {
+            const parsed = JSON.parse(raw || "[]");
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
+/**
+ * As pernas que vale a pena ir ler agora.
+ *
+ * Uma perna já preenchida à mão não se toca nunca: o que a pessoa escreveu vale
+ * mais do que o que nós lemos. Uma preenchida por nós pode ser substituída
+ * enquanto o jogo não começar - é assim que a leitura converge para o último
+ * preço sem ser preciso guardar fotografias em lado nenhum, como a extensão faz.
+ */
+export function legsToRead(rows: BetRow[], now: number): Leg[] {
+    const legs: Leg[] = [];
+
+    for (const row of rows) {
+        const escritaPeloServidor = row.metadata?.closingOddSource === "server";
+        const selections = asArray(row.selections);
+
+        selections.forEach((selection, index) => {
+            const matchId = selection?.sourceRef?.matchId;
+            const selectionId = selection?.sourceRef?.selectionId;
+            if (!matchId || !selectionId) return; // sem ids não há como ler
+
+            const filled =
+                selection?.closingOdd !== undefined && selection?.closingOdd !== null;
+            // Preenchida por uma pessoa: intocável.
+            if (filled && !escritaPeloServidor) return;
+
+            const kickoff = kickoffMs(selection);
+            if (kickoff === null) return; // sem apito não se sabe quando ler
+            if (kickoff <= now) return; // depois do apito o preço é lixo
+
+            const exact = typeof selection?.startsAtUtc === "string";
+            const janela = exact ? CAPTURE_WINDOW_MIN : DISCOVERY_WINDOW_MIN;
+            if (kickoff - now > janela * 60_000) return; // ainda é cedo
+
+            legs.push({
+                betId: String(row.id),
+                index,
+                matchId: String(matchId),
+                selectionId: String(selectionId),
+                event: String(selection?.event || ""),
+                kickoff,
+                exact,
+                filled,
+            });
+        });
+    }
+
+    return legs;
+}
+
+/** Lê uma página de jogo. Devolve null quando não deu - nunca um preço inventado. */
+async function fetchMatch(matchId: string, event: string) {
+    const url = `https://www.betclic.pt${betclicMatchPath(matchId, event)}`;
+    try {
+        const res = await fetch(url, {
+            headers: { "User-Agent": UA, "Accept-Language": "pt-PT,pt;q=0.9" },
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
+        if (!res.ok) return null;
+        return readMatchPage(await res.text(), matchId);
+    } catch {
+        return null;
+    }
+}
+
+interface LegUpdate {
+    closingOdd?: number;
+    startsAtUtc?: string;
+    leadMinutes?: number;
+}
+
+/**
+ * Aplica as leituras a uma aposta, com a linha bloqueada.
+ *
+ * O FOR UPDATE é pela mesma razão do PATCH /api/bets/:id/closing-odd: o
+ * utilizador pode estar a preencher a mesma aposta no site enquanto isto corre,
+ * e sem bloqueio o último a escrever levava o outro à frente em silêncio.
+ */
+async function applyToBet(
+    betId: string,
+    updates: Map<number, LegUpdate>,
+    capturedAt: string,
+): Promise<boolean> {
+    const client = await pool.connect();
+    let committed = false;
+    try {
+        await client.query("BEGIN");
+        const current = await client.query(
+            "SELECT selections, metadata FROM bets WHERE id = $1 FOR UPDATE",
+            [betId],
+        );
+        if (current.rows.length === 0) return false;
+
+        const selections = asArray(current.rows[0].selections);
+        let mexeu = false;
+        let piorLead: number | null = null;
+
+        for (const [index, update] of updates) {
+            if (!selections[index]) continue;
+            const antes = selections[index];
+            const depois = { ...antes };
+            if (update.startsAtUtc && !antes.startsAtUtc) {
+                depois.startsAtUtc = update.startsAtUtc;
+                mexeu = true;
+            }
+            if (update.closingOdd !== undefined) {
+                depois.closingOdd = update.closingOdd;
+                mexeu = true;
+                if (update.leadMinutes !== undefined) {
+                    // A pior perna manda na marca de qualidade, que é o honesto.
+                    piorLead =
+                        piorLead === null
+                            ? update.leadMinutes
+                            : Math.max(piorLead, update.leadMinutes);
+                }
+            }
+            selections[index] = depois;
+        }
+
+        if (!mexeu) return false;
+
+        // A combinada sai sempre do conjunto COMPLETO das pernas e fica null
+        // enquanto faltar uma - meia múltipla não dá meia linha de fecho.
+        const combinada = combineClosingOdds(selections);
+
+        const marca: Record<string, unknown> = {};
+        if (piorLead !== null) {
+            marca.closingOddSource = "server";
+            marca.closingOddCapturedAt = capturedAt;
+            marca.closingOddLeadMinutes = piorLead;
+        }
+
+        await client.query(
+            `UPDATE bets
+                SET selections = $1::jsonb,
+                    closing_odd = $2,
+                    metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+                    updated_at = timezone('utc', now())
+              WHERE id = $4`,
+            [JSON.stringify(selections), combinada, JSON.stringify(marca), betId],
+        );
+        await client.query("COMMIT");
+        committed = true;
+        return true;
+    } catch (error) {
+        console.error(`[clv] falhou a escrever a aposta ${betId}:`, error);
+        return false;
+    } finally {
+        if (!committed) await client.query("ROLLBACK").catch(() => {});
+        client.release();
+    }
+}
+
+async function runCapture(now = Date.now()) {
+    const started = Date.now();
+
+    const { rows } = await pool.query<BetRow>(
+        `SELECT id, selections, metadata
+           FROM bets
+          WHERE status = 'POR_LIQUIDAR'
+            AND is_ignored = false
+            AND lower(bookmaker) = 'betclic'
+            AND jsonb_typeof(selections) = 'array'
+          LIMIT 2000`,
+    );
+
+    const legs = legsToRead(rows, now);
+
+    // Agrupar por jogo: é aqui que está o ganho da captura no servidor. Duas
+    // pernas do mesmo jogo, ou as apostas de vinte utilizadores no mesmo jogo,
+    // são UM pedido.
+    const porJogo = new Map<string, Leg[]>();
+    for (const leg of legs) {
+        const grupo = porJogo.get(leg.matchId);
+        if (grupo) grupo.push(leg);
+        else porJogo.set(leg.matchId, [leg]);
+    }
+
+    // Os jogos mais perto do apito primeiro: se o orçamento acabar, o que fica
+    // por ler é o que ainda tem tempo de ser lido na passagem seguinte.
+    const jogos = [...porJogo.entries()]
+        .sort((a, b) => Math.min(...a[1].map((l) => l.kickoff)) - Math.min(...b[1].map((l) => l.kickoff)))
+        .slice(0, MAX_MATCHES_PER_RUN);
+
+    const porAposta = new Map<string, Map<number, LegUpdate>>();
+    let lidos = 0;
+    let semPrecos = 0;
+    const capturedAt = new Date(now).toISOString();
+
+    for (const [matchId, grupo] of jogos) {
+        if (Date.now() - started > TIME_BUDGET_MS) break;
+
+        const page = await fetchMatch(matchId, grupo[0].event);
+        lidos++;
+        if (!page || page.odds.size === 0) {
+            // Zero preços é o canário de a Betclic ter mudado de forma.
+            semPrecos++;
+            continue;
+        }
+
+        // O apito que a própria Betclic anuncia manda sobre o que está gravado.
+        const apitoReal = page.kickoffUtc ? Date.parse(page.kickoffUtc) : NaN;
+        const apito = Number.isNaN(apitoReal) ? null : apitoReal;
+
+        for (const leg of grupo) {
+            const update: LegUpdate = {};
+
+            // Auto-cura: a perna passa a ter o apito sem ambiguidade e, da
+            // próxima vez, é lida na janela certa mesmo para quem não está em
+            // Portugal.
+            if (apito !== null && !leg.exact) update.startsAtUtc = page.kickoffUtc!;
+
+            const efetivo = apito ?? leg.kickoff;
+            const faltam = efetivo - Date.now();
+            // Só se lê ANTES do apito e já dentro da janela. Fora disto ficamos
+            // pela auto-cura e voltamos na passagem certa.
+            if (faltam > 0 && faltam <= CAPTURE_WINDOW_MIN * 60_000) {
+                const odd = page.odds.get(leg.selectionId);
+                if (typeof odd === "number" && odd > 1) {
+                    update.closingOdd = odd;
+                    update.leadMinutes = leadMinutesFrom(Date.now(), efetivo);
+                }
+            }
+
+            if (Object.keys(update).length === 0) continue;
+            const atual = porAposta.get(leg.betId);
+            if (atual) atual.set(leg.index, update);
+            else porAposta.set(leg.betId, new Map([[leg.index, update]]));
+        }
+    }
+
+    let escritas = 0;
+    for (const [betId, updates] of porAposta) {
+        if (await applyToBet(betId, updates, capturedAt)) escritas++;
+    }
+
+    return {
+        candidatas: rows.length,
+        pernas: legs.length,
+        jogos: porJogo.size,
+        lidos,
+        semPrecos,
+        apostasEscritas: escritas,
+        ms: Date.now() - started,
+    };
+}
+
+// ============================================================
+// GET /api/clv/capture
+//
+// Fica ACIMA de qualquer authenticateToken de propósito: não há utilizador nem
+// subscrição neste pedido, é o agendador a falar. Mesma guarda do cron das
+// insights (routes/insightsRoutes.ts) - fail closed, sem segredo ninguém entra.
+//
+// Quem chama é o pg_cron do Supabase, de 5 em 5 minutos (ver db/cron/
+// clv-capture.sql). O plano Hobby da Vercel só permite um cron por dia, e o
+// agendamento dentro da base de dados evita ter de mudar de plano.
+// ============================================================
+router.get("/capture", async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+        res.status(401).json({ error: "Não autorizado." });
+        return;
+    }
+
+    try {
+        const resumo = await runCapture();
+        if (resumo.semPrecos > 0) {
+            console.warn(
+                `[clv] ${resumo.semPrecos} de ${resumo.lidos} jogo(s) sem preços - a Betclic pode ter mudado a página.`,
+            );
+        }
+        console.info("[clv] passagem:", JSON.stringify(resumo));
+        res.json({ ok: true, ...resumo });
+    } catch (error: any) {
+        console.error("[clv] passagem falhou:", error);
+        res.status(503).json({ ok: false, error: error?.message || "Falhou." });
+    }
+});
+
+export default router;

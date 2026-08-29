@@ -210,6 +210,11 @@ export function mapBet(bet) {
       // Sem ela não se sabe quando ler a linha de fecho, e o histórico ficava
       // a dizer que uma aposta de sábado já estava por preencher hoje.
       ...(s.match_date_utc ? { startsAt: formatDateTime(s.match_date_utc) } : {}),
+      // O mesmo instante, mas sem ambiguidade. O startsAt acima e escrito na
+      // hora LOCAL de quem importa (formatDateTime usa getHours()), o que serve
+      // para mostrar mas engana quem o leia noutro fuso - o servidor le-lo-ia
+      // como UTC e chegaria uma hora atrasado ao apito no verao.
+      ...(s.match_date_utc ? { startsAtUtc: String(s.match_date_utc) } : {}),
       // A própria Betclic marca as odds turbinadas - muito mais fiável do que
       // adivinhar pelo texto do mercado.
       ...(s.is_boosted_odd === true ? { isBoosted: true } : {}),
