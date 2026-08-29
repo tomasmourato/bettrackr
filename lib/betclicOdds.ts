@@ -172,6 +172,26 @@ export function collectMarkets(state: unknown): Map<string, Market> {
     return out;
 }
 
+/**
+ * Reconstroi um mercado a partir de ids e odds soltos, aplicando o MESMO crivo
+ * do collectMarkets. Existe para o servidor nunca ter de acreditar na margem
+ * que o agente residencial lhe manda: o agente traz os precos, o servidor
+ * decide se aquilo e um mercado completo. Devolve null quando nao e de confiar.
+ */
+export function marketFrom(ids: unknown, odds: unknown): Market | null {
+    if (!Array.isArray(ids) || !Array.isArray(odds)) return null;
+    if (ids.length !== odds.length || odds.length < MIN_SELECTIONS) return null;
+    const limpas: number[] = [];
+    for (const o of odds) {
+        const n = Number(o);
+        if (!Number.isFinite(n) || n <= 1) return null;
+        limpas.push(n);
+    }
+    const overround = limpas.reduce((soma, o) => soma + 1 / o, 0);
+    if (overround < OVERROUND_MIN || overround > OVERROUND_MAX) return null;
+    return { odds: limpas, overround };
+}
+
 export interface FairOdd {
     /** A odd sem a margem da casa. Sempre MAIOR do que a crua. */
     odd: number;

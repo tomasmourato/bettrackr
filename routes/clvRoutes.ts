@@ -17,34 +17,19 @@ import { combineClosingOdds } from "../lib/clvClosingOdds.js";
 import {
     betclicMatchPath,
     devig,
-    kickoffMs,
     leadMinutesFrom,
+    marketFrom,
     readMatchPage,
+    type MatchPage,
 } from "../lib/betclicOdds.js";
-
-const router = Router();
-
-// A janela onde uma leitura conta: abre a 30 minutos do apito e FECHA a 5.
-//
-// Não é o último preço em absoluto de propósito. Na Betclic as odds descem
-// muito nos minutos que antecedem o apito, e uma linha de fecho apanhada aí
-// seria baixa de mais: como o CLV é (odd / fecho - 1), um fecho baixo demais
-// inflaciona o CLV de toda a gente. Parar aos 5 minutos dá uma linha mais
-// estável e erra por defeito, que é o lado certo para errar.
-//
-// A abertura larga não é desperdício: cada leitura substitui a anterior, por
-// isso as primeiras são a rede de segurança para quando a última falhar.
-//
-// Ambas reguláveis por ambiente, para se afinarem sem novo deploy.
-const CAPTURE_WINDOW_MIN = Number(process.env.CLV_CAPTURE_WINDOW_MIN) || 30;
-const CAPTURE_CUTOFF_MIN = Number(process.env.CLV_CAPTURE_CUTOFF_MIN) || 5;
-
-// Para pernas ainda sem `startsAtUtc`, o apito é estimado a partir do
-// `startsAt` legado (hora local de quem importou, assumida como Lisboa). Uma
-// janela larga dá à auto-cura a hipótese de ler o apito verdadeiro na página e
-// gravá-lo - a partir daí a perna passa a ser tratada com precisão. Nunca menor
-// do que a janela de captura, senão haveria pernas elegíveis que ninguém iria ler.
-const DISCOVERY_WINDOW_MIN = Math.max(150, CAPTURE_WINDOW_MIN);
+import {
+    CAPTURE_CUTOFF_MIN,
+    CAPTURE_WINDOW_MIN,
+    asArray,
+    legsToRead,
+    type Leg,
+} from "../lib/clvCapture.js";
+import type { BetRow } from "../lib/clvCapture.js";
 
 // Tetos por passagem: não martelar a Betclic e não estourar o maxDuration=60
 // da função da Vercel. Uma página estabiliza em ~0.8s.
@@ -56,92 +41,16 @@ const UA =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
-interface Leg {
-    betId: string;
-    index: number;
-    matchId: string;
-    selectionId: string;
-    event: string;
-    /** Apito estimado (ms UTC) a partir do que está gravado na perna. */
-    kickoff: number;
-    /** true quando o apito veio de `startsAtUtc` e não de uma suposição. */
-    exact: boolean;
-    /** A perna já tem odd de fecho gravada? */
-    filled: boolean;
-}
+const router = Router();
 
-interface BetRow {
-    id: string;
-    selections: unknown;
-    metadata: any;
-}
-
-function asArray(raw: unknown): any[] {
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === "string") {
-        try {
-            const parsed = JSON.parse(raw || "[]");
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
-    }
-    return [];
-}
-
-/**
- * As pernas que vale a pena ir ler agora.
- *
- * Uma perna já preenchida à mão não se toca nunca: o que a pessoa escreveu vale
- * mais do que o que nós lemos. Uma preenchida por nós pode ser substituída
- * enquanto o jogo não começar - é assim que a leitura converge para o último
- * preço sem ser preciso guardar fotografias em lado nenhum, como a extensão faz.
- */
-export function legsToRead(rows: BetRow[], now: number): Leg[] {
-    const legs: Leg[] = [];
-
-    for (const row of rows) {
-        const escritaPeloServidor = row.metadata?.closingOddSource === "server";
-        const selections = asArray(row.selections);
-
-        selections.forEach((selection, index) => {
-            const matchId = selection?.sourceRef?.matchId;
-            const selectionId = selection?.sourceRef?.selectionId;
-            if (!matchId || !selectionId) return; // sem ids não há como ler
-
-            const filled =
-                selection?.closingOdd !== undefined && selection?.closingOdd !== null;
-            // Preenchida por uma pessoa: intocável.
-            if (filled && !escritaPeloServidor) return;
-
-            const kickoff = kickoffMs(selection);
-            if (kickoff === null) return; // sem apito não se sabe quando ler
-
-            const faltam = kickoff - now;
-            // Passado o corte já não há nada a gravar, por isso nem se vai lá.
-            // (Inclui o depois do apito: aí o mercado está suspenso e o preço
-            // que viesse seria lixo com ar de dado.)
-            if (faltam <= CAPTURE_CUTOFF_MIN * 60_000) return;
-
-            const exact = typeof selection?.startsAtUtc === "string";
-            const janela = exact ? CAPTURE_WINDOW_MIN : DISCOVERY_WINDOW_MIN;
-            if (faltam > janela * 60_000) return; // ainda é cedo
-
-            legs.push({
-                betId: String(row.id),
-                index,
-                matchId: String(matchId),
-                selectionId: String(selectionId),
-                event: String(selection?.event || ""),
-                kickoff,
-                exact,
-                filled,
-            });
-        });
-    }
-
-    return legs;
-}
+// A decisao de QUE pernas ler vive no modulo partilhado, para o servidor e o
+// agente residencial nunca poderem discordar sobre a janela.
+export {
+    CAPTURE_WINDOW_MIN,
+    CAPTURE_CUTOFF_MIN,
+    legsToRead,
+    asArray,
+} from "../lib/clvCapture.js";
 
 /**
  * Le uma pagina de jogo, dizendo TAMBEM porque falhou quando falha.
@@ -281,9 +190,15 @@ async function applyToBet(
     }
 }
 
-async function runCapture(now = Date.now()) {
-    const started = Date.now();
-
+/**
+ * Que jogos ha a ler agora, e que pernas dependem de cada um.
+ *
+ * Separado do resto porque ha dois leitores possiveis: a propria funcao, e o
+ * agente que corre numa ligacao residencial (a Betclic responde 403 a qualquer
+ * datacenter - medido em AWS us-east, AWS eu-central e Azure). Quem le muda; a
+ * decisao de o que ler nao.
+ */
+async function trabalho(now: number) {
     const { rows } = await pool.query<BetRow>(
         `SELECT id, selections, metadata
            FROM bets
@@ -312,6 +227,28 @@ async function runCapture(now = Date.now()) {
         .sort((a, b) => Math.min(...a[1].map((l) => l.kickoff)) - Math.min(...b[1].map((l) => l.kickoff)))
         .slice(0, MAX_MATCHES_PER_RUN);
 
+    return { candidatas: rows.length, legs, jogos };
+}
+
+/** Uma leitura de uma pagina, venha ela de onde vier. */
+export interface Leitura {
+    matchId: string;
+    /** id da seleccao -> preco. */
+    odds: Record<string, number>;
+    /** Mercados completos, para o de-vig. O servidor RE-VALIDA a margem. */
+    markets?: Array<{ ids: string[]; odds: number[] }>;
+    kickoffUtc?: string | null;
+}
+
+/**
+ * Aplica leituras ja feitas. E aqui que mora tudo o que decide: a janela, o
+ * de-vig, a convergencia e a escrita. O agente residencial so traz os precos.
+ */
+async function aplicar(
+    leituras: Map<string, MatchPage>,
+    jogos: Array<[string, Leg[]]>,
+    now: number,
+) {
     const porAposta = new Map<string, Map<number, LegUpdate>>();
     let lidos = 0;
     let semPrecos = 0;
@@ -323,19 +260,13 @@ async function runCapture(now = Date.now()) {
     const capturedAt = new Date(now).toISOString();
 
     for (const [matchId, grupo] of jogos) {
-        if (Date.now() - started > TIME_BUDGET_MS) break;
-
-        const leitura = await fetchMatch(matchId, grupo[0].event);
+        const page = leituras.get(matchId);
         lidos++;
-        if (!leitura.page) {
-            // O canario. Agora diz QUAL foi a avaria, para nao se andar a
-            // adivinhar entre a Betclic ter mudado, a rede ter falhado, ou o
-            // pedido estar a sair de um sitio a que servem outra pagina.
+        if (!page || page.odds.size === 0) {
             semPrecos++;
-            motivos.push(`${matchId}:${leitura.porque}`);
+            motivos.push(`${matchId}:sem-leitura`);
             continue;
         }
-        const page = leitura.page;
 
         // O apito que a própria Betclic anuncia manda sobre o que está gravado.
         const apitoReal = page.kickoffUtc ? Date.parse(page.kickoffUtc) : NaN;
@@ -382,32 +313,14 @@ async function runCapture(now = Date.now()) {
         }
     }
 
-    // Sonda de saude, ligada por ambiente (CLV_PROBE_MATCH_ID).
-    //
-    // Sem ela so se descobre que a leitura esta partida quando ha uma aposta
-    // mesmo a precisar dela - ou seja, tarde de mais. Com um id de jogo posto
-    // na variavel, cada passagem diz nos logs se consegue ou nao ler aquela
-    // pagina, sem depender de haver apostas nenhumas. Desliga-se tirando a
-    // variavel; nao faz escritas.
-    const sonda = process.env.CLV_PROBE_MATCH_ID;
-    if (sonda) {
-        const r = await fetchMatch(sonda, "sonda");
-        console.info(
-            `[clv][sonda] jogo ${sonda}: ${r.page
-                ? `OK ${r.page.odds.size} precos, ${r.page.markets.size} com mercado, apito ${r.page.kickoffUtc}, ${r.kb}KB`
-                : `FALHOU -> ${r.porque}`}`,
-        );
-    }
-
     let escritas = 0;
     for (const [betId, updates] of porAposta) {
         if (await applyToBet(betId, updates, capturedAt)) escritas++;
     }
 
     return {
-        candidatas: rows.length,
-        pernas: legs.length,
-        jogos: porJogo.size,
+        pernas: jogos.reduce((n, [, g]) => n + g.length, 0),
+        jogos: jogos.length,
         lidos,
         semPrecos,
         // Quantas pernas ficaram com a margem removida. A diferenca para
@@ -416,9 +329,30 @@ async function runCapture(now = Date.now()) {
         semSeleccao,
         motivos,
         apostasEscritas: escritas,
-        ms: Date.now() - started,
     };
 }
+
+// A sonda antiga vivia dentro da passagem; agora e um passo a parte.
+// Sonda de saude, ligada por ambiente (CLV_PROBE_MATCH_ID).
+//
+// Sem ela so se descobre que a leitura esta partida quando ha uma aposta
+// mesmo a precisar dela - ou seja, tarde de mais. Com um id de jogo posto
+// na variavel, cada passagem diz nos logs se consegue ou nao ler aquela
+// pagina, sem depender de haver apostas nenhumas. Desliga-se tirando a
+// variavel; nao faz escritas.
+async function correrSonda() {
+  const sonda = process.env.CLV_PROBE_MATCH_ID;
+if (sonda) {
+    const r = await fetchMatch(sonda, "sonda");
+    console.info(
+        `[clv][sonda] jogo ${sonda}: ${r.page
+            ? `OK ${r.page.odds.size} precos, ${r.page.markets.size} com mercado, apito ${r.page.kickoffUtc}, ${r.kb}KB`
+            : `FALHOU -> ${r.porque}`}`,
+    );
+}
+
+}
+
 
 // ============================================================
 // GET /api/clv/capture
@@ -431,9 +365,131 @@ async function runCapture(now = Date.now()) {
 // clv-capture.sql). O plano Hobby da Vercel só permite um cron por dia, e o
 // agendamento dentro da base de dados evita ter de mudar de plano.
 // ============================================================
+/** Guarda partilhada: fail closed, sem segredo ninguem entra. */
+function autorizado(req: any, nomeDaVariavel: string): boolean {
+    const secret = process.env[nomeDaVariavel];
+    return Boolean(secret) && req.headers.authorization === `Bearer ${secret}`;
+}
+
+/**
+ * A passagem feita pelo proprio servidor. Continua aqui por duas razoes: e o
+ * caminho certo no dia em que a Betclic deixar de recusar datacenters, e e o
+ * que o cron do Supabase ja chama. Hoje leva 403 e nao escreve nada - o que
+ * escreve e o agente, pelo /submit.
+ */
+async function runCapture(now = Date.now()) {
+    const started = Date.now();
+    const { candidatas, jogos } = await trabalho(now);
+
+    const leituras = new Map<string, MatchPage>();
+    const falhas: string[] = [];
+    for (const [matchId, grupo] of jogos) {
+        if (Date.now() - started > TIME_BUDGET_MS) break;
+        const r = await fetchMatch(matchId, grupo[0].event);
+        if (r.page) leituras.set(matchId, r.page);
+        else falhas.push(`${matchId}:${r.porque}`);
+    }
+
+    await correrSonda();
+    const resumo = await aplicar(leituras, jogos, now);
+    return {
+        candidatas,
+        ...resumo,
+        motivos: falhas.length ? falhas : resumo.motivos,
+        ms: Date.now() - started,
+    };
+}
+
+// ============================================================
+// O rele residencial
+//
+// A Betclic responde 403 a qualquer datacenter - medido em AWS us-east, AWS
+// eu-central e Azure; a mesma pagina, pelo mesmo caminho e com os mesmos
+// cabecalhos, devolve 200 a partir de uma ligacao residencial. Nao se contorna
+// isso com proxies nem com impressao digital forjada: muda-se quem faz o
+// pedido. O agente corre numa maquina de casa e traz os precos; TODA a decisao
+// (janela, de-vig, convergencia, escrita) continua a acontecer aqui.
+//
+// O agente guarda um segredo proprio (CLV_AGENT_SECRET), separado do cron: vive
+// numa maquina mais exposta e deve poder ser rodado sozinho.
+// ============================================================
+
+/** GET /api/clv/work -> que jogos ha a ler agora. */
+router.get("/work", async (req, res) => {
+    if (!autorizado(req, "CLV_AGENT_SECRET")) {
+        res.status(401).json({ error: "Nao autorizado." });
+        return;
+    }
+    try {
+        const { candidatas, jogos } = await trabalho(Date.now());
+        res.json({
+            ok: true,
+            candidatas,
+            jogos: jogos.map(([matchId, grupo]) => ({
+                matchId,
+                // O caminho vai daqui para o agente nao ter de saber construi-lo:
+                // se a rota da Betclic mudar, muda num sitio so.
+                path: betclicMatchPath(matchId, grupo[0].event),
+            })),
+        });
+    } catch (error: any) {
+        console.error("[clv] /work falhou:", error);
+        res.status(503).json({ ok: false, error: error?.message });
+    }
+});
+
+/** POST /api/clv/submit -> o agente entrega o que leu. */
+router.post("/submit", async (req, res) => {
+    if (!autorizado(req, "CLV_AGENT_SECRET")) {
+        res.status(401).json({ error: "Nao autorizado." });
+        return;
+    }
+    const cru = req.body?.leituras;
+    if (!Array.isArray(cru)) {
+        res.status(400).json({ error: "leituras tem de ser um array." });
+        return;
+    }
+    try {
+        const now = Date.now();
+        // O trabalho e recalculado AQUI: o agente nao decide que pernas contam,
+        // so traz precos. Entre o /work e o /submit a janela pode ter fechado.
+        const { candidatas, jogos } = await trabalho(now);
+
+        const leituras = new Map<string, MatchPage>();
+        for (const l of cru) {
+            const matchId = String(l?.matchId ?? "");
+            if (!matchId) continue;
+            const odds = new Map<string, number>();
+            for (const [id, valor] of Object.entries(l?.odds ?? {})) {
+                const n = Number(valor);
+                if (Number.isFinite(n) && n > 1) odds.set(String(id), n);
+            }
+            // Os mercados sao RE-VALIDADOS com o mesmo crivo: a margem que o
+            // agente mandasse nunca entra sem passar pelas regras da casa.
+            const markets = new Map<string, ReturnType<typeof marketFrom>>();
+            for (const m of Array.isArray(l?.markets) ? l.markets : []) {
+                const market = marketFrom(m?.ids, m?.odds);
+                if (!market) continue;
+                for (const id of m.ids) markets.set(String(id), market);
+            }
+            leituras.set(matchId, {
+                odds,
+                markets: markets as MatchPage["markets"],
+                kickoffUtc: typeof l?.kickoffUtc === "string" ? l.kickoffUtc : null,
+            });
+        }
+
+        const resumo = await aplicar(leituras, jogos, now);
+        console.info("[clv][agente] entrega:", JSON.stringify(resumo));
+        res.json({ ok: true, candidatas, ...resumo });
+    } catch (error: any) {
+        console.error("[clv] /submit falhou:", error);
+        res.status(503).json({ ok: false, error: error?.message });
+    }
+});
+
 router.get("/capture", async (req, res) => {
-    const secret = process.env.CRON_SECRET;
-    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    if (!autorizado(req, "CRON_SECRET")) {
         res.status(401).json({ error: "Não autorizado." });
         return;
     }

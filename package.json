@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx bootstrap.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist-server/server.cjs && node scripts/zip-extension.mjs && node scripts/bundle-app.mjs",
-    "vercel-build": "vite build && node scripts/zip-extension.mjs && node scripts/bundle-app.mjs",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist-server/server.cjs && node scripts/zip-extension.mjs && node scripts/bundle-app.mjs && npm run build:agent",
+    "vercel-build": "vite build && node scripts/zip-extension.mjs && node scripts/bundle-app.mjs && npm run build:agent",
     "start": "node dist-server/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-server dist-ssr",
@@ -15,7 +15,8 @@
     "check:i18n": "node scripts/check-i18n.mjs",
     "test:unit": "bun test extension/test",
     "android:sync": "vite build && cap sync android",
-    "android:open": "cap open android"
+    "android:open": "cap open android",
+    "build:agent": "esbuild agent/clv-agent.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/clv-agent.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
