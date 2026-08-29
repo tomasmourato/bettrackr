@@ -45,6 +45,10 @@ function normalizeSelections(raw: any, rowId: string): Selection[] {
     market: s?.market ?? "",
     choice: s?.choice ?? "",
     odd: safeNum(s?.odd),
+    // A odd de fecho pode legitimamente não existir, por isso não passa pelo
+    // safeNum (que daria 0 e faria o CLV dividir por zero).
+    closingOdd: s?.closingOdd == null ? undefined : safeNum(s.closingOdd),
+    startsAt: typeof s?.startsAt === "string" ? s.startsAt : undefined,
     sport: s?.sport,
     betType: s?.betType,
     result: VALID_SELECTION_RESULTS.includes(s?.result) ? s.result : undefined,
@@ -203,13 +207,25 @@ export async function setBetIgnored(
 // fecho. Endpoint dedicado e leve, como o /ignore: a caixa de entrada do CLV
 // preenche muitas apostas de seguida e não tem o Bet completo à mão.
 // ------------------------------------------------------------
+export interface ClosingOddInput {
+  /** Odd de fecho do boletim. Ignorada quando `legs` vem preenchido. */
+  closingOdd?: number | null;
+  /** Odds de fecho por perna; o servidor deriva a combinada. */
+  legs?: Array<{ index: number; closingOdd: number | null }>;
+  /** Como a linha foi obtida ("manual", "betclic-api", "betclic-page"). */
+  source?: string;
+  capturedAt?: string;
+  /** Minutos antes do apito - a marca de qualidade da linha. */
+  leadMinutes?: number;
+}
+
 export async function setBetClosingOdd(
   id: string,
-  closingOdd: number | null
+  input: ClosingOddInput
 ): Promise<Bet> {
   const res = await authFetch(`/api/bets/${encodeURIComponent(id)}/closing-odd`, {
     method: "PATCH",
-    body: JSON.stringify({ closingOdd }),
+    body: JSON.stringify(input),
   });
   const data = await parseJsonResponse(res);
   if (!res.ok) throw new Error(data.error || "Erro ao gravar a odd de fecho.");

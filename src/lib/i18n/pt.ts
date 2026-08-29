@@ -884,6 +884,10 @@ export const PT = {
   "clv.chartTitle": "CLV acumulado",
   "clv.chartDesc":
     "O valor esperado acumulado das tuas apostas medido contra a linha de fecho.",
+  "clv.promo": "Promoções",
+  "clv.promoValue": "{n} · {pct}",
+  "clv.promoHelp":
+    "Boosts, odds turbo e missões ficam de fora das médias: a odd está acima do mercado por construção, por isso bater a linha com ela não diz nada sobre a escolha.",
   "clv.byBookmaker": "CLV por casa",
   "clv.help":
     "A odd de fecho é usada tal como a registas, com a margem da casa incluída - por isso estes números pecam por defeito. O que interessa é a tendência e a comparação entre casas.",
@@ -893,7 +897,7 @@ export const PT = {
 
   // Odd de fecho: campo do formulário e detalhe da aposta
   "clv.closingOdd": "Odd de fecho",
-  "clv.closingOddOptional": "Odd de fecho (opcional)",
+  "clv.closingOddShort": "Fecho",
   "clv.closingOddAria": "Odd de fecho da aposta",
   "clv.closingOddHint": "A última odd antes de o evento começar.",
 
@@ -908,6 +912,11 @@ export const PT = {
   "clv.fill.pending": {
     one: "{n} por preencher",
     other: "{n} por preencher",
+  },
+  "clv.fill.legProgress": "{done}/{total} pernas",
+  "clv.fill.pendingLegs": {
+    one: "{n} perna por preencher",
+    other: "{n} pernas por preencher",
   },
   "clv.fill.empty": "Não há odds de fecho por preencher. Bom trabalho.",
   "clv.fill.oddTaken": "Apanhada",

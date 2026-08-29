@@ -7,6 +7,7 @@ import {
 } from "../middleware/authMiddleware.js";
 import { requireSubscriptionForExtension } from "../middleware/accessMiddleware.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
+import { combineClosingOdds } from "../src/lib/clv.js";
 
 const router = Router();
 
@@ -111,9 +112,8 @@ function parseBetPayload(body: any): ParsedPayload {
     if (netProfit && typeof netProfit === "object")
         return { error: netProfit.error };
 
-    // closingOdd: a odd de fecho, opcional. Ausente/vazia -> null ("ainda não
-    // se sabe"); nunca 0, senão o CLV passava a dividir por zero. O limite é 1
-    // e não 0 porque uma odd decimal abaixo de 1 pagaria menos do que a stake.
+    // closingOdd: opcional. O limite é 1 e não 0 porque uma odd decimal abaixo
+    // de 1 pagaria menos do que a stake; e nunca 0, senão o CLV dividia por zero.
     const closingOddRaw = b.closingOdd;
     let closingOdd: number | null = null;
     if (
@@ -127,6 +127,14 @@ function parseBetPayload(body: any): ParsedPayload {
         }
         closingOdd = n;
     }
+
+    // A combinada é DERIVADA das pernas sempre que todas a tenham: há dois
+    // escritores (formulário e extensão) e a invariante "combinada = produto
+    // das pernas" tem de ser garantida num sítio só. Sem pernas preenchidas
+    // vale o que o cliente mandou - é o que mantém as apostas gravadas antes
+    // das odds por perna existirem.
+    const combined = combineClosingOdds(b.selections);
+    if (combined !== null) closingOdd = combined;
 
     const isRiskFree = b.isRiskFree === true || b.isRiskFree === "true";
     // Freebet e "sem risco" são mutuamente exclusivos; sem risco tem prioridade.
@@ -486,14 +494,106 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
         closingOdd = n;
     }
 
+    // Pernas: [{ index, closingOdd }]. É por aqui que a extensão escreve, e
+    // também o preenchimento de uma múltipla. As pernas mandam sobre o valor
+    // ao nível da aposta, que fica para as simples e para o histórico.
+    const rawLegs = req.body?.legs;
+    const legs = new Map<number, number>();
+    if (rawLegs !== undefined && rawLegs !== null) {
+        if (!Array.isArray(rawLegs)) {
+            res.status(400).json({ error: "legs tem de ser um array." });
+            return;
+        }
+        for (const leg of rawLegs) {
+            const index = Number(leg?.index);
+            if (!Number.isInteger(index) || index < 0) {
+                res.status(400).json({ error: "Índice de perna inválido." });
+                return;
+            }
+            const value = leg?.closingOdd;
+            if (value === undefined || value === null || value === "") continue;
+            const n = Number(value);
+            if (!Number.isFinite(n) || n <= 1) {
+                res.status(400).json({
+                    error: "A odd de fecho de uma perna tem de ser maior que 1.",
+                });
+                return;
+            }
+            legs.set(index, n);
+        }
+    }
+
+    // Metadata da captura (origem, quando, e quantos minutos antes do apito).
+    // Vai fundida, nunca substituída: por baixo está o importKey de que a
+    // deduplicação da extensão depende.
+    const capture: Record<string, unknown> = {};
+    if (typeof req.body?.source === "string") {
+        capture.closingOddSource = req.body.source.slice(0, 40);
+    }
+    if (typeof req.body?.capturedAt === "string") {
+        capture.closingOddCapturedAt = req.body.capturedAt.slice(0, 40);
+    }
+    if (Number.isFinite(Number(req.body?.leadMinutes))) {
+        capture.closingOddLeadMinutes = Math.round(Number(req.body.leadMinutes));
+    }
+
+    // Escrever pernas é ler-modificar-escrever, e vêm em paralelo: preencher
+    // uma múltipla de 5 dispara 5 pedidos ao mesmo tempo, e a extensão pode
+    // estar a escrever enquanto o utilizador escreve. Sem o bloqueio da linha,
+    // cada pedido leria as seleções antes de os outros gravarem e o último a
+    // escrever levava as outras pernas à frente - silenciosamente.
+    const client = legs.size > 0 ? await pool.connect() : null;
+
     try {
-        const result = await pool.query(
+        let selectionsJson: string | null = null;
+        if (client) {
+            await client.query("BEGIN");
+            const current = await client.query(
+                "SELECT selections FROM bets WHERE id = $1 AND user_id = $2 FOR UPDATE",
+                [req.params.id, req.user!.id],
+            );
+            if (current.rows.length === 0) {
+                await client.query("ROLLBACK");
+                res.status(404).json({ error: "Bet não encontrada." });
+                return;
+            }
+            const raw = current.rows[0].selections;
+            const selections = Array.isArray(raw)
+                ? raw
+                : typeof raw === "string"
+                  ? JSON.parse(raw || "[]")
+                  : [];
+            for (const [index, value] of legs) {
+                if (!selections[index]) continue;
+                selections[index] = { ...selections[index], closingOdd: value };
+            }
+            selectionsJson = JSON.stringify(selections);
+            // A combinada sai sempre do conjunto COMPLETO das pernas, já com
+            // as que os outros pedidos gravaram - é o que o bloqueio garante.
+            closingOdd = combineClosingOdds(selections);
+        }
+
+        // O union de tipos entre PoolClient e Pool não é chamável; ambos têm
+        // o mesmo query() em runtime, por isso basta escolher um.
+        const result = await (client
+            ? client.query.bind(client)
+            : pool.query.bind(pool))(
             `UPDATE bets
-       SET closing_odd = $1, updated_at = timezone('utc', now())
-       WHERE id = $2 AND user_id = $3
+       SET closing_odd = $1,
+           selections = COALESCE($2::jsonb, selections),
+           metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+           updated_at = timezone('utc', now())
+       WHERE id = $4 AND user_id = $5
        RETURNING ${BET_COLUMNS}`,
-            [closingOdd, req.params.id, req.user!.id],
+            [
+                closingOdd,
+                selectionsJson,
+                JSON.stringify(capture),
+                req.params.id,
+                req.user!.id,
+            ],
         );
+        if (client) await client.query("COMMIT");
 
         if (result.rows.length === 0) {
             res.status(404).json({ error: "Bet não encontrada." });
@@ -501,6 +601,7 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
         }
         res.json({ success: true, bet: result.rows[0] });
     } catch (error: any) {
+        if (client) await client.query("ROLLBACK").catch(() => {});
         if (error?.code === "22P02") {
             res.status(404).json({ error: "Bet não encontrada." });
             return;
@@ -512,6 +613,8 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
         }
         console.error("Erro ao gravar a odd de fecho:", error);
         res.status(500).json({ error: "Erro ao gravar a odd de fecho." });
+    } finally {
+        client?.release();
     }
 });
 

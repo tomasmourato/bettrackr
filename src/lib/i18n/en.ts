@@ -878,6 +878,10 @@ export const EN: Record<TKey, Entry> = {
   "clv.coverageValue": "{tracked} of {eligible}",
   "clv.chartTitle": "Cumulative CLV",
   "clv.chartDesc": "The expected value of your bets so far, measured against the closing line.",
+  "clv.promo": "Promos",
+  "clv.promoValue": "{n} · {pct}",
+  "clv.promoHelp":
+    "Boosts, enhanced odds and missions are kept out of the averages: the price is above the market by construction, so beating the close with one says nothing about the pick.",
   "clv.byBookmaker": "CLV by bookmaker",
   "clv.help":
     "The closing odd is used exactly as you record it, bookmaker margin included - so these numbers understate your edge. What matters is the trend and the comparison between bookmakers.",
@@ -887,7 +891,7 @@ export const EN: Record<TKey, Entry> = {
 
   // Closing odd: form field and bet detail
   "clv.closingOdd": "Closing odd",
-  "clv.closingOddOptional": "Closing odd (optional)",
+  "clv.closingOddShort": "Close",
   "clv.closingOddAria": "Closing odd of the bet",
   "clv.closingOddHint": "The last odd before the event starts.",
 
@@ -902,6 +906,11 @@ export const EN: Record<TKey, Entry> = {
   "clv.fill.pending": {
     one: "{n} to fill in",
     other: "{n} to fill in",
+  },
+  "clv.fill.legProgress": "{done}/{total} legs",
+  "clv.fill.pendingLegs": {
+    one: "{n} leg to fill in",
+    other: "{n} legs to fill in",
   },
   "clv.fill.empty": "No closing odds left to fill in. Nice work.",
   "clv.fill.oddTaken": "Taken",

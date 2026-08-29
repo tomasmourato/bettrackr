@@ -17,6 +17,7 @@ import {
 
 import type { Bet, Preferences, BookieAccount, AuditLog, BankrollMovement } from "./types";
 import type { BankrollMovementInput } from "./lib/bankrollApi";
+import type { ClosingOddInput } from "./lib/betsApi";
 import type { DashboardBetsFilters } from "./components/Dashboard";
 import type { getStoredUser } from "./lib/authApi";
 import type { BillingStatus } from "./lib/billingApi";
@@ -151,8 +152,8 @@ export interface ShellProps {
   onAddBet: (bet: Bet) => Promise<void>;
   onUpdateBet: (bet: Bet) => Promise<void>;
   onIgnoreBet: (id: string, ignored: boolean, comment?: string | null) => Promise<void>;
-  /** Odd de fecho (CLV). null limpa o valor. Ver src/lib/clv.ts. */
-  onSetClosingOdd: (id: string, closingOdd: number | null) => Promise<void>;
+  /** Odd de fecho (CLV), por perna ou do boletim. Ver src/lib/clv.ts. */
+  onSetClosingOdd: (id: string, input: ClosingOddInput) => Promise<void>;
   onDeleteBet: (id: string) => Promise<void>;
   onDuplicateBets: (bets: Bet[]) => Promise<void>;
   onImportCSV: (bets: Bet[]) => Promise<void>;

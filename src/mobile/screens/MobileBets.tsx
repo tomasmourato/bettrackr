@@ -1361,6 +1361,15 @@ title={form.editingBet ? t("bets.editTitle") : t("bets.new")}
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <span>
                 {t("bets.field.totalOdd")} <strong className="font-mono text-zinc-800 dark:text-zinc-100">{form.calculatedOdd.toFixed(2)}</strong>
+                {form.calculatedClosingOdd !== null && (
+                  <>
+                    {" · "}
+                    {t("clv.closingOdd")}{" "}
+                    <strong className="font-mono text-zinc-800 dark:text-zinc-100">
+                      {form.calculatedClosingOdd.toFixed(2)}
+                    </strong>
+                  </>
+                )}
               </span>
               <span>
                 {form.status === "POR_LIQUIDAR" ? t("bets.form.potentialReturn") : t("bets.sort.profit")}{" "}
@@ -1411,10 +1420,8 @@ title={form.editingBet ? t("bets.editTitle") : t("bets.new")}
           {form.status === "CASHOUT" && (
             <FormField label={t("bets.form.cashoutReceived")}>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.01"
-                min="0"
                 value={form.cashoutReturn}
                 onChange={(e) => form.setCashoutReturn(e.target.value)}
                 placeholder="0.00"
@@ -1426,10 +1433,8 @@ title={form.editingBet ? t("bets.editTitle") : t("bets.new")}
           {(form.status === "MEIO_GANHA" || form.status === "MEIO_PERDIDA") && (
             <FormField label={t("bets.form.settledOptional")}>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.01"
-                min="0"
                 value={form.settledReturn}
                 onChange={(e) => form.setSettledReturn(e.target.value)}
 placeholder={t("bets.form.automatic")}
@@ -1487,6 +1492,7 @@ placeholder={t("bets.form.bookmakerNamePlaceholder")}
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-1.5">
               {t("bets.form.selectionsShort")}
             </p>
+            <p className="mb-2 text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.closingOddHint")}</p>
             <div className="space-y-3">
               {form.selections.map((s, i) => (
                 <MobileCard key={i} className="!p-3 space-y-2">
@@ -1528,16 +1534,26 @@ placeholder={t("bets.form.choicePlaceholderShort")}
                       className={inputClasses}
                     />
                   </div>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="1"
-                    value={s.odd}
-                    onChange={(e) => form.changeSelection(i, "odd", e.target.value)}
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={s.odd}
+                      onChange={(e) => form.changeSelection(i, "odd", e.target.value)}
 placeholder={t("bets.field.odd")}
-                    className={inputClasses}
-                  />
+                      className={inputClasses}
+                    />
+                    {/* Odd de fecho desta perna: é o que dá o CLV (src/lib/clv.ts) */}
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={s.closingOdd}
+                      onChange={(e) => form.changeSelection(i, "closingOdd", e.target.value)}
+                      placeholder={t("clv.closingOddShort")}
+                      aria-label={t("clv.closingOddAria")}
+                      className={inputClasses}
+                    />
+                  </div>
                 </MobileCard>
               ))}
               {form.type === "MULTIPLA" && (
@@ -1555,31 +1571,12 @@ placeholder={t("bets.field.odd")}
           {/* Stake + dinheiro */}
           <FormField label={t("bets.form.stakeCurrency", { currency })}>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0"
               value={form.stake}
               onChange={(e) => form.setStake(e.target.value)}
               className={inputClasses}
             />
-          </FormField>
-
-          {/* Odd de fecho: opcional, é o que dá o CLV (ver src/lib/clv.ts) */}
-          <FormField label={t("clv.closingOddOptional")}>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="1.01"
-              value={form.closingOdd}
-              onChange={(e) => form.setClosingOdd(e.target.value)}
-              aria-label={t("clv.closingOddAria")}
-              className={inputClasses}
-            />
-            <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
-              {t("clv.closingOddHint")}
-            </p>
           </FormField>
 
           <div className="flex flex-wrap gap-2">

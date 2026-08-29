@@ -36,6 +36,13 @@
 //    misturaria dinheiro promocional com dinheiro real. Uma aposta SEM RISCO é
 //    dinheiro real e conta para tudo.
 //
+//  * As apostas PROMOCIONAIS (boosts, odds turbo, missões) ficam fora das
+//    médias por inteiro - não só do dinheiro, como as freebets. Uma odd
+//    turbinada está acima do mercado por construção: bater a linha de fecho
+//    com ela diz que a casa ofereceu valor, não que a escolha foi boa. São
+//    contadas e mostradas à parte, porque saber quanto valeram as promoções é
+//    útil - só não é a mesma pergunta.
+//
 //  * A odd de fecho é usada CRUA, com a margem da casa lá dentro. O CLV
 //    rigoroso compara com a linha sem margem (no-vig), o que exigiria as odds
 //    de fecho de todos os resultados do mercado - que não temos. O efeito é
@@ -44,7 +51,7 @@
 //    Por isso o que interessa é a tendência e a comparação entre casas, não o
 //    zero absoluto. A UI diz isto ao utilizador (chave i18n "clv.help").
 
-import { Bet } from "../types";
+import { Bet, Selection } from "../types";
 import { safeNum } from "../utils";
 
 /** O CLV de uma aposta, já calculado. */
@@ -72,8 +79,10 @@ export interface ClvBookmakerRow {
 }
 
 export interface ClvSummary {
-  /** Elegíveis COM odd de fecho registada - a base de todas as médias. */
+  /** Elegíveis COM odd de fecho registada. */
   trackedBets: number;
+  /** Seguidas menos as promocionais - a base de todas as médias. */
+  ratedBets: number;
   /** Elegíveis, com ou sem odd de fecho. */
   eligibleBets: number;
   /** Elegíveis cujo evento já começou e continuam sem odd de fecho. */
@@ -90,6 +99,12 @@ export interface ClvSummary {
   moneyClv: number;
   /** Volume real sobre o qual o moneyClv foi medido. */
   clvStake: number;
+  /** Seguidas que são promocionais (boost/turbo/missão), contadas à parte. */
+  promoBets: number;
+  /** Média do CLV % só das promocionais - quanto valeram as promoções. */
+  promoAvgClvPct: number;
+  /** CLV em dinheiro só das promocionais. */
+  promoMoneyClv: number;
   /** false quando não há uma única odd de fecho: a UI mostra o estado vazio. */
   hasData: boolean;
   series: ClvPoint[];
@@ -120,6 +135,75 @@ function round2(value: number): number {
 function validOdd(value: unknown): number | null {
   const odd = safeNum(value);
   return Number.isFinite(odd) && odd > 1 ? odd : null;
+}
+
+/**
+ * A odd de fecho do boletim: o produto das odds de fecho das pernas, tal como
+ * a `odd` é o produto das odds apanhadas.
+ *
+ * Devolve null se FALTAR uma perna que seja. Meia múltipla não dá meia linha
+ * de fecho - dava um número que parecia bom e não era, por isso é preferível
+ * o boletim continuar por preencher.
+ *
+ * Vive aqui, e não no formulário, porque há dois escritores (o formulário e a
+ * extensão) e a invariante "combinada = produto das pernas" não pode ser
+ * calculada em dois sítios. O servidor usa esta mesma função.
+ */
+export function combineClosingOdds(
+  selections: Array<Pick<Selection, "closingOdd">> | undefined,
+): number | null {
+  if (!Array.isArray(selections) || selections.length === 0) return null;
+  let product = 1;
+  for (const selection of selections) {
+    const odd = validOdd(selection?.closingOdd);
+    if (odd === null) return null;
+    product *= odd;
+  }
+  // Duas casas decimais, o mesmo arredondamento da odd combinada do formulário.
+  return Number(product.toFixed(2));
+}
+
+/**
+ * O apito do jogo, quando se sabe. Numa múltipla é o do jogo que começa por
+ * ÚLTIMO: é a partir daí que todas as pernas têm linha de fecho.
+ *
+ * Cai no Bet.dateTime quando nenhuma perna traz hora - mas isso é um recurso,
+ * não um equivalente: na Betclic o dateTime é o momento em que o boletim foi
+ * feito (placed_date_utc), que pode ser dias antes do jogo.
+ */
+export function kickoffOf(bet: Bet): string | undefined {
+  const times = (bet.selections || [])
+    .map((selection) => selection?.startsAt)
+    .filter((value): value is string => Boolean(value));
+  if (times.length === 0) return undefined;
+  return times.reduce((latest, value) => (value > latest ? value : latest));
+}
+
+/**
+ * Mercados promocionais, para quando não há melhor: "Boost (10€ máx.)" é o
+ * segundo mercado mais usado da conta real, e há ainda odds turbo e missões.
+ *
+ * É só a rede de segurança. O sinal bom é o `isBoosted` da perna, que vem do
+ * `is_boosted_odd` da própria Betclic e apanha boosts que o rótulo do mercado
+ * não denuncia. A expressão fica para as apostas escritas à mão e para os CSV,
+ * que não trazem a marca.
+ *
+ * Não inclui "Dicas da Casa": é uma escolha sugerida pela casa a preço normal,
+ * não um preço turbinado - o CLV dessas diz alguma coisa.
+ */
+const PROMO_MARKET_RE = /boost|turbo|missão|missao|super\s*odd/i;
+
+/**
+ * Aposta promocional se QUALQUER perna o for - a mesma regra do filtro de
+ * desporto. Numa múltipla basta uma perna turbinada para o preço do boletim
+ * deixar de ser comparável com o mercado.
+ */
+export function isPromoBet(bet: Bet): boolean {
+  return (bet.selections || []).some(
+    (selection) =>
+      selection?.isBoosted === true ||
+      PROMO_MARKET_RE.test(`${selection?.market ?? ""} ${selection?.betType ?? ""}`),
+  );
 }
 
 /**
@@ -160,18 +244,24 @@ export function betClv(bet: Bet): ClvBetResult | null {
 export function needsClosingOdd(bet: Bet, now: Date = new Date()): boolean {
   if (!isClvEligible(bet)) return false;
   if (validOdd(bet.closingOdd) !== null) return false;
-  const start = toTimestamp(bet.dateTime);
+  // O apito, quando o conhecemos; senão a data do boletim, que na Betclic é a
+  // da aposta e por isso pode chegar aqui antes de o jogo sequer começar.
+  const start = toTimestamp(kickoffOf(bet) ?? bet.dateTime);
   return start > 0 && start <= now.getTime();
 }
 
 export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
   let eligibleBets = 0;
   let trackedBets = 0;
+  let ratedBets = 0;
   let pendingFill = 0;
   let beatCount = 0;
   let sumClvPct = 0;
   let moneyClv = 0;
   let clvStake = 0;
+  let promoBets = 0;
+  let promoSumClvPct = 0;
+  let promoMoneyClv = 0;
 
   interface ClvEvent {
     ts: number;
@@ -194,6 +284,17 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
     }
 
     trackedBets++;
+
+    // Promocional: conta-se à parte e não entra em mais nada. A odd está acima
+    // do mercado por construção, por isso poluía a média e o gráfico.
+    if (isPromoBet(bet)) {
+      promoBets++;
+      promoSumClvPct += clv.clvPct;
+      promoMoneyClv += clv.moneyClv;
+      continue;
+    }
+
+    ratedBets++;
     sumClvPct += clv.clvPct;
     if (clv.beatClose) beatCount++;
 
@@ -235,15 +336,21 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
 
   return {
     trackedBets,
+    ratedBets,
     eligibleBets,
     pendingFill,
+    // A cobertura é sobre dados preenchidos, não sobre a qualidade da amostra:
+    // uma promocional com linha de fecho está preenchida na mesma.
     coveragePct: eligibleBets > 0 ? round2((trackedBets / eligibleBets) * 100) : 0,
-    beatCloseRate: trackedBets > 0 ? round2((beatCount / trackedBets) * 100) : 0,
-    avgClvPct: trackedBets > 0 ? round2(sumClvPct / trackedBets) : 0,
+    beatCloseRate: ratedBets > 0 ? round2((beatCount / ratedBets) * 100) : 0,
+    avgClvPct: ratedBets > 0 ? round2(sumClvPct / ratedBets) : 0,
     // Sem dinheiro real seguido não há volume sobre o qual ponderar.
     weightedClvPct: clvStake > 0 ? round2((moneyClv / clvStake) * 100) : null,
     moneyClv: round2(moneyClv),
     clvStake: round2(clvStake),
+    promoBets,
+    promoAvgClvPct: promoBets > 0 ? round2(promoSumClvPct / promoBets) : 0,
+    promoMoneyClv: round2(promoMoneyClv),
     hasData: trackedBets > 0,
     series,
     byBookmaker: Array.from(byBookmaker.entries())

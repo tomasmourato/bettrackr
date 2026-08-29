@@ -1,39 +1,42 @@
 // src/components/ClosingOddsModal.tsx
 // A caixa de entrada do CLV: lista as apostas cujo evento já começou e que
-// ainda não têm odd de fecho, uma por linha, com um campo para escrever a odd.
+// ainda não têm odd de fecho, com um campo por PERNA.
 //
 // Existe porque o CLV vive ou morre no atrito de registar a linha de fecho.
 // Obrigar a abrir o formulário de cada aposta para escrever um número era
 // garantir que ninguém o faria duas vezes. Aqui grava-se com Enter (ou ao sair
-// do campo) e a linha desaparece com o CLV já calculado ao lado.
+// do campo) e a perna fica logo com o seu CLV ao lado.
 //
-// A gravação passa pelo PATCH /api/bets/:id/closing-odd, que só escreve uma
-// coluna - o PUT obrigaria a mandar a aposta inteira de volta.
+// É por perna e não por boletim porque numa múltipla ninguém sabe a odd de
+// fecho combinada - só as dos jogos. O servidor faz o produto
+// (combineClosingOdds, src/lib/clv.ts) e só grava a combinada quando todas as
+// pernas estiverem preenchidas.
 
 import React, { useMemo, useState } from "react";
 import { Crosshair, X } from "lucide-react";
 import { Bet } from "../types";
-import { safeNum } from "../utils";
+import { parseDecimal, safeNum } from "../utils";
 import { needsClosingOdd } from "../lib/clv";
+import type { ClosingOddInput } from "../lib/betsApi";
 import { useI18n } from "../lib/i18n";
 
 interface ClosingOddsModalProps {
   bets: Bet[];
   onClose: () => void;
-  onSetClosingOdd: (id: string, closingOdd: number | null) => Promise<void>;
+  onSetClosingOdd: (id: string, input: ClosingOddInput) => Promise<void>;
 }
 
 const inputClasses =
   "w-24 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-sm px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600";
 
-/** Resumo curto da aposta, para se reconhecer a linha sem abrir nada. */
-function describe(bet: Bet): string {
-  const first = bet.selections?.[0];
-  if (!first) return bet.bookmaker || "-";
-  const event = first.event?.trim();
-  const choice = first.choice?.trim();
-  const extra = bet.selections.length > 1 ? ` (+${bet.selections.length - 1})` : "";
-  return [event, choice].filter(Boolean).join(" - ") + extra;
+/** Chave de rascunho: uma perna é a aposta mais o seu índice. */
+const legKey = (betId: string, index: number) => `${betId}:${index}`;
+
+/** Resumo curto de uma perna, para se reconhecer sem abrir nada. */
+function describeLeg(bet: Bet, index: number): string {
+  const selection = bet.selections?.[index];
+  if (!selection) return bet.bookmaker || "-";
+  return [selection.event?.trim(), selection.choice?.trim()].filter(Boolean).join(" - ");
 }
 
 export default function ClosingOddsModal({
@@ -54,23 +57,26 @@ export default function ClosingOddsModal({
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<Record<string, number>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
-  const remaining = useMemo(
-    () => pending.filter((bet) => saved[bet.id] === undefined).length,
-    [pending, saved],
+  const totalLegs = useMemo(
+    () => pending.reduce((sum, bet) => sum + (bet.selections?.length || 0), 0),
+    [pending],
   );
+  const remaining = totalLegs - Object.keys(saved).length;
 
-  const commit = async (bet: Bet) => {
-    const raw = (drafts[bet.id] ?? "").trim();
-    if (raw === "") return;
-    const parsed = parseFloat(raw.replace(",", "."));
-    if (!Number.isFinite(parsed) || parsed <= 1) return;
+  const commit = async (bet: Bet, index: number) => {
+    const key = legKey(bet.id, index);
+    const parsed = parseDecimal(drafts[key] ?? "");
+    if (parsed === null || parsed <= 1) return;
 
-    setSavingId(bet.id);
-    await onSetClosingOdd(bet.id, Number(parsed.toFixed(3)));
-    setSavingId(null);
-    setSaved((prev) => ({ ...prev, [bet.id]: parsed }));
+    setSavingKey(key);
+    await onSetClosingOdd(bet.id, {
+      legs: [{ index, closingOdd: parsed }],
+      source: "manual",
+    });
+    setSavingKey(null);
+    setSaved((prev) => ({ ...prev, [key]: parsed }));
   };
 
   return (
@@ -110,81 +116,102 @@ export default function ClosingOddsModal({
           {pending.length === 0 ? (
             <p className="text-xs italic text-zinc-400 dark:text-zinc-500">{t("clv.fill.empty")}</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {pending.map((bet) => {
-                const savedOdd = saved[bet.id];
-                const odd = safeNum(bet.odd);
-                // O CLV desta linha é calculado à mão a partir do valor que
-                // acabou de ser gravado: a prop `bets` só chega atualizada no
-                // render seguinte e a lista está congelada de propósito.
-                const clvPct = savedOdd ? (odd / savedOdd - 1) * 100 : null;
+                const legs = bet.selections || [];
+                const isMultiple = legs.length > 1;
+                const savedLegs = legs.filter(
+                  (_, index) => saved[legKey(bet.id, index)] !== undefined,
+                ).length;
 
                 return (
                   <li
                     key={bet.id}
-                    className={`flex items-center gap-3 rounded-sm border p-2.5 transition-colors ${
-                      savedOdd
+                    className={`rounded-sm border p-2.5 transition-colors ${
+                      legs.length > 0 && savedLegs === legs.length
                         ? "border-emerald-100 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/30"
                         : "border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/50"
                     }`}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-zinc-800 dark:text-zinc-100">
-                        {describe(bet)}
-                      </p>
+                    <div className="flex items-baseline justify-between gap-3">
                       <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                         {bet.dateTime} · {bet.bookmaker}
                       </p>
+                      {isMultiple && (
+                        <p className="shrink-0 text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                          {t("clv.fill.legProgress", { done: savedLegs, total: legs.length })}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="shrink-0 text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                        {t("clv.fill.oddTaken")}
-                      </p>
-                      <p className="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                        {odd.toFixed(2)}
-                      </p>
-                    </div>
+                    <div className="mt-1.5 space-y-1.5">
+                      {legs.map((selection, index) => {
+                        const key = legKey(bet.id, index);
+                        const savedOdd = saved[key];
+                        const odd = safeNum(selection.odd);
+                        // Calculado à mão a partir do valor acabado de gravar:
+                        // a prop `bets` só chega atualizada no render seguinte
+                        // e a lista está congelada de propósito.
+                        const clvPct = savedOdd ? (odd / savedOdd - 1) * 100 : null;
 
-                    {savedOdd ? (
-                      <div className="w-28 shrink-0 text-right">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                          {t("clv.fill.saved")}
-                        </p>
-                        <p
-                          className={`font-mono text-xs font-bold ${
-                            (clvPct ?? 0) >= 0
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-600 dark:text-rose-400"
-                          }`}
-                        >
-                          {savedOdd.toFixed(2)} · {(clvPct ?? 0) >= 0 ? "+" : ""}
-                          {(clvPct ?? 0).toFixed(1)}%
-                        </p>
-                      </div>
-                    ) : (
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        min="1.01"
-                        disabled={savingId === bet.id}
-                        value={drafts[bet.id] ?? ""}
-                        onChange={(event) =>
-                          setDrafts((prev) => ({ ...prev, [bet.id]: event.target.value }))
-                        }
-                        onBlur={() => commit(bet)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            commit(bet);
-                          }
-                        }}
-                        placeholder={t("bets.form.closingOddPlaceholder")}
-                        aria-label={t("clv.closingOddAria")}
-                        className={inputClasses}
-                      />
-                    )}
+                        return (
+                          <div key={key} className="flex items-center gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                                {describeLeg(bet, index)}
+                              </p>
+                            </div>
+
+                            <div className="shrink-0 text-right">
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                                {t("clv.fill.oddTaken")}
+                              </p>
+                              <p className="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                                {odd.toFixed(2)}
+                              </p>
+                            </div>
+
+                            {savedOdd ? (
+                              <div className="w-28 shrink-0 text-right">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                                  {t("clv.fill.saved")}
+                                </p>
+                                <p
+                                  className={`font-mono text-xs font-bold ${
+                                    (clvPct ?? 0) >= 0
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-rose-600 dark:text-rose-400"
+                                  }`}
+                                >
+                                  {savedOdd.toFixed(2)} · {(clvPct ?? 0) >= 0 ? "+" : ""}
+                                  {(clvPct ?? 0).toFixed(1)}%
+                                </p>
+                              </div>
+                            ) : (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                disabled={savingKey === key}
+                                value={drafts[key] ?? ""}
+                                onChange={(event) =>
+                                  setDrafts((prev) => ({ ...prev, [key]: event.target.value }))
+                                }
+                                onBlur={() => commit(bet, index)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    commit(bet, index);
+                                  }
+                                }}
+                                placeholder={t("bets.form.closingOddPlaceholder")}
+                                aria-label={t("clv.closingOddAria")}
+                                className={inputClasses}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </li>
                 );
               })}
@@ -194,7 +221,7 @@ export default function ClosingOddsModal({
 
         <div className="flex shrink-0 items-center justify-between gap-3 border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
           <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-            {t("clv.fill.pending", { n: remaining })}
+            {t("clv.fill.pendingLegs", { n: remaining })}
           </span>
           <button
             type="button"

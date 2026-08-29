@@ -15,6 +15,7 @@ import {
   deleteAllBets,
   setBetIgnored,
   setBetClosingOdd,
+  type ClosingOddInput,
 } from "../lib/betsApi";
 
 export function useBets(enabled: boolean, onSessionExpired: () => void, initialBets?: Bet[]) {
@@ -159,11 +160,11 @@ export function useBets(enabled: boolean, onSessionExpired: () => void, initialB
 
   const setClosingOdd = async (
     id: string,
-    closingOdd: number | null
+    input: ClosingOddInput
   ): Promise<Bet | null> => {
     setError(null);
     try {
-      const updated = await setBetClosingOdd(id, closingOdd);
+      const updated = await setBetClosingOdd(id, input);
       setBets((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
       return updated;
     } catch (err) {

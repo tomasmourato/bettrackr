@@ -38,6 +38,7 @@ import { Bet, BetStatus, BookieAccount, BankrollMovement } from "../../types";
 import { calculateBankroll } from "../../lib/bankroll";
 import { calculateClv } from "../../lib/clv";
 import ClosingOddsSheet from "../components/ClosingOddsSheet";
+import type { ClosingOddInput } from "../../lib/betsApi";
 import type { DashboardBetsFilters } from "../../components/Dashboard";
 import { calculateDashboardStats, safeNum } from "../../utils";
 import { useI18n, type TKey } from "../../lib/i18n";
@@ -53,7 +54,7 @@ interface MobileDashboardProps {
   bankrollMovements?: BankrollMovement[];
   // Gravar a odd de fecho a partir da caixa de entrada do CLV. Ausente na
   // vista de um amigo, que e so de leitura.
-  onSetClosingOdd?: (id: string, closingOdd: number | null) => Promise<void>;
+  onSetClosingOdd?: (id: string, input: ClosingOddInput) => Promise<void>;
 }
 
 type Timeframe = "ALL" | "7_DAYS" | "30_DAYS" | "90_DAYS" | "THIS_MONTH" | "THIS_YEAR" | "CUSTOM";
@@ -560,6 +561,17 @@ export default function MobileDashboard({
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+                {clv.promoBets > 0 && (
+                  <div className="mt-2 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-2 text-xs">
+                    <span className="text-zinc-500 dark:text-zinc-400">{t("clv.promo")}</span>
+                    <span className="font-mono text-zinc-600 dark:text-zinc-300">
+                      {t("clv.promoValue", {
+                        n: clv.promoBets,
+                        pct: `${clv.promoAvgClvPct >= 0 ? "+" : ""}${clv.promoAvgClvPct.toFixed(1)}%`,
+                      })}
+                    </span>
+                  </div>
+                )}
                 <p className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.help")}</p>
               </>
             ) : (

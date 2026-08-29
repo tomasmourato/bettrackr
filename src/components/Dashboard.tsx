@@ -21,6 +21,7 @@ import { calculateDashboardStats, safeNum } from "../utils";
 import { calculateBankroll } from "../lib/bankroll";
 import { calculateClv } from "../lib/clv";
 import ClosingOddsModal from "./ClosingOddsModal";
+import type { ClosingOddInput } from "../lib/betsApi";
 import { useI18n } from "../lib/i18n";
 import FilterDropdown from "./FilterDropdown";
 import FiltersBar from "./FiltersBar";
@@ -70,7 +71,7 @@ interface DashboardProps {
   // Gravar a odd de fecho a partir da caixa de entrada do CLV. Ausente na
   // vista de um amigo, que é só de leitura - aí a secção mostra os números
   // mas não oferece o preenchimento.
-  onSetClosingOdd?: (id: string, closingOdd: number | null) => Promise<void>;
+  onSetClosingOdd?: (id: string, input: ClosingOddInput) => Promise<void>;
 }
 
 export interface DashboardBetsFilters {
@@ -757,6 +758,17 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                   {clv.weightedClvPct === null ? "-" : `${clv.weightedClvPct >= 0 ? "+" : ""}${clv.weightedClvPct.toFixed(2)}%`}
                 </strong>
               </div>
+              {clv.promoBets > 0 && (
+                <div className="flex items-center justify-between" title={t("clv.promoHelp")}>
+                  <span>{t("clv.promo")}</span>
+                  <strong className="text-zinc-500 dark:text-zinc-400 font-medium font-mono">
+                    {t("clv.promoValue", {
+                      n: clv.promoBets,
+                      pct: `${clv.promoAvgClvPct >= 0 ? "+" : ""}${clv.promoAvgClvPct.toFixed(1)}%`,
+                    })}
+                  </strong>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span>{t("clv.coverage")}</span>
                 <strong className="text-zinc-700 dark:text-zinc-200 font-medium font-mono">

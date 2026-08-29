@@ -11,7 +11,8 @@
 
 import { useMemo, useState } from "react";
 import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType } from "../types";
-import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, safeNum } from "../utils";
+import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, parseDecimal, safeNum } from "../utils";
+import { combineClosingOdds } from "../lib/clv";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { hasCashoutSignal } from "../lib/betStatus";
 import { useI18n } from "../lib/i18n";
@@ -21,6 +22,11 @@ export interface FormSelection {
   market: string;
   choice: string;
   odd: string;
+  /** Odd de fecho desta perna; vazia enquanto não se souber. */
+  closingOdd: string;
+  // Hora do apito. Não é editável no formulário - vem da extensão - mas anda
+  // por aqui para uma edição à mão não a deitar fora sem querer.
+  startsAt?: string;
 }
 
 const nowLocal = () => new Date().toISOString().replace("T", " ").slice(0, 16);
@@ -36,8 +42,6 @@ export function useBetForm(accounts: BookieAccount[]) {
   const [customBookmaker, setCustomBookmaker] = useState("");
   const [accountId, setAccountId] = useState(""); // "" = sem conta
   const [stake, setStake] = useState<string>("10.00");
-  // Odd de fecho: string vazia = "ainda não se sabe". Nunca é obrigatória.
-  const [closingOdd, setClosingOdd] = useState<string>("");
   const [isFreebet, setIsFreebet] = useState(false);
   const [isRiskFree, setIsRiskFree] = useState(false);
   const [freebetType, setFreebetType] = useState<FreebetType>("SNR");
@@ -46,16 +50,26 @@ export function useBetForm(accounts: BookieAccount[]) {
   const [notes, setNotes] = useState("");
   const [settledReturn, setSettledReturn] = useState("");
   const [selections, setSelections] = useState<FormSelection[]>([
-    { event: "", market: "", choice: "", odd: "1.80" },
+    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "" },
   ]);
+
+  // Odd de fecho combinada, irmã do calculatedOdd: null enquanto faltar a odd
+  // de fecho de uma perna que seja. Meia múltipla não dá meia linha de fecho.
+  const calculatedClosingOdd = useMemo(
+    () =>
+      combineClosingOdds(
+        selections.map((s) => ({ closingOdd: parseDecimal(s.closingOdd) ?? undefined })),
+      ),
+    [selections],
+  );
 
   // Odd combinada (produto das odds válidas).
   const calculatedOdd = useMemo(() => {
     let multiplier = 1;
     let validCount = 0;
     selections.forEach((s) => {
-      const parsed = parseFloat(s.odd);
-      if (!isNaN(parsed) && parsed > 0) {
+      const parsed = parseDecimal(s.odd);
+      if (parsed !== null && parsed > 0) {
         multiplier *= parsed;
         validCount++;
       }
@@ -66,20 +80,20 @@ export function useBetForm(accounts: BookieAccount[]) {
   // Pré-visualização em tempo real do retorno/lucro (inclui cashout, tipo de
   // freebet e o retorno liquidado manual de meio-ganha/meio-perdida).
   const potentialWinnings = useMemo(() => {
-    const stakeNum = parseFloat(stake) || 0;
+    const stakeNum = parseDecimal(stake) ?? 0;
     const calcs = calculateBetReturnAndProfit(
       stakeNum,
       calculatedOdd,
       status,
       isFreebet,
-      parseFloat(cashoutReturn) || 0,
+      parseDecimal(cashoutReturn) ?? 0,
       freebetType,
       isRiskFree,
     );
 
     if (status === "MEIO_GANHA" || status === "MEIO_PERDIDA") {
-      const customReturn = Number(settledReturn.replace(",", "."));
-      if (settledReturn.trim() !== "" && Number.isFinite(customReturn) && customReturn >= 0) {
+      const customReturn = parseDecimal(settledReturn);
+      if (customReturn !== null && customReturn >= 0) {
         const finalReturn = Number(customReturn.toFixed(2));
         return {
           ...calcs,
@@ -100,7 +114,6 @@ export function useBetForm(accounts: BookieAccount[]) {
     setCustomBookmaker("");
     setAccountId("");
     setStake("10.00");
-    setClosingOdd("");
     setIsFreebet(false);
     setIsRiskFree(false);
     setFreebetType(defaultFreebetTypeFor("Betano"));
@@ -108,7 +121,7 @@ export function useBetForm(accounts: BookieAccount[]) {
     setDateTime(nowLocal());
     setNotes("");
     setSettledReturn("");
-    setSelections([{ event: "", market: "", choice: "", odd: "1.80" }]);
+    setSelections([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
     setError(null);
   };
 
@@ -134,7 +147,6 @@ export function useBetForm(accounts: BookieAccount[]) {
 
     setAccountId(bet.accountId ?? "");
     setStake(bet.stake.toString());
-    setClosingOdd(bet.closingOdd ? String(bet.closingOdd) : "");
     setIsFreebet(bet.isFreebet);
     setIsRiskFree(bet.isRiskFree ?? false);
     setFreebetType(bet.freebetType ?? defaultFreebetTypeFor(bet.bookmaker));
@@ -152,6 +164,8 @@ export function useBetForm(accounts: BookieAccount[]) {
         market: s.market,
         choice: s.choice,
         odd: s.odd.toString(),
+        closingOdd: s.closingOdd ? String(s.closingOdd) : "",
+        startsAt: s.startsAt,
       })),
     );
   };
@@ -163,7 +177,7 @@ export function useBetForm(accounts: BookieAccount[]) {
   };
 
   const addSelection = () => {
-    setSelections((prev) => [...prev, { event: "", market: "", choice: "", odd: "1.50" }]);
+    setSelections((prev) => [...prev, { event: "", market: "", choice: "", odd: "1.50", closingOdd: "" }]);
   };
 
   const removeSelection = (index: number) => {
@@ -186,8 +200,8 @@ export function useBetForm(accounts: BookieAccount[]) {
    * limpas para o servidor não o forçar de volta.
    */
   const buildBet = (): Bet | null => {
-    const stakeNum = parseFloat(stake);
-    if (isNaN(stakeNum) || stakeNum <= 0) {
+    const stakeNum = parseDecimal(stake);
+    if (stakeNum === null || stakeNum <= 0) {
       setError(t("bets.error.stake"));
       return null;
     }
@@ -201,17 +215,27 @@ export function useBetForm(accounts: BookieAccount[]) {
     const built: Selection[] = [];
     let isValid = true;
 
+    let closingOddInvalid = false;
+
     selections.forEach((s, idx) => {
-      const oddVal = parseFloat(s.odd);
-      if (!s.event.trim() || !s.market.trim() || !s.choice.trim() || isNaN(oddVal) || oddVal <= 1) {
+      const oddVal = parseDecimal(s.odd);
+      if (!s.event.trim() || !s.market.trim() || !s.choice.trim() || oddVal === null || oddVal <= 1) {
         isValid = false;
+      }
+      // A odd de fecho é opcional, mas preenchida tem de ser uma odd a sério -
+      // o servidor rejeita <= 1 e um 400 aqui perdia o formulário todo.
+      const closingVal = parseDecimal(s.closingOdd);
+      if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
+        closingOddInvalid = true;
       }
       built.push({
         id: `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
         event: s.event.trim(),
         market: s.market.trim(),
         choice: s.choice.trim(),
-        odd: oddVal,
+        odd: oddVal ?? 0,
+        ...(closingVal !== null && closingVal > 1 ? { closingOdd: closingVal } : {}),
+        ...(s.startsAt ? { startsAt: s.startsAt } : {}),
       });
     });
 
@@ -220,19 +244,12 @@ export function useBetForm(accounts: BookieAccount[]) {
       return null;
     }
 
-    setError(null);
-
-    // Odd de fecho: opcional, mas se estiver preenchida tem de ser uma odd a
-    // sério - o servidor rejeita <= 1 e um 400 aqui perdia o formulário todo.
-    let closingOddNum: number | undefined;
-    if (closingOdd.trim() !== "") {
-      const parsed = parseFloat(closingOdd.replace(",", "."));
-      if (!Number.isFinite(parsed) || parsed <= 1) {
-        setError(t("bets.error.closingOdd"));
-        return null;
-      }
-      closingOddNum = Number(parsed.toFixed(3));
+    if (closingOddInvalid) {
+      setError(t("bets.error.closingOdd"));
+      return null;
     }
+
+    setError(null);
 
     const { potentialReturn, finalReturn, netProfit } = potentialWinnings;
 
@@ -251,7 +268,8 @@ export function useBetForm(accounts: BookieAccount[]) {
       selections: built,
       stake: stakeNum,
       odd: calculatedOdd,
-      closingOdd: closingOddNum,
+      // Derivada das pernas pela mesma função que o servidor usa.
+      closingOdd: combineClosingOdds(built) ?? undefined,
       isFreebet,
       freebetType: isFreebet ? freebetType : undefined,
       isRiskFree,
@@ -284,7 +302,6 @@ export function useBetForm(accounts: BookieAccount[]) {
     customBookmaker, setCustomBookmaker,
     accountId, setAccountId,
     stake, setStake,
-    closingOdd, setClosingOdd,
     isFreebet, setIsFreebet,
     isRiskFree, setIsRiskFree,
     freebetType, setFreebetType,
@@ -295,6 +312,7 @@ export function useBetForm(accounts: BookieAccount[]) {
     selections,
     // derivados
     calculatedOdd,
+    calculatedClosingOdd,
     potentialWinnings,
     // ações
     reset,

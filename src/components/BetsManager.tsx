@@ -21,13 +21,13 @@ import {
   CheckSquare
 } from "lucide-react";
 import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType, SelectionResult } from "../types";
-import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, safeNum, selectBetsForFinancialSummary } from "../utils";
+import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, parseDecimal, safeNum, selectBetsForFinancialSummary } from "../utils";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { hasCashoutSignal } from "../lib/betStatus";
 import FilterDropdown from "./FilterDropdown";
 import FilteredBetsSummary from "./FilteredBetsSummary";
 import FiltersBar from "./FiltersBar";
-import { betClv, needsClosingOdd } from "../lib/clv";
+import { betClv, combineClosingOdds, needsClosingOdd } from "../lib/clv";
 import TimeframeFilter, {
   EMPTY_TIMEFRAME_FILTER,
   resolveTimeframeRange,
@@ -201,8 +201,6 @@ export default function BetsManager({
   const [formCustomBookmaker, setFormCustomBookmaker] = useState("");
   const [formAccountId, setFormAccountId] = useState(""); // "" = sem conta
   const [formStake, setFormStake] = useState<string>("10.00");
-  // Odd de fecho: string vazia = "ainda não se sabe". Nunca é obrigatória.
-  const [formClosingOdd, setFormClosingOdd] = useState<string>("");
   const [formIsFreebet, setFormIsFreebet] = useState(false);
   const [formIsRiskFree, setFormIsRiskFree] = useState(false);
   const [formFreebetType, setFormFreebetType] = useState<FreebetType>("SNR");
@@ -215,8 +213,13 @@ export default function BetsManager({
     market: string;
     choice: string;
     odd: string;
+    /** Odd de fecho desta perna; vazia enquanto não se souber. */
+    closingOdd: string;
+    // Hora do apito. Não editável - vem da extensão - mas anda por aqui para
+    // uma edição à mão não a deitar fora sem querer.
+    startsAt?: string;
     result?: SelectionResult;
-  }>>([{ event: "", market: "", choice: "", odd: "1.80" }]);
+  }>>([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
 
   useEffect(() => {
     if (!detailBet) return;
@@ -237,8 +240,8 @@ export default function BetsManager({
     let multiplier = 1;
     let validCount = 0;
     formSelections.forEach(s => {
-      const parsed = parseFloat(s.odd);
-      if (!isNaN(parsed) && parsed > 0) {
+      const parsed = parseDecimal(s.odd);
+      if (parsed !== null && parsed > 0) {
         multiplier *= parsed;
         validCount++;
       }
@@ -247,14 +250,24 @@ export default function BetsManager({
   }, [formSelections]);
 
   // Real-time calculations for potential return in the form
+  // Odd de fecho combinada: null enquanto faltar a de uma perna que seja.
+  // Meia múltipla não dá meia linha de fecho.
+  const calculatedClosingOdd = useMemo(
+    () =>
+      combineClosingOdds(
+        formSelections.map((s) => ({ closingOdd: parseDecimal(s.closingOdd) ?? undefined })),
+      ),
+    [formSelections]
+  );
+
   const potentialWinningsInfo = useMemo(() => {
-    const stakeNum = parseFloat(formStake) || 0;
+    const stakeNum = parseDecimal(formStake) ?? 0;
     const calcs = calculateBetReturnAndProfit(
       stakeNum,
       calculatedOdd,
       formStatus,
       formIsFreebet,
-      parseFloat(formCashoutReturn) || 0,
+      parseDecimal(formCashoutReturn) ?? 0,
       formFreebetType,
       formIsRiskFree
     );
@@ -262,8 +275,8 @@ export default function BetsManager({
     // Meio-ganha/meio-perdida: o utilizador pode indicar o retorno liquidado
     // manualmente (fork). O cashout usa o seu próprio campo (formCashoutReturn).
     if (formStatus === "MEIO_GANHA" || formStatus === "MEIO_PERDIDA") {
-      const customReturn = Number(formSettledReturn.replace(",", "."));
-      if (formSettledReturn.trim() !== "" && Number.isFinite(customReturn) && customReturn >= 0) {
+      const customReturn = parseDecimal(formSettledReturn);
+      if (customReturn !== null && customReturn >= 0) {
         const finalReturn = Number(customReturn.toFixed(2));
         return {
           ...calcs,
@@ -673,7 +686,6 @@ export default function BetsManager({
     setFormCustomBookmaker("");
     setFormAccountId("");
     setFormStake("10.00");
-    setFormClosingOdd("");
     setFormIsFreebet(false);
     setFormIsRiskFree(false);
     setFormFreebetType(defaultFreebetTypeFor("Betano"));
@@ -681,7 +693,7 @@ export default function BetsManager({
     setFormDateTime(new Date().toISOString().replace("T", " ").slice(0, 16));
     setFormNotes("");
     setFormSettledReturn("");
-    setFormSelections([{ event: "", market: "", choice: "", odd: "1.80" }]);
+    setFormSelections([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
     setFormError(null);
   };
 
@@ -708,7 +720,6 @@ export default function BetsManager({
     
     setFormAccountId(bet.accountId ?? "");
     setFormStake(bet.stake.toString());
-    setFormClosingOdd(bet.closingOdd ? String(bet.closingOdd) : "");
     setFormIsFreebet(bet.isFreebet);
     setFormIsRiskFree(bet.isRiskFree ?? false);
     setFormFreebetType(bet.freebetType ?? defaultFreebetTypeFor(bet.bookmaker));
@@ -725,6 +736,8 @@ export default function BetsManager({
       market: s.market,
       choice: s.choice,
       odd: s.odd.toString(),
+      closingOdd: s.closingOdd ? String(s.closingOdd) : "",
+      startsAt: s.startsAt,
       result: s.result,
     })));
     setIsModalOpen(true);
@@ -746,7 +759,7 @@ export default function BetsManager({
 
   // Add Selection inside form
   const addSelection = () => {
-    setFormSelections([...formSelections, { event: "", market: "", choice: "", odd: "1.50" }]);
+    setFormSelections([...formSelections, { event: "", market: "", choice: "", odd: "1.50", closingOdd: "" }]);
   };
 
   // Remove Selection inside form
@@ -768,8 +781,8 @@ export default function BetsManager({
     e.preventDefault();
 
     // Validations
-    const stakeNum = parseFloat(formStake);
-    if (isNaN(stakeNum) || stakeNum <= 0) {
+    const stakeNum = parseDecimal(formStake);
+    if (stakeNum === null || stakeNum <= 0) {
       setFormError(t("bets.error.stake"));
       return;
     }
@@ -784,17 +797,27 @@ export default function BetsManager({
     const selections: Selection[] = [];
     let isValid = true;
     
+    let closingOddInvalid = false;
+
     formSelections.forEach((s, idx) => {
-      const oddVal = parseFloat(s.odd);
-      if (!s.event.trim() || !s.market.trim() || !s.choice.trim() || isNaN(oddVal) || oddVal <= 1) {
+      const oddVal = parseDecimal(s.odd);
+      if (!s.event.trim() || !s.market.trim() || !s.choice.trim() || oddVal === null || oddVal <= 1) {
         isValid = false;
+      }
+      // A odd de fecho é opcional, mas preenchida tem de ser uma odd a sério -
+      // o servidor rejeita <= 1 e um 400 aqui perdia o formulário todo.
+      const closingVal = parseDecimal(s.closingOdd);
+      if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
+        closingOddInvalid = true;
       }
       selections.push({
         id: `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
         event: s.event.trim(),
         market: s.market.trim(),
         choice: s.choice.trim(),
-        odd: oddVal,
+        odd: oddVal ?? 0,
+        ...(closingVal !== null && closingVal > 1 ? { closingOdd: closingVal } : {}),
+        ...(s.startsAt ? { startsAt: s.startsAt } : {}),
         ...(s.result ? { result: s.result } : {}),
       });
     });
@@ -804,16 +827,9 @@ export default function BetsManager({
       return;
     }
 
-    // Odd de fecho: opcional, mas se estiver preenchida tem de ser uma odd a
-    // sério - o servidor rejeita <= 1 e um 400 aqui perdia o formulário todo.
-    let closingOddNum: number | undefined;
-    if (formClosingOdd.trim() !== "") {
-      const parsedClosing = parseFloat(formClosingOdd.replace(",", "."));
-      if (!Number.isFinite(parsedClosing) || parsedClosing <= 1) {
-        setFormError(t("bets.error.closingOdd"));
-        return;
-      }
-      closingOddNum = Number(parsedClosing.toFixed(3));
+    if (closingOddInvalid) {
+      setFormError(t("bets.error.closingOdd"));
+      return;
     }
 
     setFormError(null);
@@ -843,7 +859,8 @@ export default function BetsManager({
       selections: selections,
       stake: stakeNum,
       odd: calculatedOdd,
-      closingOdd: closingOddNum,
+      // Derivada das pernas pela mesma função que o servidor usa.
+      closingOdd: combineClosingOdds(selections) ?? undefined,
       isFreebet: formIsFreebet,
       freebetType: formIsFreebet ? formFreebetType : undefined,
       isRiskFree: formIsRiskFree,
@@ -1910,9 +1927,8 @@ aria-label={t("bets.details.close")}
                     {t("bets.form.cashoutValue", { currency })}
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     className="w-full px-3 py-2 rounded-sm border border-violet-200 dark:border-violet-800 bg-white dark:bg-zinc-800 focus:outline-none focus:border-violet-500 text-zinc-700 dark:text-zinc-200 font-mono font-bold"
                     placeholder="0.00"
                     value={formCashoutReturn}
@@ -2053,36 +2069,20 @@ placeholder={t("bets.form.whichPlaceholder")}
                 )}
               </div>
 
-              {/* Stake, odd de fecho & notas */}
+              {/* Stake & notas */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.stake")}</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200 font-mono font-bold"
                     placeholder="10.00"
                     value={formStake}
                     onChange={(e) => setFormStake(e.target.value)}
                   />
                 </div>
-                {/* Odd de fecho: opcional, é o que dá o CLV (ver src/lib/clv.ts) */}
                 <div>
-                  <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("clv.closingOddOptional")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="1.01"
-                    className="w-full px-3 py-2 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-700 dark:text-zinc-200 font-mono"
-                    placeholder={t("bets.form.closingOddPlaceholder")}
-                    aria-label={t("clv.closingOddAria")}
-                    value={formClosingOdd}
-                    onChange={(e) => setFormClosingOdd(e.target.value)}
-                  />
-                  <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.closingOddHint")}</p>
-                </div>
-                <div className="col-span-2">
                   <label className="block text-zinc-500 dark:text-zinc-400 font-semibold mb-1">{t("bets.form.notes")}</label>
                   <input
                     type="text"
@@ -2096,6 +2096,7 @@ placeholder={t("bets.form.notesPlaceholder")}
 
               {/* Selections Section */}
               <div className="space-y-3">
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{t("clv.closingOddHint")}</p>
                 <div className="flex justify-between items-center">
                   <h4 className="font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide text-[10px]">
                     {t("bets.form.selections", { n: formSelections.length })}
@@ -2167,14 +2168,26 @@ placeholder={t("bets.form.choicePlaceholder")}
                         <div>
                           <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("bets.form.oddIndividual")}</label>
                           <input
-                            type="number"
-                            step="0.01"
-                            min="1.01"
+                            type="text"
+                            inputMode="decimal"
                             required
                             className="w-full px-2.5 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 font-mono text-[11px]"
                             placeholder="1.80"
                             value={sel.odd}
                             onChange={(e) => handleSelectionChange(idx, "odd", e.target.value)}
+                          />
+                        </div>
+                        {/* Odd de fecho desta perna: é o que dá o CLV (src/lib/clv.ts) */}
+                        <div>
+                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("clv.closingOddShort")}</label>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="w-full px-2.5 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 font-mono text-[11px]"
+                            placeholder={t("bets.form.closingOddPlaceholder")}
+                            aria-label={t("clv.closingOddAria")}
+                            value={sel.closingOdd}
+                            onChange={(e) => handleSelectionChange(idx, "closingOdd", e.target.value)}
                           />
                         </div>
                       </div>
@@ -2189,6 +2202,11 @@ placeholder={t("bets.form.choicePlaceholder")}
                   <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">{t("bets.form.preview")}</p>
                   <p className="text-sm font-bold mt-0.5">
                     {t("bets.form.totalOdd")}<span className="font-mono text-emerald-300">@{calculatedOdd.toFixed(2)}</span>
+                    {calculatedClosingOdd !== null && (
+                      <span className="ml-2 text-zinc-400">
+                        {t("clv.closingOdd")}<span className="font-mono text-violet-300 ml-1">@{calculatedClosingOdd.toFixed(2)}</span>
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="text-right">
@@ -2198,9 +2216,8 @@ placeholder={t("bets.form.choicePlaceholder")}
                   {formStatus === "MEIO_GANHA" || formStatus === "MEIO_PERDIDA" ? (
                     <div className="mt-1 flex items-center justify-end gap-1">
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         required
                         value={formSettledReturn !== "" ? formSettledReturn : potentialWinningsInfo.finalReturn.toFixed(2)}
                         onChange={(e) => setFormSettledReturn(e.target.value)}

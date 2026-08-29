@@ -8,7 +8,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Camera as CameraIcon, Image as ImageIcon, Sparkles, X, PlusCircle } from "lucide-react";
 import { Bet, Selection, BetStatus, BetType, FreebetType } from "../../types";
-import { AVAILABLE_BOOKMAKERS, calculateBetReturnAndProfit } from "../../utils";
+import { AVAILABLE_BOOKMAKERS, calculateBetReturnAndProfit, parseDecimal } from "../../utils";
 import { defaultFreebetTypeFor } from "../../lib/bookmakers";
 import { authFetch, parseJsonResponse } from "../../lib/authApi";
 import { matchBookmaker, matchStatus } from "../../lib/screenshotMatch";
@@ -178,8 +178,8 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
     let multiplier = 1;
     let count = 0;
     editSelections.forEach((s) => {
-      const parsed = parseFloat(s.odd);
-      if (!isNaN(parsed) && parsed > 0) {
+      const parsed = parseDecimal(s.odd);
+      if (parsed !== null && parsed > 0) {
         multiplier *= parsed;
         count++;
       }
@@ -190,11 +190,11 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
   const previewReturns = useMemo(
     () =>
       calculateBetReturnAndProfit(
-        parseFloat(editStake) || 0,
+        parseDecimal(editStake) ?? 0,
         calculatedTotalOdd,
         editStatus,
         isFreebet,
-        parseFloat(editCashoutReturn) || 0,
+        parseDecimal(editCashoutReturn) ?? 0,
         editFreebetType,
       ),
     [editStake, calculatedTotalOdd, editStatus, isFreebet, editCashoutReturn, editFreebetType],
@@ -215,8 +215,8 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
   };
 
   const handleConfirmAndSave = async () => {
-    const stakeNum = parseFloat(editStake);
-    if (isNaN(stakeNum) || stakeNum <= 0) {
+    const stakeNum = parseDecimal(editStake);
+    if (stakeNum === null || stakeNum <= 0) {
       setFormError(t("import.error.stake"));
       return;
     }
@@ -224,8 +224,8 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
     const finalSelections: Selection[] = [];
     let isValid = true;
     editSelections.forEach((s, idx) => {
-      const oddNum = parseFloat(s.odd);
-      if (!s.event.trim() || !s.market.trim() || !s.choice.trim() || isNaN(oddNum) || oddNum <= 1) {
+      const oddNum = parseDecimal(s.odd);
+      if (!s.event.trim() || !s.market.trim() || !s.choice.trim() || oddNum === null || oddNum <= 1) {
         isValid = false;
       }
       finalSelections.push({
@@ -233,7 +233,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
         event: s.event.trim(),
         market: s.market.trim(),
         choice: s.choice.trim(),
-        odd: oddNum,
+        odd: oddNum ?? 0,
       });
     });
 
@@ -248,7 +248,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
       calculatedTotalOdd,
       editStatus,
       isFreebet,
-      parseFloat(editCashoutReturn) || 0,
+      parseDecimal(editCashoutReturn) ?? 0,
       editFreebetType,
     );
 
@@ -429,10 +429,8 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
                 {t("bets.form.cashoutReceived")}
               </span>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.01"
-                min="0"
                 value={editCashoutReturn}
                 onChange={(e) => setEditCashoutReturn(e.target.value)}
                 className={`mt-1 ${inputClasses}`}
@@ -479,7 +477,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
                     <input type="text" value={s.market} onChange={(e) => changeSelection(i, "market", e.target.value)} placeholder={t("bets.field.market")} className={inputClasses} />
                     <input type="text" value={s.choice} onChange={(e) => changeSelection(i, "choice", e.target.value)} placeholder={t("bets.form.choicePlaceholderShort")} className={inputClasses} />
                   </div>
-                  <input type="number" inputMode="decimal" step="0.01" min="1" value={s.odd} onChange={(e) => changeSelection(i, "odd", e.target.value)} placeholder={t("bets.field.odd")} className={inputClasses} />
+                  <input type="text" inputMode="decimal" value={s.odd} onChange={(e) => changeSelection(i, "odd", e.target.value)} placeholder={t("bets.field.odd")} className={inputClasses} />
                 </MobileCard>
               ))}
               {editType === "MULTIPLA" && (
@@ -499,10 +497,8 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
               {t("bets.form.stakeCurrency", { currency })}
             </span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0"
               value={editStake}
               onChange={(e) => setEditStake(e.target.value)}
               className={`mt-1 ${inputClasses}`}

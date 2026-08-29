@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useMemo, Suspense, lazy } from "react";
 
 import { Bet, BankrollMovement, Preferences } from "./types";
+import type { ClosingOddInput } from "./lib/betsApi";
 import { INITIAL_BETS, safeNum } from "./utils";
 
 import type { DashboardBetsFilters } from "./components/Dashboard";
@@ -294,14 +295,14 @@ export default function App({ initialData }: AppProps) {
     }
   };
 
-  const handleSetClosingOdd = async (id: string, closingOdd: number | null) => {
-    const updated = await setClosingOdd(id, closingOdd);
+  const handleSetClosingOdd = async (id: string, input: ClosingOddInput) => {
+    const updated = await setClosingOdd(id, input);
     if (updated) {
       addLog(
         "ODD_DE_FECHO",
-        closingOdd === null
-          ? `Aposta #${updated.id.substring(0, 8)}: odd de fecho removida.`
-          : `Aposta #${updated.id.substring(0, 8)}: odd de fecho ${closingOdd}.`
+        updated.closingOdd
+          ? `Aposta #${updated.id.substring(0, 8)}: odd de fecho ${updated.closingOdd}.`
+          : `Aposta #${updated.id.substring(0, 8)}: odd de fecho removida.`
       );
     }
   };

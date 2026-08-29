@@ -192,12 +192,28 @@ export function mapBet(bet) {
 
   const selections = (bet.bet_selections || []).map((s, i) => {
     const result = betclicSelectionResult(s);
+    // Os ids servem para voltar a pedir o preço corrente à Betclic enquanto o
+    // jogo não começa - é assim que a odd de fecho é apanhada sem ninguém a
+    // escrever à mão. Guardados como texto, que é como voltam para o URL.
+    const sourceRef = {};
+    if (s.match_id != null) sourceRef.matchId = String(s.match_id);
+    if (s.market_id != null) sourceRef.marketId = String(s.market_id);
+    if (s.id != null) sourceRef.selectionId = String(s.id);
+
     return {
       id: `betclic-${ref || "x"}-${i}`,
       event: s.match_label ?? "",
       market: s.market_label ?? "",
       choice: s.selection_label ?? "",
       odd: Number(s.odds) || 0,
+      // A hora do JOGO, que é diferente da hora da APOSTA (placed_date_utc).
+      // Sem ela não se sabe quando ler a linha de fecho, e o histórico ficava
+      // a dizer que uma aposta de sábado já estava por preencher hoje.
+      ...(s.match_date_utc ? { startsAt: formatDateTime(s.match_date_utc) } : {}),
+      // A própria Betclic marca as odds turbinadas - muito mais fiável do que
+      // adivinhar pelo texto do mercado.
+      ...(s.is_boosted_odd === true ? { isBoosted: true } : {}),
+      ...(Object.keys(sourceRef).length > 0 ? { sourceRef } : {}),
       sport: s.sport_label || undefined,
       betType: s.market_label || undefined,
       ...(result ? { result } : {}),

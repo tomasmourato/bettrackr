@@ -79,6 +79,7 @@ const accountBox = document.getElementById("account-box");
 const accountUser = document.getElementById("account-user");
 const logoutBtn = document.getElementById("logout-btn");
 const autoImportToggle = document.getElementById("auto-import");
+const closingOddsToggle = document.getElementById("capture-closing-odds");
 const updateOnlyToggle = document.getElementById("update-only");
 
 function setMsg(text, kind) {
@@ -116,6 +117,7 @@ async function refreshStatus() {
   if (status.bettrackr) {
     accountUser.textContent = status.bettrackrUser ? `Sessão: ${status.bettrackrUser}` : "Sessão iniciada";
     autoImportToggle.checked = status.autoImport === true;
+    closingOddsToggle.checked = status.captureClosingOdds === true;
     updateOnlyToggle.checked = status.updateOnly === true;
   }
   return status;
@@ -373,6 +375,19 @@ logoutBtn.addEventListener("click", async () => {
   accountsBox.innerHTML = "";
   setMsg("Sessão terminada.", null);
   await refreshStatus();
+});
+
+closingOddsToggle.addEventListener("change", async () => {
+  await chrome.runtime.sendMessage({
+    type: "SET_CAPTURE_CLOSING_ODDS",
+    enabled: closingOddsToggle.checked,
+  });
+  setMsg(
+    closingOddsToggle.checked
+      ? "Odd de fecho automática ligada."
+      : "Odd de fecho automática desligada.",
+    null,
+  );
 });
 
 autoImportToggle.addEventListener("change", async () => {

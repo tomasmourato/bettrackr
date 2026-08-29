@@ -7,6 +7,28 @@ export function safeNum(value: any, defaultValue = 0): number {
   return isNaN(num) ? defaultValue : num;
 }
 
+/**
+ * Lê um decimal escrito à portuguesa ou à inglesa: "1,85" e "1.85" dão os dois
+ * 1.85.
+ *
+ * Existe porque um <input type="number"> REJEITA a vírgula: o `.value` vem
+ * vazio e o número desaparece antes de o nosso código o ver - o utilizador
+ * escreve 1,85, carrega em guardar e não acontece nada. Por isso os campos de
+ * decimais são type="text" + inputMode="decimal" (o inputMode sozinho só muda
+ * o teclado do telemóvel, não resolve nada) e a leitura passa toda por aqui.
+ *
+ * Devolve null - e não NaN - no vazio e no lixo, para quem chama ser obrigado
+ * a decidir o que fazer com o campo por preencher.
+ */
+export function parseDecimal(raw: string | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null;
+  // Só a primeira vírgula: "1,8,5" fica "1.8,5" e cai no NaN, como deve ser.
+  const cleaned = String(raw).trim().replace(",", ".");
+  if (cleaned === "") return null;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 // Calculation formulas for individual bets.
 // cashoutReturn: só usado quando status === "CASHOUT" - é o valor pelo qual a
 // aposta foi encerrada antecipadamente (arbitrário, não deriva de stake*odd).

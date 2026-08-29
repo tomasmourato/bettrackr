@@ -13,6 +13,22 @@ export interface Selection {
   market: string;
   choice: string;
   odd: number;
+  // Odd de fecho desta perna. A do boletim (Bet.closingOdd) é o produto
+  // destas, tal como Bet.odd é o produto das odds. Ver src/lib/clv.ts.
+  closingOdd?: number;
+  // Hora do apito, "YYYY-MM-DD HH:mm". Não confundir com Bet.dateTime, que na
+  // Betclic é o momento em que o boletim foi feito (placed_date_utc).
+  startsAt?: string;
+  // Odd turbinada pela casa (a Betclic marca-a em is_boosted_odd). Está acima
+  // do mercado por construção, por isso fica fora das médias do CLV.
+  isBoosted?: boolean;
+  // Identificadores da perna na casa de apostas, para se poder voltar a pedir
+  // o preço corrente. Nomes genéricos de propósito: hoje só a Betclic os dá.
+  sourceRef?: {
+    matchId?: string;
+    marketId?: string;
+    selectionId?: string;
+  };
   sport?: string;
   betType?: string;
   result?: SelectionResult;
@@ -41,10 +57,10 @@ export interface Bet {
   selections: Selection[];
   stake: number; // For normal bets, this is real cash. For freebets, it's the freebet value.
   odd: number; // Multiplied odds of all selections
-  // Odd de fecho: a última odd antes de o evento começar, registada à mão.
-  // undefined = ainda não se sabe (e "ainda não sei" é diferente de "não bati
-  // a linha" - é isso que a cobertura do CLV mede). Numa múltipla é a odd de
-  // fecho combinada, tal como `odd`. Ver src/lib/clv.ts.
+  // Odd de fecho combinada: o produto das odds de fecho das pernas, tal como
+  // `odd` é o produto das odds. undefined = ainda não se sabe, e "ainda não
+  // sei" é diferente de "não bati a linha" - é isso que a cobertura do CLV
+  // mede. Derivada de Selection.closingOdd por combineClosingOdds (src/lib/clv.ts).
   closingOdd?: number;
   isFreebet: boolean;
   freebetType?: FreebetType; // só relevante quando isFreebet; default resolvido pela casa

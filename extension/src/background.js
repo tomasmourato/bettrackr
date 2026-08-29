@@ -8,6 +8,16 @@ import { fetchBetanoHistory } from "./betano-history.js";
 import { mapSolverdeBets, solverdeRef } from "./mapper-solverde.js";
 import { fetchSolverdeHistory } from "./solverde-history.js";
 import { runAfterBettrackrVerification } from "./bettrackr-identity.js";
+import {
+  SNAPSHOT_LEAD_MINUTES,
+  acceptSnapshot,
+  collectSelectionOdds,
+  legKeyOf,
+  parseNgState,
+  nextWakeUp,
+  pendingLegsFrom,
+  readyToWrite,
+} from "./closing-odds.js";
 
 const PAGE_SIZE = 20;
 const DEFAULT_BETTRACKR_BASE = "https://betrackr.vercel.app";
@@ -343,6 +353,230 @@ async function fetchExistingBets(cfg) {
     if (key) existing.set(String(key), { ...bet, metadata });
   }
   return existing;
+}
+
+
+// ============================================================
+// Odd de fecho (CLV) - a extensão apanha a linha sozinha.
+//
+// O problema: a odd de fecho é a última antes do apito e ninguém a escreve à
+// mão para centenas de apostas. A extensão já tem sessão na Betclic; só lhe
+// faltava acordar. É o que os alarmes fazem.
+//
+// Duas passagens:
+//   1. Oportunista - sempre que a extensão corre por outro motivo, tira uma
+//      fotografia do preço das pernas com jogo nas próximas 48h. É a rede
+//      para quando o Chrome estiver fechado à hora do apito.
+//   2. Ao alarme - dois minutos antes do apito mais próximo, para apanhar a
+//      linha o mais tarde possível.
+//
+// Só se lê ANTES do apito (ver closing-odds.js): depois disso o mercado está
+// suspenso e o preço que viesse seria lixo com ar de dado.
+// ============================================================
+const CLOSING_ALARM = "bettrackr-closing-odds";
+const SNAPSHOT_STORE = "closingOddSnapshots";
+// Teto por passagem, para não martelar a Betclic nem gastar bateria. O que
+// custa é a página do jogo (centenas de KB), por isso o teto que interessa é
+// o de JOGOS - está em MAX_MATCHES_PER_PASS, junto à leitura.
+const MAX_LEGS_PER_PASS = 60;
+
+async function closingOddsEnabled() {
+  const stored = await chrome.storage.local.get(["captureClosingOdds"]);
+  return stored.captureClosingOdds === true;
+}
+
+async function getSnapshots() {
+  const stored = await chrome.storage.local.get([SNAPSHOT_STORE]);
+  return stored[SNAPSHOT_STORE] && typeof stored[SNAPSHOT_STORE] === "object"
+    ? stored[SNAPSHOT_STORE]
+    : {};
+}
+
+/**
+ * O preço corrente de cada perna. Devolve um Map de legKey -> odd.
+ *
+ * A página de um jogo da Betclic traz o estado todo embebido no HTML, num
+ * <script id="ng-state"> - o transfer state do Angular, já com as respostas
+ * gRPC descodificadas. As odds estão lá em JSON, indexadas pelo MESMO id de
+ * seleção que a API de apostas devolve.
+ *
+ * Por isso não é preciso gRPC (o endpoint real é binário), nem abrir um
+ * separador, nem raspar o DOM - os botões de odd da página não têm id nenhum e
+ * obrigariam a casar por texto do mercado. É um GET a uma página pública.
+ *
+ * O URL basta ser /m<matchId>: a Betclic aceita-o e serve o jogo certo, sem
+ * precisarmos de saber o slug do desporto nem da competição.
+ */
+const MAX_MATCHES_PER_PASS = 8;
+
+async function readMatchOdds(matchId) {
+  // credentials: "omit" de propósito - a página é pública e não há razão para
+  // lhe mandar a sessão do utilizador.
+  const res = await fetch(`https://www.betclic.pt/m${encodeURIComponent(matchId)}`, {
+    credentials: "omit",
+  });
+  if (!res.ok) return null;
+  const state = parseNgState(await res.text());
+  return state ? collectSelectionOdds(state) : null;
+}
+
+async function readCurrentOdds(legs) {
+  const out = new Map();
+
+  // Agrupar por jogo: uma múltipla com duas pernas do mesmo jogo, ou dois
+  // boletins no mesmo jogo, são um pedido só. Cada página são centenas de KB.
+  const porJogo = new Map();
+  for (const leg of legs) {
+    if (!leg.matchId || !leg.selectionId) continue;
+    if (!porJogo.has(leg.matchId)) porJogo.set(leg.matchId, []);
+    porJogo.get(leg.matchId).push(leg);
+  }
+
+  let lidos = 0;
+  for (const [matchId, grupo] of porJogo) {
+    if (lidos >= MAX_MATCHES_PER_PASS) break;
+    lidos++;
+    let precos = null;
+    try {
+      precos = await readMatchOdds(matchId);
+    } catch (_) {
+      // Um jogo que falhe não pode travar os outros.
+      continue;
+    }
+    if (!precos) continue;
+    for (const leg of grupo) {
+      const odd = precos.get(String(leg.selectionId));
+      if (typeof odd === "number" && odd > 1) {
+        out.set(legKeyOf(leg.importKey, leg.index), odd);
+      }
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Uma passagem: lê os preços das pernas que interessam, guarda as leituras que
+ * passam as regras, e escreve no BetTrackr os boletins que ficaram completos.
+ */
+async function runClosingOddsPass(cfg, bets) {
+  const now = Date.now();
+  const legs = pendingLegsFrom(bets, now).slice(0, MAX_LEGS_PER_PASS);
+
+  const snapshots = await getSnapshots();
+  let guardadas = 0;
+
+  if (legs.length > 0) {
+    const precos = await readCurrentOdds(legs);
+    const at = new Date().toISOString();
+    for (const leg of legs) {
+      const odd = precos.get(legKeyOf(leg.importKey, leg.index));
+      if (odd === undefined) continue;
+      const key = legKeyOf(leg.importKey, leg.index);
+      const candidate = { odd, at };
+      if (!acceptSnapshot(snapshots[key], candidate, leg.startsAt)) continue;
+      snapshots[key] = candidate;
+      guardadas++;
+    }
+  }
+
+  // Escrever o que já está completo, e limpar as leituras que deixaram de
+  // fazer falta - senão o chrome.storage crescia para sempre.
+  let escritas = 0;
+  const usadas = new Set();
+  for (const bet of bets) {
+    const body = readyToWrite(bet, snapshots, now);
+    if (!body) continue;
+    const ok = await writeClosingOdd(cfg, bet, body);
+    if (!ok) continue;
+    escritas++;
+    for (const leg of body.legs) {
+      usadas.add(legKeyOf(bet.importKey || bet.metadata?.importKey, leg.index));
+    }
+  }
+  for (const key of usadas) delete snapshots[key];
+
+  await chrome.storage.local.set({ [SNAPSHOT_STORE]: snapshots });
+  await scheduleClosingOddsAlarm(bets, now);
+
+  return { pernas: legs.length, guardadas, escritas };
+}
+
+/** Escreve a odd de fecho de um boletim. Devolve true se ficou gravada. */
+async function writeClosingOdd(cfg, bet, body) {
+  const id = bet.bettrackrId;
+  if (!id) return false;
+  try {
+    const res = await fetch(`${cfg.bettrackrBase}/api/bets/${id}/closing-odd`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cfg.bettrackrToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) {
+      // Sessão morta: parar em vez de repetir em ciclo.
+      await chrome.alarms.clear(CLOSING_ALARM);
+      return false;
+    }
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Um alarme de cada vez, para o apito mais próximo menos a antecedência. */
+async function scheduleClosingOddsAlarm(bets, now = Date.now()) {
+  await chrome.alarms.clear(CLOSING_ALARM);
+  const when = nextWakeUp(pendingLegsFrom(bets, now), now);
+  if (when === null) return;
+  // O mínimo do MV3 é um minuto; abaixo disso o alarme não dispara.
+  await chrome.alarms.create(CLOSING_ALARM, { when: Math.max(when, now + 60 * 1000) });
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== CLOSING_ALARM) return;
+  if (!(await closingOddsEnabled())) return;
+  try {
+    const cfg = await getConfig();
+    if (!cfg.betclicToken || !cfg.bettrackrToken) return;
+    const bets = await fetchBetsForClosingOdds(cfg);
+    const r = await runClosingOddsPass(cfg, bets);
+    console.info(
+      `[BetTrackr][fecho] alarme: ${r.pernas} perna(s), ${r.guardadas} leitura(s), ${r.escritas} escrita(s).`,
+    );
+  } catch (error) {
+    console.info("[BetTrackr][fecho] alarme falhou:", error && error.message);
+  }
+});
+
+/**
+ * As apostas do BetTrackr no formato de que a captura precisa: com o id da
+ * app (para o PATCH), a chave de importação (para as fotografias) e as
+ * seleções já com startsAt e sourceRef.
+ */
+async function fetchBetsForClosingOdds(cfg) {
+  const existing = await fetchExistingBets(cfg);
+  const out = [];
+  for (const [importKey, bet] of existing) {
+    let selections = bet.selections;
+    if (typeof selections === "string") {
+      try {
+        selections = JSON.parse(selections);
+      } catch (_) {
+        selections = [];
+      }
+    }
+    out.push({
+      bettrackrId: bet.id,
+      importKey,
+      status: bet.status,
+      isIgnored: bet.is_ignored === true,
+      selections: Array.isArray(selections) ? selections : [],
+    });
+  }
+  return out;
 }
 
 function importKey(bet) {
@@ -974,14 +1208,33 @@ async function runImport(source, sessionSnapshot, accountIds, opts = {}) {
     expectedUserId: cfg.bettrackrUserId,
   }, async (identity) => {
     await chrome.storage.local.set({ bettrackrUserId: identity.userId });
-    return runImportSources(source, cfg, accountIds, opts);
+    const resultado = await runImportSources(source, cfg, accountIds, opts);
+
+    // Passagem oportunista da odd de fecho: a extensão já está a correr e já
+    // tem sessão, por isso aproveita-se para fotografar os preços dos jogos
+    // que aí vêm. É a rede para quando o Chrome estiver fechado ao apito.
+    // Nunca deixa uma falha aqui estragar a importação, que é o que o
+    // utilizador pediu.
+    try {
+      if (await closingOddsEnabled()) {
+        const bets = await fetchBetsForClosingOdds(cfg);
+        const r = await runClosingOddsPass(cfg, bets);
+        console.info(
+          `[BetTrackr][fecho] importação: ${r.pernas} perna(s), ${r.guardadas} leitura(s), ${r.escritas} escrita(s).`,
+        );
+      }
+    } catch (error) {
+      console.info("[BetTrackr][fecho] passagem falhou:", error && error.message);
+    }
+
+    return resultado;
   });
 }
 
 async function extensionStatus() {
   // O token/base vêm do storage; lê-o primeiro para que o fetch das casas ativas
   // corra em paralelo com as sondas de sessão (Betano/Solverde), não em série.
-  const stored = await chrome.storage.local.get(["betclicToken", "bettrackrToken", "bettrackrBase", "bettrackrUser", "autoImport", "updateOnlyImport"]);
+  const stored = await chrome.storage.local.get(["betclicToken", "bettrackrToken", "bettrackrBase", "bettrackrUser", "autoImport", "updateOnlyImport", "captureClosingOdds"]);
   const bettrackrBase = stored.bettrackrBase || DEFAULT_BETTRACKR_BASE;
   const [tabs, solverde, enabledBookmakers, subscription] = await Promise.all([
     chrome.tabs.query({ url: ["https://www.betano.pt/*", "https://betano.pt/*"] }),
@@ -1002,6 +1255,7 @@ async function extensionStatus() {
     bettrackrBase,
     bettrackrUser: stored.bettrackrUser || null,
     autoImport: stored.autoImport === true,
+    captureClosingOdds: stored.captureClosingOdds === true,
     updateOnly: stored.updateOnlyImport === true,
     enabledBookmakers,
     subscription,
@@ -1165,6 +1419,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === "SET_AUTO_IMPORT") {
     chrome.storage.local.set({ autoImport: msg.enabled === true })
       .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: String(error && error.message || error) }));
+    return true;
+  }
+  if (msg && msg.type === "SET_CAPTURE_CLOSING_ODDS") {
+    chrome.storage.local.set({ captureClosingOdds: msg.enabled === true })
+      .then(async () => {
+        // Ao ligar, agenda já; ao desligar, cancela o alarme e larga as
+        // fotografias - não faz sentido guardar leituras que ninguém vai usar.
+        if (msg.enabled === true) {
+          try {
+            const cfg = await getConfig();
+            if (cfg.bettrackrToken) {
+              await scheduleClosingOddsAlarm(await fetchBetsForClosingOdds(cfg));
+            }
+          } catch (_) {}
+        } else {
+          await chrome.alarms.clear(CLOSING_ALARM);
+          await chrome.storage.local.remove(SNAPSHOT_STORE);
+        }
+        sendResponse({ ok: true });
+      })
       .catch((error) => sendResponse({ ok: false, error: String(error && error.message || error) }));
     return true;
   }

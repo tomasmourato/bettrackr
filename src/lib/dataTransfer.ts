@@ -5,7 +5,8 @@
 // mesma normalização de estados, freebets, contas e seleções múltiplas.
 
 import { Bet, BankrollMovement, BankrollMovementKind, BookieAccount, Preferences, Selection, BetStatus, BetType, FreebetType } from "../types";
-import { calculateBetReturnAndProfit, safeNum } from "../utils";
+import { calculateBetReturnAndProfit, parseDecimal, safeNum } from "../utils";
+import { combineClosingOdds } from "./clv";
 import { defaultFreebetTypeFor } from "./bookmakers";
 import { normalizeBetStatus } from "./betStatus";
 import { isNativeApp } from "./apiBase";
@@ -51,8 +52,12 @@ async function deliverTextFile(filename: string, content: string, mime: string):
   URL.revokeObjectURL(url);
 }
 
-/** Exporta todas as apostas para CSV (formato próprio, round-trip seguro). */
-export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Promise<void> {
+/**
+ * Constrói o CSV das apostas. Separado da entrega do ficheiro para poder ser
+ * testado sem Blob nem DOM - o round-trip export/import é fácil de partir em
+ * silêncio (já aconteceu com o NET_PROFIT) e merece um teste a sério.
+ */
+export function buildBetsCSV(bets: Bet[], accounts: BookieAccount[]): string {
   const accountLabelById = new Map(accounts.map((a) => [a.id, a.label]));
 
   // RETURN = finalReturn; NET_PROFIT = netProfit. Ambos são exportados já
@@ -78,7 +83,13 @@ export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Pro
     const betVal = b.selections.map((s) => s.choice).join(" + ");
     const stakeVal = safeNum(b.stake).toFixed(2);
     const oddsVal = safeNum(b.odd).toFixed(3);
-    const closingOddsVal = b.closingOdd ? safeNum(b.closingOdd).toFixed(3) : "";
+    // Por perna e juntas por " + ", como o GAME, o BET e o SPORT. Uma simples
+    // continua a ser um número só, por isso os CSV antigos continuam a entrar.
+    const closingOddsVal = b.selections.some((sel) => sel.closingOdd)
+      ? b.selections.map((sel) => (sel.closingOdd ? safeNum(sel.closingOdd).toFixed(3) : "")).join(" + ")
+      : b.closingOdd
+        ? safeNum(b.closingOdd).toFixed(3)
+        : "";
 
     let statusVal = "PENDING";
     if (b.status === "GANHA") statusVal = "WON";
@@ -127,7 +138,16 @@ export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Pro
     csvContent += `${dateVal};${timeVal};${escapeField(gameVal)};${escapeField(betVal)};${stakeVal};${oddsVal};${closingOddsVal};${statusVal};${returnVal};${netProfitVal};${sportVal};${bookieVal};${betTypeVal};${freebetVal};${freebetTypeVal};${riskFreeVal};${escapeField(accountVal)};${escapeField(commentVal)};${escapeField(tagsVal)}\n`;
   });
 
-  await deliverTextFile("apostas_export.csv", csvContent, "text/csv;charset=utf-8;");
+  return csvContent;
+}
+
+/** Exporta todas as apostas para CSV (formato próprio, round-trip seguro). */
+export async function exportBetsCSV(bets: Bet[], accounts: BookieAccount[]): Promise<void> {
+  await deliverTextFile(
+    "apostas_export.csv",
+    buildBetsCSV(bets, accounts),
+    "text/csv;charset=utf-8;",
+  );
 }
 
 const BANKROLL_KINDS: BankrollMovementKind[] = ["DEPOSITO", "LEVANTAMENTO", "AJUSTE"];
@@ -335,12 +355,16 @@ export function importBetsFromFile(
 
           const rawClosingOdds =
             closingOddsIdx !== -1 && row[closingOddsIdx] ? row[closingOddsIdx] : "";
-          const parsedClosingOdds = parseFloat(rawClosingOdds.replace(",", "."));
-          // Só uma odd decimal a sério conta; o resto é "ainda não sei".
-          const closingOdd =
-            Number.isFinite(parsedClosingOdds) && parsedClosingOdds > 1
-              ? parsedClosingOdds
-              : undefined;
+          // Uma por perna, na mesma ordem dos jogos. Só uma odd decimal a
+          // sério conta; o resto é "ainda não sei".
+          // Split por "+" e não por " + ": numa múltipla só parcialmente
+          // preenchida a célula acaba em " + ", o parser de CSV corta o espaço
+          // final e o separador deixava de ser encontrado - perdendo-se
+          // também a perna que ESTAVA preenchida.
+          const closingOddsPerLeg = rawClosingOdds
+            .split("+")
+            .map((value) => parseDecimal(value))
+            .map((value) => (value !== null && value > 1 ? value : undefined));
 
           const statusRaw = statusIdx !== -1 && row[statusIdx] ? row[statusIdx].toUpperCase() : "PENDING";
           const rawReturn = returnIdx !== -1 && row[returnIdx] ? row[returnIdx] : "";
@@ -405,6 +429,8 @@ export function importBetsFromFile(
             const selOdd = games.length > 1 ? Number(Math.pow(totalOdd, 1 / games.length).toFixed(2)) : totalOdd;
             selections.push({
               id: `sel_${Math.random().toString(36).substring(2, 9)}_${Date.now()}_${j}`,
+              // Um CSV de uma simples traz um valor só, que serve a perna 0.
+              closingOdd: closingOddsPerLeg[j],
               event: games[j] || gameVal,
               market: subBetTypes[j] || betTypeVal || "Simples",
               choice: betsArr[j] || betVal || "Resultado",
@@ -463,7 +489,7 @@ export function importBetsFromFile(
             selections,
             stake: stakeNumVal,
             odd: totalOdd,
-            closingOdd,
+            closingOdd: combineClosingOdds(selections) ?? undefined,
             isFreebet,
             freebetType,
             isRiskFree,

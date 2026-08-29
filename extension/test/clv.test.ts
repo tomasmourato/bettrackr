@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { betClv, calculateClv, isClvEligible, needsClosingOdd } from "../../src/lib/clv";
+import {
+  betClv,
+  calculateClv,
+  combineClosingOdds,
+  isClvEligible,
+  isPromoBet,
+  kickoffOf,
+  needsClosingOdd,
+} from "../../src/lib/clv";
 import type { Bet, BetStatus } from "../../src/types";
 
 // O CLV é a única estatística da app que não espera pela liquidação: mede o
@@ -195,5 +203,179 @@ describe("calculateClv", () => {
     expect(r.byBookmaker[0].bets).toBe(2);
     expect(r.byBookmaker[0].avgClvPct).toBe(10); // (5 + 15) / 2
     expect(r.byBookmaker[1].avgClvPct).toBe(-5);
+  });
+});
+
+describe("combineClosingOdds", () => {
+  const leg = (closingOdd?: number) => ({ closingOdd });
+
+  test("produto das pernas, com duas casas", () => {
+    // 2.10 x 1.80 = 3.78
+    expect(combineClosingOdds([leg(2.1), leg(1.8)])).toBe(3.78);
+  });
+
+  test("uma simples é a própria odd", () => {
+    expect(combineClosingOdds([leg(2.5)])).toBe(2.5);
+  });
+
+  test("faltando uma perna não há combinada", () => {
+    // Meia múltipla não dá meia linha de fecho: dava um número que parecia
+    // bom e não era.
+    expect(combineClosingOdds([leg(2.1), leg(undefined)])).toBeNull();
+    expect(combineClosingOdds([])).toBeNull();
+    expect(combineClosingOdds(undefined)).toBeNull();
+  });
+
+  test("odds impossíveis contam como ausentes", () => {
+    expect(combineClosingOdds([leg(2.1), leg(1)])).toBeNull();
+    expect(combineClosingOdds([leg(2.1), leg(0)])).toBeNull();
+  });
+});
+
+describe("kickoffOf e needsClosingOdd com o apito", () => {
+  test("numa múltipla vale o jogo que começa por último", () => {
+    const b = bet({
+      selections: [
+        { id: "a", event: "A", market: "m", choice: "c", odd: 2, startsAt: "2026-02-10 18:00" },
+        { id: "b", event: "B", market: "m", choice: "c", odd: 2, startsAt: "2026-02-11 21:00" },
+      ],
+    });
+    expect(kickoffOf(b)).toBe("2026-02-11 21:00");
+  });
+
+  test("o apito manda sobre a data do boletim", () => {
+    // Na Betclic o dateTime é o momento da aposta: sem esta regra, uma aposta
+    // feita hoje para sábado aparecia hoje em "por preencher".
+    const futuro = bet({
+      dateTime: "2026-02-01 10:00",
+      selections: [
+        { id: "a", event: "A", market: "m", choice: "c", odd: 2, startsAt: "2026-04-01 20:00" },
+      ],
+    });
+    expect(needsClosingOdd(futuro, NOW)).toBe(false);
+
+    const passado = bet({
+      dateTime: "2026-02-01 10:00",
+      selections: [
+        { id: "a", event: "A", market: "m", choice: "c", odd: 2, startsAt: "2026-02-02 20:00" },
+      ],
+    });
+    expect(needsClosingOdd(passado, NOW)).toBe(true);
+  });
+
+  test("sem apito nas pernas cai na data do boletim", () => {
+    expect(kickoffOf(bet())).toBeUndefined();
+    expect(needsClosingOdd(bet({ dateTime: "2026-02-01 12:00" }), NOW)).toBe(true);
+  });
+});
+
+describe("apostas promocionais (boost/turbo/missão)", () => {
+  const promoLeg = (market: string, odd = 2.4) => ({
+    id: "p",
+    event: "Benfica - Porto",
+    market,
+    choice: "Benfica",
+    odd,
+  });
+
+  test("reconhece os mercados promocionais da Betclic", () => {
+    // "Boost (10€ máx.)" é o segundo mercado mais usado da conta real.
+    expect(isPromoBet(bet({ selections: [promoLeg("Boost (10€ máx.)")] }))).toBe(true);
+    expect(isPromoBet(bet({ selections: [promoLeg("Odds Turbo")] }))).toBe(true);
+    expect(isPromoBet(bet({ selections: [promoLeg("Missão da semana")] }))).toBe(true);
+    expect(isPromoBet(bet({ selections: [promoLeg("Super Odd")] }))).toBe(true);
+  });
+
+  test("um mercado normal não é promocional", () => {
+    expect(isPromoBet(bet({ selections: [promoLeg("Vencedor do jogo")] }))).toBe(false);
+    // "Dicas da Casa" é uma sugestão a preço normal, não um preço turbinado.
+    expect(isPromoBet(bet({ selections: [promoLeg("Dicas da Casa")] }))).toBe(false);
+    expect(isPromoBet(bet({ selections: [] }))).toBe(false);
+  });
+
+  test("basta uma perna turbinada para o boletim contar como promocional", () => {
+    const misto = bet({
+      selections: [promoLeg("Vencedor do jogo"), promoLeg("Boost (10€ máx.)")],
+    });
+    expect(isPromoBet(misto)).toBe(true);
+  });
+
+  test("fica fora das médias e aparece na sua linha", () => {
+    const r = calculateClv(
+      [
+        bet({ odd: 2.1, closingOdd: 2, stake: 10 }), // normal: +5%, +0.50
+        bet({
+          odd: 3,
+          closingOdd: 2,
+          stake: 10,
+          selections: [promoLeg("Boost (10€ máx.)", 3)],
+        }), // promocional: +50%, +5.00
+      ],
+      NOW,
+    );
+
+    expect(r.trackedBets).toBe(2);
+    expect(r.ratedBets).toBe(1);
+    // Sem a separação, a média seria +27.5% - um número construído sobre uma
+    // odd que a casa turbinou de propósito.
+    expect(r.avgClvPct).toBe(5);
+    expect(r.beatCloseRate).toBe(100);
+    expect(r.moneyClv).toBe(0.5);
+    expect(r.clvStake).toBe(10);
+
+    expect(r.promoBets).toBe(1);
+    expect(r.promoAvgClvPct).toBe(50);
+    expect(r.promoMoneyClv).toBe(5);
+  });
+
+  test("continua a contar para a cobertura", () => {
+    // A cobertura é sobre dados preenchidos: uma promocional com linha de
+    // fecho está preenchida na mesma.
+    const r = calculateClv(
+      [bet({ odd: 3, closingOdd: 2, selections: [promoLeg("Boost (10€ máx.)", 3)] })],
+      NOW,
+    );
+    expect(r.coveragePct).toBe(100);
+    expect(r.hasData).toBe(true);
+    expect(r.avgClvPct).toBe(0); // não há nenhuma medível
+  });
+
+  test("fora do gráfico e do agrupamento por casa", () => {
+    const r = calculateClv(
+      [bet({ odd: 3, closingOdd: 2, selections: [promoLeg("Boost (10€ máx.)", 3)] })],
+      NOW,
+    );
+    expect(r.series).toHaveLength(0);
+    expect(r.byBookmaker).toHaveLength(0);
+  });
+});
+
+describe("a marca de boost da própria Betclic", () => {
+  test("isBoosted manda, mesmo com o mercado a parecer normal", () => {
+    // A Betclic marca boosts que o rótulo do mercado não denuncia; sem a flag
+    // a expressão regular deixava-os passar para dentro das médias.
+    const b = bet({
+      selections: [
+        { id: "s", event: "A", market: "Vencedor do jogo", choice: "c", odd: 3, isBoosted: true },
+      ],
+    });
+    expect(isPromoBet(b)).toBe(true);
+  });
+
+  test("sem a flag, o texto do mercado ainda serve de rede", () => {
+    // As apostas à mão e as importadas de CSV não trazem is_boosted_odd.
+    const b = bet({
+      selections: [{ id: "s", event: "A", market: "Boost (10€ máx.)", choice: "c", odd: 3 }],
+    });
+    expect(isPromoBet(b)).toBe(true);
+  });
+
+  test("isBoosted falso não torna promocional", () => {
+    const b = bet({
+      selections: [
+        { id: "s", event: "A", market: "Vencedor do jogo", choice: "c", odd: 3, isBoosted: false },
+      ],
+    });
+    expect(isPromoBet(b)).toBe(false);
   });
 });
