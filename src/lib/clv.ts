@@ -51,8 +51,11 @@
 //    Por isso o que interessa é a tendência e a comparação entre casas, não o
 //    zero absoluto. A UI diz isto ao utilizador (chave i18n "clv.help").
 
-import { Bet, Selection } from "../types";
+import { Bet } from "../types";
 import { safeNum } from "../utils";
+import { combineClosingOdds } from "../../lib/clvClosingOdds";
+
+export { combineClosingOdds } from "../../lib/clvClosingOdds";
 
 /** O CLV de uma aposta, já calculado. */
 export interface ClvBetResult {
@@ -149,20 +152,6 @@ function validOdd(value: unknown): number | null {
  * extensão) e a invariante "combinada = produto das pernas" não pode ser
  * calculada em dois sítios. O servidor usa esta mesma função.
  */
-export function combineClosingOdds(
-  selections: Array<Pick<Selection, "closingOdd">> | undefined,
-): number | null {
-  if (!Array.isArray(selections) || selections.length === 0) return null;
-  let product = 1;
-  for (const selection of selections) {
-    const odd = validOdd(selection?.closingOdd);
-    if (odd === null) return null;
-    product *= odd;
-  }
-  // Duas casas decimais, o mesmo arredondamento da odd combinada do formulário.
-  return Number(product.toFixed(2));
-}
-
 /**
  * O apito do jogo, quando se sabe. Numa múltipla é o do jogo que começa por
  * ÚLTIMO: é a partir daí que todas as pernas têm linha de fecho.

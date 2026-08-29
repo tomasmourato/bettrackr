@@ -7,7 +7,7 @@ import {
 } from "../middleware/authMiddleware.js";
 import { requireSubscriptionForExtension } from "../middleware/accessMiddleware.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
-import { combineClosingOdds } from "../src/lib/clv.js";
+import { combineClosingOdds } from "../lib/clvClosingOdds.js";
 
 const router = Router();
 
