@@ -1,0 +1,26 @@
+# Diagnostico pontual, corrido a mao (workflow_dispatch).
+#
+# A funcao da Vercel leva 403 da Betclic e ja se sabe que nao e geografia nem
+# cabecalhos - e o IP ser de datacenter. Isto testa um TERCEIRO fornecedor
+# (os runners do GitHub correm na Azure), para saber se o bloqueio e a todos
+# ou so a alguns. Nao le nem escreve nada nosso: e um GET a uma pagina publica.
+#
+# Pode ser apagado assim que a duvida ficar resolvida.
+name: Teste de acesso a Betclic
+
+on: workflow_dispatch
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: De onde sai o pedido
+        run: curl -s --max-time 20 https://ipinfo.io/json || true
+      - name: Pagina de jogo
+        run: |
+          URL="https://www.betclic.pt/futebol-sfootball/evento-c0/x-m1204641058537472"
+          code=$(curl -s -o /tmp/p.html -w "%{http_code}" --max-time 25 "$URL")
+          echo "----------------------------------------"
+          echo "http=$code   bytes=$(wc -c < /tmp/p.html)"
+          if grep -q "ng-state" /tmp/p.html; then echo "ng-state: SIM"; else echo "ng-state: NAO"; fi
+          echo "----------------------------------------"
