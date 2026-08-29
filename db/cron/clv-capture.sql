@@ -15,8 +15,10 @@
 -- morta no ar sem dar erro nenhum.
 -- ============================================================
 
--- 1. Extensões. Ambas estão disponíveis no projeto (pg_cron 1.6.4, pg_net
---    0.20.3), só não estavam instaladas.
+-- 1. Extensões. Confirmado por leitura na base de PRODUÇÃO em 2026-08-29:
+--    pg_cron 1.6.4 e pg_net 0.20.3 disponíveis, nenhuma instalada ainda.
+--    (Também confirmado: a migração 019 JÁ está aplicada em produção, e a
+--    variável CRON_SECRET já existe no ambiente Production da Vercel.)
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
@@ -27,13 +29,13 @@ create extension if not exists pg_net;
 --    select vault.create_secret('<o-mesmo-que-o-CRON_SECRET>', 'cron_secret');
 
 -- 3. A passagem, de 5 em 5 minutos.
---    Trocar <DOMINIO> pelo domínio de produção antes de correr.
+--    Domínio de produção já preenchido (projeto bettrackrv2 na Vercel).
 select cron.schedule(
   'clv-capture',
   '*/5 * * * *',
   $$
     select net.http_get(
-      url := 'https://<DOMINIO>/api/clv/capture',
+      url := 'https://betrackr.vercel.app/api/clv/capture',
       headers := jsonb_build_object(
         'Authorization',
         'Bearer ' || (select decrypted_secret
