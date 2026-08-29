@@ -143,7 +143,15 @@ export function legsToRead(rows: BetRow[], now: number): Leg[] {
     return legs;
 }
 
-/** Lê uma página de jogo. Devolve null quando não deu - nunca um preço inventado. */
+/**
+ * Le uma pagina de jogo, dizendo TAMBEM porque falhou quando falha.
+ *
+ * "Zero precos" juntava quatro avarias muito diferentes - pedido rebentado,
+ * resposta nao-200, pagina sem ng-state, e ng-state sem precos - e sem as
+ * separar nao ha como saber se o problema e a Betclic, a rede, ou o sitio de
+ * onde o pedido sai. Nunca se inventa um preco: em qualquer destes casos a
+ * leitura simplesmente nao acontece.
+ */
 async function fetchMatch(matchId: string, event: string) {
     const url = `https://www.betclic.pt${betclicMatchPath(matchId, event)}`;
     try {
@@ -151,10 +159,22 @@ async function fetchMatch(matchId: string, event: string) {
             headers: { "User-Agent": UA, "Accept-Language": "pt-PT,pt;q=0.9" },
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
-        if (!res.ok) return null;
-        return readMatchPage(await res.text(), matchId);
-    } catch {
-        return null;
+        const html = await res.text();
+        if (!res.ok) {
+            return { page: null, porque: `http-${res.status}`, kb: (html.length / 1024) | 0 };
+        }
+        const page = readMatchPage(html, matchId);
+        const kb = (html.length / 1024) | 0;
+        if (!html.includes("ng-state")) {
+            // A pagina veio, mas sem o estado do Angular. E o que acontece quando
+            // do outro lado nos servem uma variante diferente da que um browser
+            // normal recebe.
+            return { page: null, porque: `sem-ng-state(${kb}KB)`, kb };
+        }
+        if (page.odds.size === 0) return { page: null, porque: `ng-state-sem-precos(${kb}KB)`, kb };
+        return { page, porque: null, kb };
+    } catch (e: any) {
+        return { page: null, porque: `pedido-falhou(${e?.name || "erro"})`, kb: 0 };
     }
 }
 
@@ -296,18 +316,26 @@ async function runCapture(now = Date.now()) {
     let lidos = 0;
     let semPrecos = 0;
     let comMercado = 0;
+    const motivos: string[] = [];
+    // Quantas pernas foram procuradas na pagina e nao estavam la: separa "a
+    // pagina veio vazia" de "a pagina veio mas nao tinha a NOSSA seleccao".
+    let semSeleccao = 0;
     const capturedAt = new Date(now).toISOString();
 
     for (const [matchId, grupo] of jogos) {
         if (Date.now() - started > TIME_BUDGET_MS) break;
 
-        const page = await fetchMatch(matchId, grupo[0].event);
+        const leitura = await fetchMatch(matchId, grupo[0].event);
         lidos++;
-        if (!page || page.odds.size === 0) {
-            // Zero preços é o canário de a Betclic ter mudado de forma.
+        if (!leitura.page) {
+            // O canario. Agora diz QUAL foi a avaria, para nao se andar a
+            // adivinhar entre a Betclic ter mudado, a rede ter falhado, ou o
+            // pedido estar a sair de um sitio a que servem outra pagina.
             semPrecos++;
+            motivos.push(`${matchId}:${leitura.porque}`);
             continue;
         }
+        const page = leitura.page;
 
         // O apito que a própria Betclic anuncia manda sobre o que está gravado.
         const apitoReal = page.kickoffUtc ? Date.parse(page.kickoffUtc) : NaN;
@@ -331,6 +359,7 @@ async function runCapture(now = Date.now()) {
                 faltam <= CAPTURE_WINDOW_MIN * 60_000
             ) {
                 const odd = page.odds.get(leg.selectionId);
+                if (odd === undefined) semSeleccao++;
                 if (typeof odd === "number" && odd > 1) {
                     update.closingOdd = odd;
                     update.leadMinutes = leadMinutesFrom(Date.now(), efetivo);
@@ -353,6 +382,23 @@ async function runCapture(now = Date.now()) {
         }
     }
 
+    // Sonda de saude, ligada por ambiente (CLV_PROBE_MATCH_ID).
+    //
+    // Sem ela so se descobre que a leitura esta partida quando ha uma aposta
+    // mesmo a precisar dela - ou seja, tarde de mais. Com um id de jogo posto
+    // na variavel, cada passagem diz nos logs se consegue ou nao ler aquela
+    // pagina, sem depender de haver apostas nenhumas. Desliga-se tirando a
+    // variavel; nao faz escritas.
+    const sonda = process.env.CLV_PROBE_MATCH_ID;
+    if (sonda) {
+        const r = await fetchMatch(sonda, "sonda");
+        console.info(
+            `[clv][sonda] jogo ${sonda}: ${r.page
+                ? `OK ${r.page.odds.size} precos, ${r.page.markets.size} com mercado, apito ${r.page.kickoffUtc}, ${r.kb}KB`
+                : `FALHOU -> ${r.porque}`}`,
+        );
+    }
+
     let escritas = 0;
     for (const [betId, updates] of porAposta) {
         if (await applyToBet(betId, updates, capturedAt)) escritas++;
@@ -367,6 +413,8 @@ async function runCapture(now = Date.now()) {
         // Quantas pernas ficaram com a margem removida. A diferenca para
         // `pernas` e a cobertura que falta ao de-vig.
         comDeVig: comMercado,
+        semSeleccao,
+        motivos,
         apostasEscritas: escritas,
         ms: Date.now() - started,
     };
@@ -394,7 +442,7 @@ router.get("/capture", async (req, res) => {
         const resumo = await runCapture();
         if (resumo.semPrecos > 0) {
             console.warn(
-                `[clv] ${resumo.semPrecos} de ${resumo.lidos} jogo(s) sem preços - a Betclic pode ter mudado a página.`,
+                `[clv] ${resumo.semPrecos} de ${resumo.lidos} jogo(s) sem leitura -> ${resumo.motivos.join(" | ")}`,
             );
         }
         console.info("[clv] passagem:", JSON.stringify(resumo));
