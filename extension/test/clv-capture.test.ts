@@ -94,6 +94,14 @@ describe("quem manda na odd de fecho", () => {
     expect(legs[0].filled).toBe(true);
   });
 
+  test("uma perna escrita pela EXTENSÃO pode ser melhorada", () => {
+    // A extensão apanha a linha a zero minutos do apito, dentro da janela em
+    // que as odds da Betclic desabam, e sem tirar a margem. Se isso bloqueasse
+    // a leitura do servidor, ficava guardada a pior das duas.
+    const rows = [bet([leg({ closingOdd: 1.41 })], { closingOddSource: "betclic" })];
+    expect(legsToRead(rows, AGORA)).toHaveLength(1);
+  });
+
   test("uma perna vazia é sempre candidata", () => {
     expect(legsToRead([bet([leg()])], AGORA)[0].filled).toBe(false);
   });

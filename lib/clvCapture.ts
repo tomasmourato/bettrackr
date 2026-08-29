@@ -72,11 +72,21 @@ export function asArray(raw: unknown): any[] {
  * enquanto o jogo não começar - é assim que a leitura converge para o último
  * preço sem ser preciso guardar fotografias em lado nenhum, como a extensão faz.
  */
+/** Origens escritas por maquina, que uma leitura melhor pode substituir. */
+const MAQUINA = new Set(["server", "betclic"]);
+
 export function legsToRead(rows: BetRow[], now: number): Leg[] {
     const legs: Leg[] = [];
 
     for (const row of rows) {
-        const escritaPeloServidor = row.metadata?.closingOddSource === "server";
+        // Quem escreveu a odd que la esta decide se pode ser melhorada.
+        //
+        // "manual" e de uma pessoa e nao se toca. "server" e "betclic" sao de
+        // maquina: a da extensao e pior de propriedade - apanha a linha a zero
+        // minutos do apito, dentro da zona em que as odds da Betclic desabam, e
+        // sem tirar a margem. Deixar que bloqueasse a leitura boa era guardar a
+        // pior das duas.
+        const podeMelhorar = MAQUINA.has(row.metadata?.closingOddSource);
         const selections = asArray(row.selections);
 
         selections.forEach((selection, index) => {
@@ -87,7 +97,7 @@ export function legsToRead(rows: BetRow[], now: number): Leg[] {
             const filled =
                 selection?.closingOdd !== undefined && selection?.closingOdd !== null;
             // Preenchida por uma pessoa: intocável.
-            if (filled && !escritaPeloServidor) return;
+            if (filled && !podeMelhorar) return;
 
             const kickoff = kickoffMs(selection);
             if (kickoff === null) return; // sem apito não se sabe quando ler

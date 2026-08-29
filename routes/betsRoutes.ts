@@ -694,7 +694,7 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
         if (client) {
             await client.query("BEGIN");
             const current = await client.query(
-                "SELECT selections FROM bets WHERE id = $1 AND user_id = $2 FOR UPDATE",
+                "SELECT selections, metadata FROM bets WHERE id = $1 AND user_id = $2 FOR UPDATE",
                 [req.params.id, req.user!.id],
             );
             if (current.rows.length === 0) {
@@ -708,6 +708,23 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
                 : typeof raw === "string"
                   ? JSON.parse(raw || "[]")
                   : [];
+
+            // A extensao nao passa por cima do que o servidor apanhou.
+            //
+            // As duas capturas nao valem o mesmo: o servidor le entre os 30 e
+            // os 5 minutos do apito e tira a margem da casa; a extensao le a
+            // zero minutos, dentro da janela em que as odds da Betclic desabam,
+            // e sem de-vig. Como a extensao nao se atualiza sozinha, e aqui que
+            // se arbitra - senao a leitura pior chegava depois e ganhava.
+            const jaDoServidor =
+                current.rows[0].metadata?.closingOddSource === "server";
+            const daExtensao = req.body?.source === "betclic";
+            if (jaDoServidor && daExtensao) {
+                await client.query("ROLLBACK");
+                res.json({ success: true, ignorado: "ja ha leitura do servidor" });
+                return;
+            }
+
             for (const [index, value] of legs) {
                 if (!selections[index]) continue;
                 selections[index] = { ...selections[index], closingOdd: value };
