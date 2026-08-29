@@ -16,6 +16,7 @@ import pool from "../db/pool.js";
 import { combineClosingOdds } from "../lib/clvClosingOdds.js";
 import {
     betclicMatchPath,
+    devig,
     kickoffMs,
     leadMinutesFrom,
     readMatchPage,
@@ -159,6 +160,10 @@ async function fetchMatch(matchId: string, event: string) {
 
 interface LegUpdate {
     closingOdd?: number;
+    /** A mesma odd sem a margem da casa. Ausente quando nao houve como apurar. */
+    closingOddNoVig?: number;
+    /** A margem do mercado, guardada para a correcao ser auditavel. */
+    closingOddMargin?: number;
     startsAtUtc?: string;
     leadMinutes?: number;
 }
@@ -199,6 +204,17 @@ async function applyToBet(
             }
             if (update.closingOdd !== undefined) {
                 depois.closingOdd = update.closingOdd;
+                // As tres andam juntas: a crua fica sempre, a justa e a margem
+                // so quando o mercado completo deu para confiar. Uma perna que
+                // deixe de ter mercado fiavel perde a justa em vez de ficar com
+                // uma justa velha ao lado de uma crua nova.
+                if (update.closingOddNoVig !== undefined) {
+                    depois.closingOddNoVig = update.closingOddNoVig;
+                    depois.closingOddMargin = update.closingOddMargin;
+                } else {
+                    delete depois.closingOddNoVig;
+                    delete depois.closingOddMargin;
+                }
                 mexeu = true;
                 if (update.leadMinutes !== undefined) {
                     // A pior perna manda na marca de qualidade, que é o honesto.
@@ -279,6 +295,7 @@ async function runCapture(now = Date.now()) {
     const porAposta = new Map<string, Map<number, LegUpdate>>();
     let lidos = 0;
     let semPrecos = 0;
+    let comMercado = 0;
     const capturedAt = new Date(now).toISOString();
 
     for (const [matchId, grupo] of jogos) {
@@ -317,6 +334,15 @@ async function runCapture(now = Date.now()) {
                 if (typeof odd === "number" && odd > 1) {
                     update.closingOdd = odd;
                     update.leadMinutes = leadMinutesFrom(Date.now(), efetivo);
+                    // A odd crua leva a margem da casa la dentro e isso
+                    // inflaciona o CLV. Quando o mercado completo esta na
+                    // pagina e e de confiar, guarda-se tambem a justa.
+                    const justa = devig(odd, page.markets.get(leg.selectionId));
+                    if (justa) {
+                        update.closingOddNoVig = justa.odd;
+                        update.closingOddMargin = justa.marginPct;
+                        comMercado++;
+                    }
                 }
             }
 
@@ -338,6 +364,9 @@ async function runCapture(now = Date.now()) {
         jogos: porJogo.size,
         lidos,
         semPrecos,
+        // Quantas pernas ficaram com a margem removida. A diferenca para
+        // `pernas` e a cobertura que falta ao de-vig.
+        comDeVig: comMercado,
         apostasEscritas: escritas,
         ms: Date.now() - started,
     };

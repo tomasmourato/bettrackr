@@ -758,6 +758,17 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
                   {clv.weightedClvPct === null ? "-" : `${clv.weightedClvPct >= 0 ? "+" : ""}${clv.weightedClvPct.toFixed(2)}%`}
                 </strong>
               </div>
+              {clv.noVigBets > 0 && (
+                <div className="flex items-center justify-between" title={t("clv.noVigHelp")}>
+                  <span>{t("clv.noVig")}</span>
+                  <strong className={`font-medium font-mono ${clv.noVigAvgClvPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {t("clv.noVigValue", {
+                      n: clv.noVigBets,
+                      pct: `${clv.noVigAvgClvPct >= 0 ? "+" : ""}${clv.noVigAvgClvPct.toFixed(1)}%`,
+                    })}
+                  </strong>
+                </div>
+              )}
               {clv.promoBets > 0 && (
                 <div className="flex items-center justify-between" title={t("clv.promoHelp")}>
                   <span>{t("clv.promo")}</span>

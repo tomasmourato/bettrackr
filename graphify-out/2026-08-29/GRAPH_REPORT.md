@@ -1,16 +1,16 @@
 # Graph Report - bettrackr  (2026-08-29)
 
 ## Corpus Check
-- 219 files · ~242,963 words
+- 219 files · ~243,174 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1469 nodes · 3441 edges · 167 communities (94 shown, 73 thin omitted)
+- 1469 nodes · 3441 edges · 168 communities (95 shown, 73 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 47 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `06af3049`
+- Built from commit: `d3112f5d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -112,7 +112,7 @@
 - App.tsx
 - make-admin.mjs
 - AGENTS.md
-- tailwindcss
+- BankrollCard.tsx
 - Dashboard.tsx
 - BetsManager.tsx
 - billingApi.ts
@@ -149,6 +149,7 @@
 - adm-zip
 - FilteredBetsSummary.tsx
 - Language
+- @tailwindcss/vite
 - scripts
 - adminApi.ts
 - vercel.json
@@ -192,7 +193,7 @@
 - **Sports Betting Tracking Motif** — public_pwa_192x192_betting_slip, public_pwa_192x192_soccer_ball, public_pwa_192x192_performance_bar_chart [INFERRED 0.85]
 - **Sports Analytics Branding** — public_pwa_512x512_bettrackr_pwa_icon, public_pwa_512x512_football, public_pwa_512x512_performance_analytics, public_pwa_512x512_upward_trend, public_pwa_512x512_betting_ticket [INFERRED 0.95]
 
-## Communities (167 total, 73 thin omitted)
+## Communities (168 total, 73 thin omitted)
 
 ### Community 0 - "utils.ts"
 Cohesion: 0.21
@@ -212,7 +213,7 @@ Nodes (47): bcryptjs, @capacitor/android, @capacitor/app, @capacitor/camera, @ca
 
 ### Community 4 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): @capacitor/cli, devDependencies, @capacitor/cli, @tailwindcss/vite, @types/express, @types/pg, @types/react, @types/react-dom (+5 more)
+Nodes (13): @capacitor/cli, devDependencies, @capacitor/cli, tailwindcss, @types/express, @types/pg, @types/react, @types/react-dom (+5 more)
 
 ### Community 5 - "insightsRoutes.ts"
 Cohesion: 0.14
@@ -354,9 +355,13 @@ Nodes (14): App(), Gallery, MobileApp, makeInitialLogs(), useAuditLog(), DEFAULT
 Cohesion: 0.40
 Nodes (4): founder, isLocalDb, pool, remove
 
+### Community 99 - "BankrollCard.tsx"
+Cohesion: 0.47
+Nodes (5): BankrollCard(), BankrollCardProps, KINDS, todayKey(), BankrollSummary
+
 ### Community 101 - "Dashboard.tsx"
 Cohesion: 0.16
-Nodes (22): parse(), now, Dashboard(), calendarDaysFor(), EMPTY_TIMEFRAME_FILTER, formatDateKey(), fromLocalDateKey(), isTimeframe() (+14 more)
+Nodes (23): parse(), now, Dashboard(), calendarDaysFor(), EMPTY_TIMEFRAME_FILTER, formatDateKey(), fromLocalDateKey(), isTimeframe() (+15 more)
 
 ### Community 102 - "BetsManager.tsx"
 Cohesion: 0.19
@@ -375,8 +380,8 @@ Cohesion: 0.17
 Nodes (24): getSnapshots(), readCurrentOdds(), readMatchOdds(), runClosingOddsPass(), scheduleClosingOddsAlarm(), writeClosingOdd(), acceptSnapshot(), betclicMatchPath() (+16 more)
 
 ### Community 115 - "navigation.ts"
-Cohesion: 0.14
-Nodes (24): BankrollCard(), BankrollCardProps, KINDS, todayKey(), DashboardBetsFilters, DashboardProps, SettingsProps, Timeframe (+16 more)
+Cohesion: 0.20
+Nodes (18): DashboardBetsFilters, DashboardProps, SettingsProps, BankrollMovementInput, ClosingOddInput, TFn, MobileDashboardProps, MobileSettingsProps (+10 more)
 
 ### Community 116 - "pool.ts"
 Cohesion: 0.20
@@ -480,7 +485,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `combineClosingOdds()` connect `safeNum` to `utils.ts`, `dataTransfer.ts`, `BetsManager.tsx`, `clvRoutes.ts`?**
   _High betweenness centrality (0.124) - this node is a cross-community bridge._
-- **Why does `useI18n()` connect `useI18n` to `utils.ts`, `DesktopApp.tsx`, `isNativeApp`, `ClosingOddsSheet.tsx`, `index.tsx`, `MobileBets.tsx`, `MobileDashboard.tsx`, `FilteredBetsSummary.tsx`, `authFetch`, `adminApi.ts`, `MobileSettings.tsx`, `MobileInsights.tsx`, `BetclicImport.tsx`, `Dashboard.tsx`, `BetsManager.tsx`, `billingApi.ts`, `types.ts`, `navigation.ts`, `dataTransfer.ts`, `safeNum`?**
+- **Why does `useI18n()` connect `useI18n` to `utils.ts`, `DesktopApp.tsx`, `isNativeApp`, `ClosingOddsSheet.tsx`, `index.tsx`, `MobileBets.tsx`, `MobileDashboard.tsx`, `FilteredBetsSummary.tsx`, `authFetch`, `adminApi.ts`, `MobileSettings.tsx`, `MobileInsights.tsx`, `BetclicImport.tsx`, `BankrollCard.tsx`, `Dashboard.tsx`, `BetsManager.tsx`, `billingApi.ts`, `types.ts`, `dataTransfer.ts`, `safeNum`?**
   _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **What connects `config`, `daily_insights`, `daily_insights` to the rest of the system?**
   _407 weakly-connected nodes found - possible documentation gaps or missing edges._

@@ -90,19 +90,134 @@ export function findKickoffUtc(state: unknown, matchId: string): string | null {
     return found;
 }
 
+// ------------------------------------------------------------
+// Mercado completo e remoção da margem (de-vig)
+//
+// A odd que a casa mostra tem a margem dela lá dentro, e isso não é um detalhe:
+// medido num 1X2 real da Betclic, [1.23, 5.75, 9.00] soma 1.0980 de
+// probabilidade - 9.8% de margem. Comparar a odd apanhada contra uma linha de
+// fecho com margem INFLACIONA o CLV: quem apostou a 1.30 parece ter batido a
+// linha em +5.7% quando na verdade pagou 3.7% acima do preço justo.
+//
+// Só se de-viga um mercado que esteja COMPLETO na página. Medido na mesma
+// página: de 10 grupos de odds, 4 somavam menos de 1 (mercado incompleto - a
+// margem daria negativa e a "correção" inventava odds mais altas do que as
+// reais) e 4 somavam mais de 1.25 (listas de marcadores, que não são mercados
+// exclusivos). Quando não dá para confiar, não se de-viga e fica a odd crua.
+// ------------------------------------------------------------
+
+/**
+ * A banda em que a soma das probabilidades de um mercado completo pode cair.
+ *
+ * Abaixo do mínimo faltam seleções à página. Acima do máximo não é um mercado
+ * coerente - é uma lista de nomes que por acaso tem odds.
+ */
+const OVERROUND_MIN = 1.005;
+const OVERROUND_MAX = 1.25;
+
+/** O menor número de seleções que ainda faz um mercado. */
+const MIN_SELECTIONS = 2;
+
+export interface Market {
+    /** Odds de TODAS as seleções do mercado, como vieram. */
+    odds: number[];
+    /** Soma das probabilidades implícitas. Sempre > 1 num mercado completo. */
+    overround: number;
+}
+
+/**
+ * Os mercados de confiança da página, indexados por id de seleção.
+ *
+ * O sinal de que um grupo é mesmo um mercado é ESTRUTURAL: só os arrays
+ * `mainSelections` contam. Um crivo só pela soma deixava passar um grupo de 22
+ * seleções chamado "Galatasaray" que caiu por acaso na banda plausível.
+ */
+export function collectMarkets(state: unknown): Map<string, Market> {
+    const out = new Map<string, Market>();
+
+    const visita = (node: any, depth: number) => {
+        if (!node || typeof node !== "object" || depth > 14) return;
+        if (Array.isArray(node)) {
+            for (const item of node) visita(item, depth + 1);
+            return;
+        }
+
+        const grupo = node.mainSelections;
+        if (Array.isArray(grupo) && grupo.length >= MIN_SELECTIONS) {
+            const odds: number[] = [];
+            const ids: string[] = [];
+            let completo = true;
+            for (const sel of grupo) {
+                const odd = Number(sel?.odds);
+                if (sel?.id == null || !Number.isFinite(odd) || odd <= 1) {
+                    completo = false;
+                    break;
+                }
+                odds.push(odd);
+                ids.push(String(sel.id));
+            }
+            if (completo) {
+                const overround = odds.reduce((soma, odd) => soma + 1 / odd, 0);
+                if (overround >= OVERROUND_MIN && overround <= OVERROUND_MAX) {
+                    const market: Market = { odds, overround };
+                    for (const id of ids) out.set(id, market);
+                }
+            }
+        }
+
+        for (const key of Object.keys(node)) visita(node[key], depth + 1);
+    };
+
+    visita(state, 0);
+    return out;
+}
+
+export interface FairOdd {
+    /** A odd sem a margem da casa. Sempre MAIOR do que a crua. */
+    odd: number;
+    /** A margem do mercado, em percentagem. Guardada para ser auditável. */
+    marginPct: number;
+}
+
+/**
+ * A odd justa, sem a margem: `odd x soma_das_probabilidades`.
+ *
+ * De-vig multiplicativo, que reparte a margem proporcionalmente à
+ * probabilidade. É transparente e não precisa de iterações; para mercados de
+ * duas vias é praticamente ótimo. Em três vias corrige o favorito a mais (as
+ * casas carregam mais margem nos azarões), e aí o método de Shin ou o da
+ * potência seriam melhores - fica como afinação para quando houver margens
+ * gravadas que cheguem para comparar.
+ */
+export function devig(odd: number, market: Market | undefined): FairOdd | null {
+    if (!market) return null;
+    if (!Number.isFinite(odd) || odd <= 1) return null;
+    const justa = odd * market.overround;
+    if (!Number.isFinite(justa) || justa <= 1) return null;
+    return {
+        odd: Number(justa.toFixed(3)),
+        marginPct: Number(((market.overround - 1) * 100).toFixed(2)),
+    };
+}
+
 export interface MatchPage {
     /** id da seleção -> preço corrente. */
     odds: Map<string, number>;
+    /** id da seleção -> o mercado completo a que pertence, quando é de confiar. */
+    markets: Map<string, Market>;
     /** Apito em ISO-8601 UTC, quando a página o anuncia. */
     kickoffUtc: string | null;
 }
 
-/** Uma leitura da página: os preços e o apito, de uma assentada. */
+/** Uma leitura da página: preços, mercados e apito, de uma assentada. */
 export function readMatchPage(html: string, matchId: string): MatchPage {
     const state = parseNgState(html);
-    if (state === null) return { odds: new Map(), kickoffUtc: null };
+    if (state === null) {
+        return { odds: new Map(), markets: new Map(), kickoffUtc: null };
+    }
     return {
         odds: collectSelectionOdds(state),
+        markets: collectMarkets(state),
         kickoffUtc: findKickoffUtc(state, matchId),
     };
 }

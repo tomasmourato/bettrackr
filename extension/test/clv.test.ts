@@ -7,6 +7,7 @@ import {
   isPromoBet,
   kickoffOf,
   needsClosingOdd,
+  betClvNoVig,
 } from "../../src/lib/clv";
 import type { Bet, BetStatus } from "../../src/types";
 
@@ -377,5 +378,76 @@ describe("a marca de boost da própria Betclic", () => {
       ],
     });
     expect(isPromoBet(b)).toBe(false);
+  });
+});
+
+// ------------------------------------------------------------
+// CLV sem a margem da casa
+//
+// A odd de fecho crua traz a margem lá dentro, e isso INFLACIONA o CLV - não o
+// encolhe, como se tinha assumido. Estes testes fixam a medida honesta e o
+// facto de ela andar à parte: só uma parte das pernas tem mercado completo, e
+// misturar as duas numa média só daria um número sem significado.
+// ------------------------------------------------------------
+
+describe("betClvNoVig", () => {
+  test("mede contra a linha sem margem, não contra a crua", () => {
+    // Números reais de um 1X2 da Betclic: fecho cru 1.23, margem 9.8%,
+    // fecho justo 1.351. Quem apanhou 1.30 pagou acima do preço justo.
+    const b = bet({ odd: 1.3, closingOdd: 1.23, closingOddNoVig: 1.351, stake: 10 });
+    expect(betClv(b)!.clvPct).toBe(5.69); // o que a margem fazia parecer
+    expect(betClvNoVig(b)!.clvPct).toBe(-3.77); // o que na verdade foi
+  });
+
+  test("sem odd justa não há medida - e não se inventa", () => {
+    expect(betClvNoVig(bet({ odd: 2.1, closingOdd: 2 }))).toBeNull();
+  });
+
+  test("uma freebet vale 0 em dinheiro, aqui como no cru", () => {
+    const b = bet({ odd: 2.2, closingOddNoVig: 2, stake: 10, isFreebet: true });
+    expect(betClvNoVig(b)!.moneyClv).toBe(0);
+    expect(betClvNoVig(b)!.clvPct).toBe(10);
+  });
+});
+
+describe("calculateClv com odds sem margem", () => {
+  test("a média sem margem só conta quem tem odd justa", () => {
+    const s = calculateClv([
+      bet({ odd: 2.2, closingOdd: 2, closingOddNoVig: 2.1, stake: 10 }),
+      bet({ odd: 2.2, closingOdd: 2, stake: 10 }), // sem mercado completo
+    ]);
+    expect(s.ratedBets).toBe(2); // as duas contam para o CLV cru
+    expect(s.noVigBets).toBe(1); // só uma para o CLV sem margem
+    // 2.2 / 2.1 - 1 = +4.76%
+    expect(s.noVigAvgClvPct).toBe(4.76);
+  });
+
+  test("o CLV sem margem é sempre MENOR do que o cru", () => {
+    const s = calculateClv([
+      bet({ odd: 2.2, closingOdd: 2, closingOddNoVig: 2.1, stake: 10 }),
+    ]);
+    expect(s.avgClvPct).toBe(10);
+    expect(s.noVigAvgClvPct).toBe(4.76);
+    expect(s.noVigAvgClvPct).toBeLessThan(s.avgClvPct);
+  });
+
+  test("a margem média fica guardada, para se poder auditar", () => {
+    const s = calculateClv([
+      bet({
+        odd: 2.2,
+        closingOdd: 2,
+        closingOddNoVig: 2.1,
+        selections: [
+          { id: "a", event: "e", market: "m", choice: "c", odd: 2.2, closingOddMargin: 9.8 },
+        ],
+      }),
+    ]);
+    expect(s.noVigAvgMarginPct).toBe(9.8);
+  });
+
+  test("sem nenhuma odd justa a secção fica a zeros e a UI esconde-a", () => {
+    const s = calculateClv([bet({ odd: 2.2, closingOdd: 2 })]);
+    expect(s.noVigBets).toBe(0);
+    expect(s.noVigAvgClvPct).toBe(0);
   });
 });

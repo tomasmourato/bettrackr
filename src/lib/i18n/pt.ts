@@ -884,6 +884,10 @@ export const PT = {
   "clv.chartTitle": "CLV acumulado",
   "clv.chartDesc":
     "O valor esperado acumulado das tuas apostas medido contra a linha de fecho.",
+  "clv.noVig": "CLV sem margem",
+  "clv.noVigValue": "{n} · {pct}",
+  "clv.noVigHelp":
+    "O mesmo CLV, mas contra a linha de fecho já sem a margem da casa. É a medida honesta e dá sempre um número mais baixo: a margem estava a inflacionar o CLV. Só conta as apostas em que o mercado completo estava disponível.",
   "clv.promo": "Promoções",
   "clv.promoValue": "{n} · {pct}",
   "clv.promoHelp":

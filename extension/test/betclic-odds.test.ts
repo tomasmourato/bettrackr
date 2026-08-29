@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   betclicMatchPath,
+  collectMarkets,
   collectSelectionOdds,
+  devig,
   findKickoffUtc,
   kickoffMs,
   leadMinutesFrom,
@@ -175,5 +177,109 @@ describe("leadMinutesFrom", () => {
 
   test("depois do apito é negativo - quem chama tem de recusar", () => {
     expect(leadMinutesFrom(apito + 60000, apito)).toBe(-1);
+  });
+});
+
+// ------------------------------------------------------------
+// De-vig: tirar a margem da casa antes de gravar
+//
+// Os casos abaixo são os que apareceram MESMO numa página real da Betclic. De
+// 10 grupos de odds, só 1 era um mercado de confiança; os outros 9 teriam dado
+// odds justas inventadas.
+// ------------------------------------------------------------
+
+const mercado = (odds: number[], chave = "mainSelections") => ({
+  [chave]: odds.map((o, i) => ({ id: `s-${chave}-${i}`, odds: o })),
+});
+
+describe("collectMarkets", () => {
+  test("um 1X2 completo é de confiança", () => {
+    // Números reais: Resultado (Tempo Regulamentar) de um jogo da Betclic.
+    const m = collectMarkets(mercado([1.23, 5.75, 9]));
+    expect(m.size).toBe(3);
+    expect(m.get("s-mainSelections-0")!.overround).toBeCloseTo(1.098, 3);
+  });
+
+  test("um mercado INCOMPLETO é recusado", () => {
+    // Visto a sério: [1.21, 7.75] soma 0.9555. Margem negativa é impossível
+    // num mercado completo - falta-lhe uma seleção que a página não mostra.
+    // De-vigar isto inventava odds MAIORES do que as justas.
+    expect(collectMarkets(mercado([1.21, 7.75])).size).toBe(0);
+  });
+
+  test("uma lista de marcadores não é um mercado", () => {
+    // Somas de 2.48, 4.69, 5.60 apareceram todas na mesma página.
+    expect(collectMarkets(mercado([1.42, 2.3, 2.3, 2.65, 2.9])).size).toBe(0);
+  });
+
+  test("o crivo é estrutural, não só pela soma", () => {
+    // Um grupo de 22 seleções chamado "Galatasaray" somava 1.1457 e caía na
+    // banda plausível por acaso - um crivo só pela soma deixava-o passar. O
+    // que o exclui é não estar em `mainSelections`.
+    const odds = [2.5, 3, 4, 6]; // soma 1.15, dentro da banda
+    expect(collectMarkets(mercado(odds, "selections")).size).toBe(0);
+    expect(collectMarkets(mercado(odds, "mainSelections")).size).toBe(4);
+  });
+
+  test("um mercado de uma seleção só não é mercado", () => {
+    expect(collectMarkets(mercado([1.5])).size).toBe(0);
+  });
+
+  test("uma odd em falta invalida o mercado inteiro", () => {
+    // Meio mercado dá uma margem errada, e uma margem errada é pior do que
+    // margem nenhuma.
+    const meio = { mainSelections: [{ id: "a", odds: 1.23 }, { id: "b" }] };
+    expect(collectMarkets(meio).size).toBe(0);
+  });
+});
+
+describe("devig", () => {
+  const m3 = collectMarkets(mercado([1.23, 5.75, 9]));
+
+  test("a odd justa é sempre MAIOR do que a crua", () => {
+    const justa = devig(1.23, m3.get("s-mainSelections-0"))!;
+    expect(justa.odd).toBe(1.351);
+    expect(justa.marginPct).toBe(9.8);
+  });
+
+  test("as odds justas somam 1 de probabilidade - é essa a prova", () => {
+    const soma = [1.23, 5.75, 9]
+      .map((o) => devig(o, m3.get("s-mainSelections-0"))!.odd)
+      .reduce((a, o) => a + 1 / o, 0);
+    expect(soma).toBeCloseTo(1, 2);
+  });
+
+  test("sem mercado não há odd justa - e não se inventa nenhuma", () => {
+    expect(devig(1.23, undefined)).toBeNull();
+  });
+
+  test("uma odd que não é odd não passa", () => {
+    expect(devig(1, m3.get("s-mainSelections-0"))).toBeNull();
+    expect(devig(NaN, m3.get("s-mainSelections-0"))).toBeNull();
+  });
+
+  test("o efeito no CLV: o que parecia ganho era a margem", () => {
+    // Quem apanhou 1.30 contra um fecho de 1.23.
+    const justa = devig(1.23, m3.get("s-mainSelections-0"))!.odd;
+    expect(Number(((1.3 / 1.23 - 1) * 100).toFixed(1))).toBe(5.7); // cru
+    expect(Number(((1.3 / justa - 1) * 100).toFixed(1))).toBe(-3.8); // real
+  });
+});
+
+describe("readMatchPage com mercados", () => {
+  test("traz preços, mercados e apito", () => {
+    const comMercado = {
+      matchId: "111",
+      matchDateUtc: "2026-08-29T19:00:00.0000000Z",
+      ...mercado([1.23, 5.75, 9]),
+    };
+    const page = readMatchPage(html(comMercado), "111");
+    expect(page.odds.size).toBe(3);
+    expect(page.markets.size).toBe(3);
+    expect(page.kickoffUtc).toBe("2026-08-29T19:00:00.0000000Z");
+  });
+
+  test("página sem estado não traz mercado nenhum", () => {
+    expect(readMatchPage("<html></html>", "111").markets.size).toBe(0);
   });
 });

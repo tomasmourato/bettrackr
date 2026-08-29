@@ -16,9 +16,21 @@ export interface Selection {
   // Odd de fecho desta perna. A do boletim (Bet.closingOdd) é o produto
   // destas, tal como Bet.odd é o produto das odds. Ver src/lib/clv.ts.
   closingOdd?: number;
+  // A mesma odd de fecho, mas sem a margem da casa (de-vig sobre o mercado
+  // completo). É SEMPRE maior do que a crua, e é a que diz o preço justo:
+  // medido num 1X2 real, uma odd de 1.23 com 9.8% de margem vale 1.351 justa.
+  // Ausente quando o mercado completo não estava na página para se confiar.
+  closingOddNoVig?: number;
+  // A margem do mercado de onde saiu a odd justa, em percentagem. Guardada
+  // para a correção ser auditável e para se poder medir se a margem sobe
+  // perto do apito.
+  closingOddMargin?: number;
   // Hora do apito, "YYYY-MM-DD HH:mm". Não confundir com Bet.dateTime, que na
   // Betclic é o momento em que o boletim foi feito (placed_date_utc).
   startsAt?: string;
+  // O mesmo instante em ISO-8601 UTC. O startsAt acima é escrito na hora local
+  // de quem importou, o que engana quem o leia noutro fuso.
+  startsAtUtc?: string;
   // Odd turbinada pela casa (a Betclic marca-a em is_boosted_odd). Está acima
   // do mercado por construção, por isso fica fora das médias do CLV.
   isBoosted?: boolean;
@@ -62,6 +74,11 @@ export interface Bet {
   // sei" é diferente de "não bati a linha" - é isso que a cobertura do CLV
   // mede. Derivada de Selection.closingOdd por combineClosingOdds (src/lib/clv.ts).
   closingOdd?: number;
+  // A combinada sem a margem da casa, derivada de Selection.closingOddNoVig
+  // pela MESMA função. Só existe quando TODAS as pernas têm odd justa; meia
+  // múltipla não dá meia linha. Não vive na base de dados - é derivada na
+  // leitura, em mapBetFromApi.
+  closingOddNoVig?: number;
   isFreebet: boolean;
   freebetType?: FreebetType; // só relevante quando isFreebet; default resolvido pela casa
   // Aposta sem risco: stake é dinheiro REAL e conta para o lucro como uma

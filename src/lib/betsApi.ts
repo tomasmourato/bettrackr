@@ -7,6 +7,7 @@ import { authFetch, parseJsonResponse } from "./authApi";
 import { Bet, BetStatus, BetType, FreebetType, Selection, SelectionResult } from "../types";
 import { safeNum } from "../utils";
 import { normalizeBetStatus, parseBetMetadata } from "./betStatus";
+import { combineClosingOdds } from "../../lib/clvClosingOdds";
 
 // Linha crua devolvida pela API (colunas em snake_case).
 type ApiBetRow = Record<string, any>;
@@ -48,7 +49,19 @@ function normalizeSelections(raw: any, rowId: string): Selection[] {
     // A odd de fecho pode legitimamente não existir, por isso não passa pelo
     // safeNum (que daria 0 e faria o CLV dividir por zero).
     closingOdd: s?.closingOdd == null ? undefined : safeNum(s.closingOdd),
+    closingOddNoVig:
+      s?.closingOddNoVig == null ? undefined : safeNum(s.closingOddNoVig),
+    closingOddMargin:
+      s?.closingOddMargin == null ? undefined : safeNum(s.closingOddMargin),
     startsAt: typeof s?.startsAt === "string" ? s.startsAt : undefined,
+    startsAtUtc: typeof s?.startsAtUtc === "string" ? s.startsAtUtc : undefined,
+    // Sem estes dois a app perdia o que o servidor lhe manda: o isBoosted é o
+    // sinal FIÁVEL de odd turbinada (a Betclic marca-a), e sem ele a separação
+    // das promoções ficava só pelo palpite do texto do mercado; o sourceRef é
+    // o que deixa voltar a pedir o preço à casa.
+    isBoosted: s?.isBoosted === true ? true : undefined,
+    sourceRef:
+      s?.sourceRef && typeof s.sourceRef === "object" ? s.sourceRef : undefined,
     sport: s?.sport,
     betType: s?.betType,
     result: VALID_SELECTION_RESULTS.includes(s?.result) ? s.result : undefined,
@@ -72,17 +85,26 @@ export function mapBetFromApi(row: ApiBetRow): Bet {
   let origin = row.origin as Bet["origin"];
   if (!VALID_ORIGINS.includes(origin as string)) origin = "MANUAL";
 
+  const selections = normalizeSelections(row.selections, String(row.id));
+
   return {
     id: String(row.id),
     type,
     status,
-    selections: normalizeSelections(row.selections, String(row.id)),
+    selections,
     stake: safeNum(row.stake),
     odd: safeNum(row.odd),
     // A odd de fecho é a única odd que pode legitimamente não existir, por
     // isso não passa pelo safeNum (que devolveria 0 e faria o CLV dividir por
     // zero): sem valor fica undefined, "ainda não se sabe".
     closingOdd: row.closing_odd == null ? undefined : safeNum(row.closing_odd),
+    // A combinada sem margem não tem coluna na base de dados: deriva-se aqui
+    // das pernas, pela MESMA função que dá a combinada crua, para as duas
+    // nunca poderem discordar sobre o que é uma múltipla completa.
+    closingOddNoVig:
+      combineClosingOdds(
+        selections.map((s) => ({ closingOdd: s.closingOddNoVig })),
+      ) ?? undefined,
     isFreebet: row.is_freebet === true,
     freebetType: VALID_FREEBET_TYPES.includes(row.freebet_type)
       ? (row.freebet_type as FreebetType)
