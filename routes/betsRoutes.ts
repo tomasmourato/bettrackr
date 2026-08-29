@@ -7,7 +7,24 @@ import {
 } from "../middleware/authMiddleware.js";
 import { requireSubscriptionForExtension } from "../middleware/accessMiddleware.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
-import { combineClosingOdds } from "../lib/clvClosingOdds.js";
+
+// Mantém esta regra dentro do bundle backend. A rota é compilada pela Vercel
+// separadamente do frontend; não deve depender de módulos da camada `src` nem
+// de uma resolução de imports TypeScript adicional para arrancar.
+function combineClosingOdds(
+    selections: Array<{ closingOdd?: unknown }> | undefined,
+): number | null {
+    if (!Array.isArray(selections) || selections.length === 0) return null;
+
+    let product = 1;
+    for (const selection of selections) {
+        const odd = Number(selection?.closingOdd);
+        if (!Number.isFinite(odd) || odd <= 1) return null;
+        product *= odd;
+    }
+
+    return Number(product.toFixed(2));
+}
 
 const router = Router();
 
