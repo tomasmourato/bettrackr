@@ -170,6 +170,19 @@
       "source_location": "L8"
     },
     {
+      "id": "src_components_timeframefilter_timeframe",
+      "label": "Timeframe",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "Dashboard.tsx",
+      "file_type": "code",
+      "norm_label": "timeframe",
+      "source_file": "src/components/TimeframeFilter.tsx",
+      "source_location": "L7"
+    },
+    {
       "id": "src_components_timeframefilter_timeframefilterprops",
       "label": "TimeframeFilterProps",
       "_callable": true,
@@ -573,19 +586,6 @@
       "source_location": "L151"
     },
     {
-      "id": "src_components_bankrollcard_bankrollcardprops",
-      "label": "BankrollCardProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "bankrollcardprops",
-      "source_file": "src/components/BankrollCard.tsx",
-      "source_location": "L12"
-    },
-    {
       "id": "src_components_dashboard_dashboardbetsfilters",
       "label": "DashboardBetsFilters",
       "_callable": true,
@@ -623,19 +623,6 @@
       "norm_label": "settingsprops",
       "source_file": "src/components/Settings.tsx",
       "source_location": "L33"
-    },
-    {
-      "id": "src_components_timeframefilter_timeframe",
-      "label": "Timeframe",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "timeframe",
-      "source_file": "src/components/TimeframeFilter.tsx",
-      "source_location": "L7"
     },
     {
       "id": "src_lib_bankrollapi_bankrollmovementinput",
@@ -779,19 +766,6 @@
       "norm_label": "bankrollmovement",
       "source_file": "src/types.ts",
       "source_location": "L110"
-    },
-    {
-      "id": "src_types_bankrollsummary",
-      "label": "BankrollSummary",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "bankrollsummary",
-      "source_file": "src/types.ts",
-      "source_location": "L132"
     },
     {
       "id": "src_types_preferences",
@@ -1285,7 +1259,7 @@
       "file_type": "code",
       "norm_label": "betrow",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L65"
+      "source_location": "L72"
     },
     {
       "id": "routes_clvroutes_leg",
@@ -1298,7 +1272,7 @@
       "file_type": "code",
       "norm_label": "leg",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L51"
+      "source_location": "L58"
     },
     {
       "id": "routes_clvroutes_legupdate",
@@ -1311,7 +1285,7 @@
       "file_type": "code",
       "norm_label": "legupdate",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L148"
+      "source_location": "L160"
     },
     {
       "id": "src_mobile_components_mobilememberprofile_mobilememberprofileprops",
@@ -2326,6 +2300,32 @@
       "norm_label": "mainactivity",
       "source_file": "android/app/src/main/java/pt/bettrackr/app/MainActivity.java",
       "source_location": "L5"
+    },
+    {
+      "id": "src_components_bankrollcard_bankrollcardprops",
+      "label": "BankrollCardProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "BankrollCard.tsx",
+      "file_type": "code",
+      "norm_label": "bankrollcardprops",
+      "source_file": "src/components/BankrollCard.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_types_bankrollsummary",
+      "label": "BankrollSummary",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "BankrollCard.tsx",
+      "file_type": "code",
+      "norm_label": "bankrollsummary",
+      "source_file": "src/types.ts",
+      "source_location": "L132"
     },
     {
       "id": "src_components_screenshotimporter_screenshotimporter",
@@ -3646,30 +3646,6 @@
       "norm_label": "minutes()",
       "source_file": "extension/test/closing-odds.test.js",
       "source_location": "L20"
-    },
-    {
-      "id": "src_components_bankrollcard_bankrollcard",
-      "label": "BankrollCard()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "bankrollcard()",
-      "source_file": "src/components/BankrollCard.tsx",
-      "source_location": "L32"
-    },
-    {
-      "id": "src_components_bankrollcard_todaykey",
-      "label": "todayKey()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "todaykey()",
-      "source_file": "src/components/BankrollCard.tsx",
-      "source_location": "L28"
     },
     {
       "id": "db_pool_connect",
@@ -5277,7 +5253,7 @@
       "file_type": "code",
       "norm_label": "applytobet()",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L161"
+      "source_location": "L173"
     },
     {
       "id": "routes_clvroutes_asarray",
@@ -5289,7 +5265,7 @@
       "file_type": "code",
       "norm_label": "asarray()",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L71"
+      "source_location": "L78"
     },
     {
       "id": "routes_clvroutes_fetchmatch",
@@ -5301,7 +5277,7 @@
       "file_type": "code",
       "norm_label": "fetchmatch()",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L134"
+      "source_location": "L146"
     },
     {
       "id": "routes_clvroutes_legstoread",
@@ -5313,7 +5289,7 @@
       "file_type": "code",
       "norm_label": "legstoread()",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L92"
+      "source_location": "L99"
     },
     {
       "id": "routes_clvroutes_runcapture",
@@ -5325,7 +5301,7 @@
       "file_type": "code",
       "norm_label": "runcapture()",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L236"
+      "source_location": "L248"
     },
     {
       "id": "src_mobile_components_mobilememberprofile_mobilememberprofile",
@@ -9552,6 +9528,30 @@
       "source_location": "L50"
     },
     {
+      "id": "src_components_bankrollcard_bankrollcard",
+      "label": "BankrollCard()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "BankrollCard.tsx",
+      "file_type": "code",
+      "norm_label": "bankrollcard()",
+      "source_file": "src/components/BankrollCard.tsx",
+      "source_location": "L32"
+    },
+    {
+      "id": "src_components_bankrollcard_todaykey",
+      "label": "todayKey()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "BankrollCard.tsx",
+      "file_type": "code",
+      "norm_label": "todaykey()",
+      "source_file": "src/components/BankrollCard.tsx",
+      "source_location": "L28"
+    },
+    {
       "id": "extension_test_bet_return_profit_test",
       "label": "bet-return-profit.test.ts",
       "_origin": "ast",
@@ -10375,28 +10375,6 @@
       "file_type": "code",
       "norm_label": "adm-zip",
       "source_file": "adm-zip"
-    },
-    {
-      "id": "src_components_bankrollcard",
-      "label": "BankrollCard.tsx",
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "bankrollcard.tsx",
-      "source_file": "src/components/BankrollCard.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_bankrollcard_kinds",
-      "label": "KINDS",
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "kinds",
-      "source_file": "src/components/BankrollCard.tsx",
-      "source_location": "L23"
     },
     {
       "id": "src_navigation",
@@ -11474,7 +11452,7 @@
       "file_type": "code",
       "norm_label": "discovery_window_min",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L39"
+      "source_location": "L46"
     },
     {
       "id": "src_mobile_components_mobilememberprofile",
@@ -11706,6 +11684,28 @@
       "norm_label": "clv-capture.sql",
       "source_file": "db/cron/clv-capture.sql",
       "source_location": null
+    },
+    {
+      "id": "package_devdependencies_tailwindcss_vite",
+      "label": "@tailwindcss/vite",
+      "_origin": "ast",
+      "community": 156,
+      "community_name": "@tailwindcss/vite",
+      "file_type": "code",
+      "norm_label": "@tailwindcss/vite",
+      "source_file": "package.json",
+      "source_location": "L47"
+    },
+    {
+      "id": "tailwindcss_vite",
+      "label": "@tailwindcss/vite",
+      "_origin": "ast",
+      "community": 156,
+      "community_name": "@tailwindcss/vite",
+      "file_type": "concept",
+      "norm_label": "@tailwindcss/vite",
+      "source_file": "package.json",
+      "source_location": "L47"
     },
     {
       "id": "extension_test_bet_selection_test",
@@ -14346,15 +14346,15 @@
       "source_location": "L46"
     },
     {
-      "id": "package_devdependencies_tailwindcss_vite",
-      "label": "@tailwindcss/vite",
+      "id": "package_devdependencies_tailwindcss",
+      "label": "tailwindcss",
       "_origin": "ast",
       "community": 4,
       "community_name": "devDependencies",
       "file_type": "code",
-      "norm_label": "@tailwindcss/vite",
+      "norm_label": "tailwindcss",
       "source_file": "package.json",
-      "source_location": "L47"
+      "source_location": "L57"
     },
     {
       "id": "package_devdependencies_types_express",
@@ -14412,15 +14412,15 @@
       "source_location": "L46"
     },
     {
-      "id": "tailwindcss_vite",
-      "label": "@tailwindcss/vite",
+      "id": "tailwindcss",
+      "label": "tailwindcss",
       "_origin": "ast",
       "community": 4,
       "community_name": "devDependencies",
       "file_type": "concept",
-      "norm_label": "@tailwindcss/vite",
+      "norm_label": "tailwindcss",
       "source_file": "package.json",
-      "source_location": "L47"
+      "source_location": "L57"
     },
     {
       "id": "types_express",
@@ -16482,26 +16482,26 @@
       "source_location": "L1"
     },
     {
-      "id": "package_devdependencies_tailwindcss",
-      "label": "tailwindcss",
+      "id": "src_components_bankrollcard",
+      "label": "BankrollCard.tsx",
       "_origin": "ast",
       "community": 99,
-      "community_name": "tailwindcss",
+      "community_name": "BankrollCard.tsx",
       "file_type": "code",
-      "norm_label": "tailwindcss",
-      "source_file": "package.json",
-      "source_location": "L57"
+      "norm_label": "bankrollcard.tsx",
+      "source_file": "src/components/BankrollCard.tsx",
+      "source_location": "L1"
     },
     {
-      "id": "tailwindcss",
-      "label": "tailwindcss",
+      "id": "src_components_bankrollcard_kinds",
+      "label": "KINDS",
       "_origin": "ast",
       "community": 99,
-      "community_name": "tailwindcss",
-      "file_type": "concept",
-      "norm_label": "tailwindcss",
-      "source_file": "package.json",
-      "source_location": "L57"
+      "community_name": "BankrollCard.tsx",
+      "file_type": "code",
+      "norm_label": "kinds",
+      "source_file": "src/components/BankrollCard.tsx",
+      "source_location": "L23"
     },
     {
       "id": "extension_popup_session_status",
@@ -20261,7 +20261,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L176",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -20273,7 +20273,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L206",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -20285,7 +20285,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L135",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -20297,19 +20297,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L142",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_clvroutes_legstoread",
-      "target": "lib_betclicodds_kickoffms",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "routes/clvRoutes.ts",
-      "source_location": "L109",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -20321,7 +20309,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L97",
+      "source_location": "L104",
+      "weight": 1.0
+    },
+    {
+      "source": "routes_clvroutes_legstoread",
+      "target": "lib_betclicodds_kickoffms",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "routes/clvRoutes.ts",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -20333,7 +20333,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L249",
+      "source_location": "L261",
       "weight": 1.0
     },
     {
@@ -20345,7 +20345,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L275",
+      "source_location": "L287",
       "weight": 1.0
     },
     {
@@ -20357,7 +20357,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L303",
+      "source_location": "L319",
       "weight": 1.0
     },
     {
@@ -20369,7 +20369,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L316",
+      "source_location": "L332",
       "weight": 1.0
     },
     {
@@ -49297,7 +49297,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L134",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -49308,7 +49308,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L148",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -49319,18 +49319,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L161",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_clvroutes",
-      "target": "routes_clvroutes_runcapture",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "routes/clvRoutes.ts",
-      "source_location": "L236",
+      "source_location": "L173",
       "weight": 1.0
     },
     {
@@ -49346,13 +49335,24 @@
     },
     {
       "source": "routes_clvroutes",
+      "target": "routes_clvroutes_runcapture",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/clvRoutes.ts",
+      "source_location": "L248",
+      "weight": 1.0
+    },
+    {
+      "source": "routes_clvroutes",
       "target": "routes_clvroutes_discovery_window_min",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L39",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -49363,7 +49363,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L51",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -49374,7 +49374,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L65",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -49385,7 +49385,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L71",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -49396,7 +49396,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/clvRoutes.ts",
-      "source_location": "L92",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -57646,5 +57646,5 @@
       "source_file": "public/pwa-512x512.png"
     }
   ],
-  "built_at_commit": "06af304918ea07c0e6bdfd82bc73ac5dbdc37eb2"
+  "built_at_commit": "d3112f5d4e6fb5aaf5dd1cb85c317e2ac5725097"
 }

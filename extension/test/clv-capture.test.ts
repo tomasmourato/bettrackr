@@ -19,22 +19,43 @@ function leg(over: Record<string, unknown> = {}) {
     choice: "Benfica",
     odd: 2,
     sourceRef: { matchId: "m-1", selectionId: "s-100" },
-    startsAtUtc: minutos(8),
+    startsAtUtc: minutos(20),
     ...over,
   };
 }
 
-describe("janela de leitura", () => {
-  test("uma perna a 8 minutos do apito é lida", () => {
-    expect(legsToRead([bet([leg()])], AGORA)).toHaveLength(1);
+describe("janela de leitura: abre aos 30, fecha aos 5", () => {
+  const legivel = (m: number) =>
+    legsToRead([bet([leg({ startsAtUtc: minutos(m) })])], AGORA).length === 1;
+
+  test("a 20 minutos do apito é lida", () => {
+    expect(legivel(20)).toBe(true);
   });
 
-  test("a 30 minutos ainda é cedo", () => {
-    expect(legsToRead([bet([leg({ startsAtUtc: minutos(30) })])], AGORA)).toHaveLength(0);
+  test("a 30 minutos - o limite de cima - ainda é lida", () => {
+    expect(legivel(30)).toBe(true);
+  });
+
+  test("a 31 minutos ainda é cedo", () => {
+    expect(legivel(31)).toBe(false);
+  });
+
+  test("a 6 minutos ainda entra", () => {
+    expect(legivel(6)).toBe(true);
+  });
+
+  test("aos 5 minutos JÁ NÃO - é aqui que as odds da Betclic desabam", () => {
+    // Um fecho apanhado no último minuto seria baixo de mais e, como o CLV é
+    // (odd / fecho - 1), inflacionava o CLV de toda a gente.
+    expect(legivel(5)).toBe(false);
+  });
+
+  test("a 2 minutos muito menos", () => {
+    expect(legivel(2)).toBe(false);
   });
 
   test("passado o apito nunca - o mercado está suspenso e o preço seria lixo", () => {
-    expect(legsToRead([bet([leg({ startsAtUtc: minutos(-1) })])], AGORA)).toHaveLength(0);
+    expect(legivel(-1)).toBe(false);
   });
 
   test("sem apito nenhum não se sabe quando ler", () => {

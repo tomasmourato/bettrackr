@@ -23,13 +23,20 @@ import {
 
 const router = Router();
 
-// Quão perto do apito se aceita uma leitura. A "linha de fecho" é o último
-// preço antes do jogo começar; com passagens de 5 em 5 minutos, uma janela de
-// 12 dá duas ou três leituras e a última fica a menos de 5 minutos do apito.
+// A janela onde uma leitura conta: abre a 30 minutos do apito e FECHA a 5.
 //
-// Regulável por ambiente para se poder afinar (ou alargar, para uma verificação
-// com um jogo real) sem novo deploy. O valor por omissão é o que interessa.
-const CAPTURE_WINDOW_MIN = Number(process.env.CLV_CAPTURE_WINDOW_MIN) || 12;
+// Não é o último preço em absoluto de propósito. Na Betclic as odds descem
+// muito nos minutos que antecedem o apito, e uma linha de fecho apanhada aí
+// seria baixa de mais: como o CLV é (odd / fecho - 1), um fecho baixo demais
+// inflaciona o CLV de toda a gente. Parar aos 5 minutos dá uma linha mais
+// estável e erra por defeito, que é o lado certo para errar.
+//
+// A abertura larga não é desperdício: cada leitura substitui a anterior, por
+// isso as primeiras são a rede de segurança para quando a última falhar.
+//
+// Ambas reguláveis por ambiente, para se afinarem sem novo deploy.
+const CAPTURE_WINDOW_MIN = Number(process.env.CLV_CAPTURE_WINDOW_MIN) || 30;
+const CAPTURE_CUTOFF_MIN = Number(process.env.CLV_CAPTURE_CUTOFF_MIN) || 5;
 
 // Para pernas ainda sem `startsAtUtc`, o apito é estimado a partir do
 // `startsAt` legado (hora local de quem importou, assumida como Lisboa). Uma
@@ -108,11 +115,16 @@ export function legsToRead(rows: BetRow[], now: number): Leg[] {
 
             const kickoff = kickoffMs(selection);
             if (kickoff === null) return; // sem apito não se sabe quando ler
-            if (kickoff <= now) return; // depois do apito o preço é lixo
+
+            const faltam = kickoff - now;
+            // Passado o corte já não há nada a gravar, por isso nem se vai lá.
+            // (Inclui o depois do apito: aí o mercado está suspenso e o preço
+            // que viesse seria lixo com ar de dado.)
+            if (faltam <= CAPTURE_CUTOFF_MIN * 60_000) return;
 
             const exact = typeof selection?.startsAtUtc === "string";
             const janela = exact ? CAPTURE_WINDOW_MIN : DISCOVERY_WINDOW_MIN;
-            if (kickoff - now > janela * 60_000) return; // ainda é cedo
+            if (faltam > janela * 60_000) return; // ainda é cedo
 
             legs.push({
                 betId: String(row.id),
@@ -294,9 +306,13 @@ async function runCapture(now = Date.now()) {
 
             const efetivo = apito ?? leg.kickoff;
             const faltam = efetivo - Date.now();
-            // Só se lê ANTES do apito e já dentro da janela. Fora disto ficamos
-            // pela auto-cura e voltamos na passagem certa.
-            if (faltam > 0 && faltam <= CAPTURE_WINDOW_MIN * 60_000) {
+            // A decisão final é tomada com o apito que a Betclic anuncia, não
+            // com o que estava gravado: entre a abertura da janela e o corte.
+            // Fora disto ficamos pela auto-cura e voltamos na passagem certa.
+            if (
+                faltam > CAPTURE_CUTOFF_MIN * 60_000 &&
+                faltam <= CAPTURE_WINDOW_MIN * 60_000
+            ) {
                 const odd = page.odds.get(leg.selectionId);
                 if (typeof odd === "number" && odd > 1) {
                     update.closingOdd = odd;
