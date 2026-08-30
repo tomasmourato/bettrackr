@@ -131,6 +131,17 @@ const MENU_MAX_MERCADOS = 20;
 /** Teto de sanidade: acima disto ja nao e preco, e uma esmola a casa. */
 const MENU_MARGEM_MAX = 20;
 
+// Piso de odd, aplicado A EMENTA e nao pedido ao modelo.
+//
+// Pedido, foi ignorado: com "nunca abaixo de 1.20" escrito em maiusculas no
+// prompt, devolveu uma pick a 1.01. E a segunda regra verificavel que ignora no
+// mesmo dia - a primeira foi preferir margens baixas. A licao repete-se: o que
+// e verificavel enforca-se aqui, onde ele nao lhe pode fugir.
+//
+// Porque 1.20: abaixo disso arrisca-se muito para ganhar quase nada, e uma
+// derrota rara apaga dezenas de vitorias. Nao e uma dica, e ler a classificacao.
+const MENU_ODD_MIN = 1.2;
+
 interface OpcaoDoDia {
     selectionId: string;
     selection: string;
@@ -178,6 +189,7 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
             const opcoes: OpcaoDoDia[] = [];
             for (const sel of Array.isArray(m?.selections) ? m.selections : []) {
                 if (!sel?.id) continue;
+                if (!(Number(sel.odd) >= MENU_ODD_MIN)) continue;
                 opcoes.push({
                     selectionId: String(sel.id),
                     selection: String(sel.name ?? ""),
@@ -190,7 +202,9 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
                     kickoffLisbon: hora,
                 });
             }
-            if (opcoes.length > 0) mercados.push({ margem, opcoes });
+            // Um mercado que fique com uma seleccao so nao oferece escolha:
+            // e o favorito sozinho, que e precisamente o que se quer evitar.
+            if (opcoes.length >= 2) mercados.push({ margem, opcoes });
         }
     }
 
