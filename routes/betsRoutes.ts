@@ -643,7 +643,10 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
     // também o preenchimento de uma múltipla. As pernas mandam sobre o valor
     // ao nível da aposta, que fica para as simples e para o histórico.
     const rawLegs = req.body?.legs;
+    // Por perna: a crua, e opcionalmente a justa (sem a margem da casa) com a
+    // margem que a produziu. A justa nunca substitui a crua - andam a par.
     const legs = new Map<number, number>();
+    const legsNoVig = new Map<number, { odd: number; margin: number }>();
     if (rawLegs !== undefined && rawLegs !== null) {
         if (!Array.isArray(rawLegs)) {
             res.status(400).json({ error: "legs tem de ser um array." });
@@ -665,6 +668,15 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
                 return;
             }
             legs.set(index, n);
+
+            const justa = Number(leg?.closingOddNoVig);
+            const margem = Number(leg?.closingOddMargin);
+            // A justa tem de ser MAIOR do que a crua: tirar a margem so pode
+            // subir a odd. Se vier ao contrario, e sinal de que quem a mandou
+            // se enganou, e uma justa errada e pior do que justa nenhuma.
+            if (Number.isFinite(justa) && justa > n && Number.isFinite(margem)) {
+                legsNoVig.set(index, { odd: justa, margin: margem });
+            }
         }
     }
 
@@ -727,7 +739,20 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
 
             for (const [index, value] of legs) {
                 if (!selections[index]) continue;
-                selections[index] = { ...selections[index], closingOdd: value };
+                const justa = legsNoVig.get(index);
+                selections[index] = {
+                    ...selections[index],
+                    closingOdd: value,
+                    ...(justa
+                        ? { closingOddNoVig: justa.odd, closingOddMargin: justa.margin }
+                        : {}),
+                };
+                // Sem justa nova, a antiga nao pode ficar ao lado de uma crua
+                // nova - seria uma margem a dizer respeito a outro preco.
+                if (!justa) {
+                    delete selections[index].closingOddNoVig;
+                    delete selections[index].closingOddMargin;
+                }
             }
             selectionsJson = JSON.stringify(selections);
             // A combinada sai sempre do conjunto COMPLETO das pernas, já com

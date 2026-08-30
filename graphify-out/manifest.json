@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "extension/manifest.json": {
-    "mtime": 1787962649.567181,
-    "seen": 1788022512.2436042,
-    "ast_hash": "25f84f14297534122d5da7967e9ea809",
+    "mtime": 1788048373.2975526,
+    "seen": 1788048437.9233122,
+    "ast_hash": "77c54815ae9dd80828aeff821141fd3e",
     "semantic_hash": ""
   },
   "extension/popup.js": {
@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "extension/src/background.js": {
-    "mtime": 1788023832.519431,
-    "seen": 1788024335.248401,
-    "ast_hash": "6ba86cacc9b5f84057b52e31965d0657",
+    "mtime": 1788048254.6500895,
+    "seen": 1788048437.9233143,
+    "ast_hash": "f8bfc61349fc633d40ec0450bf63102f",
     "semantic_hash": ""
   },
   "extension/src/betano-history.js": {
@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "routes/betsRoutes.ts": {
-    "mtime": 1788047898.4645233,
-    "seen": 1788047930.3806467,
-    "ast_hash": "74542681124434af3d160f354dc1552e",
+    "mtime": 1788048272.9164712,
+    "seen": 1788048437.923363,
+    "ast_hash": "b531e2e6698a483f763254103ad66f87",
     "semantic_hash": ""
   },
   "scripts/zip-extension.mjs": {
@@ -1626,15 +1626,15 @@
     "semantic_hash": ""
   },
   "extension/src/closing-odds.js": {
-    "mtime": 1787966038.1302137,
-    "seen": 1788022512.2436097,
-    "ast_hash": "02b1a09fd9cbdf41e03e42116c181fb7",
+    "mtime": 1788048272.9154718,
+    "seen": 1788048437.923318,
+    "ast_hash": "e8607948738dcfae145792aaee3f0bd1",
     "semantic_hash": ""
   },
   "extension/test/closing-odds.test.js": {
-    "mtime": 1787966038.1312191,
-    "seen": 1788022512.2436242,
-    "ast_hash": "18b131c371c61d5ed67819de73a107aa",
+    "mtime": 1788048357.128523,
+    "seen": 1788048437.9233372,
+    "ast_hash": "38bd6b16eadeb2e2621653ed5d937d4a",
     "semantic_hash": ""
   },
   "extension/test/csv-closing-odds.test.ts": {
@@ -1668,9 +1668,9 @@
     "semantic_hash": ""
   },
   "extension/test/betclic-odds.test.ts": {
-    "mtime": 1788027275.1974833,
-    "seen": 1788044784.557287,
-    "ast_hash": "c49c14c8038ab7dda94242e1e932d1ca",
+    "mtime": 1788048291.14735,
+    "seen": 1788048437.9233358,
+    "ast_hash": "4ffc3f1a1f5b1636232c22b407db9161",
     "semantic_hash": ""
   },
   "extension/test/clv-capture.test.ts": {

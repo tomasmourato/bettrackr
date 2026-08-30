@@ -28,7 +28,7 @@ function leg(over = {}) {
     market: "Vencedor do jogo",
     choice: "Benfica",
     odd: 2,
-    startsAt: iso(NOW + hours(3)),
+    startsAt: iso(NOW + minutes(20)),
     ...over,
   };
 }
@@ -78,41 +78,46 @@ describe("pendingLegsFrom", () => {
     }
   });
 
-  test("ignora jogos já começados e os que estão para lá da janela", () => {
-    const jaComecou = bet({ selections: [leg({ startsAt: iso(NOW - minutes(1)) })] });
-    const longeDemais = bet({ selections: [leg({ startsAt: iso(NOW + hours(72)) })] });
-    expect(pendingLegsFrom([jaComecou], NOW)).toHaveLength(0);
-    expect(pendingLegsFrom([longeDemais], NOW)).toHaveLength(0);
+  test("a janela e a mesma do servidor: abre aos 30, fecha aos 5", () => {
+    const em = (m) => bet({ selections: [leg({ startsAt: iso(NOW + minutes(m)) })] });
+    // Fora, de um lado e do outro.
+    expect(pendingLegsFrom([em(31)], NOW)).toHaveLength(0); // ainda cedo
+    expect(pendingLegsFrom([em(5)], NOW)).toHaveLength(0); // ja no corte
+    expect(pendingLegsFrom([em(-1)], NOW)).toHaveLength(0); // apito passado
+    // Dentro.
+    expect(pendingLegsFrom([em(30)], NOW)).toHaveLength(1);
+    expect(pendingLegsFrom([em(6)], NOW)).toHaveLength(1);
   });
 
   test("uma múltipla dá uma perna por jogo", () => {
     const multipla = bet({
-      selections: [leg(), leg({ startsAt: iso(NOW + hours(5)) })],
+      selections: [leg(), leg({ startsAt: iso(NOW + minutes(25)) })],
     });
     expect(pendingLegsFrom([multipla], NOW)).toHaveLength(2);
   });
 });
 
 describe("nextWakeUp", () => {
-  test("o apito mais próximo menos a antecedência", () => {
-    const legs = pendingLegsFrom(
-      [
-        bet({ selections: [leg({ startsAt: iso(NOW + hours(5)) })] }),
-        bet({ id: "b2", selections: [leg({ startsAt: iso(NOW + hours(2)) })] }),
-      ],
-      NOW,
-    );
-    expect(nextWakeUp(legs, NOW)).toBe(NOW + hours(2) - minutes(SNAPSHOT_LEAD_MINUTES));
+  test("antes de a janela abrir, acorda quando ela abre", () => {
+    // Perna a 2 horas do apito: a janela abre 30 minutos antes dele.
+    const legs = [{ startsAt: NOW + hours(2) }];
+    expect(nextWakeUp(legs, NOW)).toBe(NOW + hours(2) - minutes(30));
   });
 
   test("sem nada a vigiar não há alarme", () => {
     expect(nextWakeUp([], NOW)).toBeNull();
   });
 
-  test("um instante de leitura já passado lê-se já, não no passado", () => {
-    // O Chrome esteve fechado: ainda vale a pena ler antes do apito.
-    const legs = [{ startsAt: NOW + minutes(1) }];
-    expect(nextWakeUp(legs, NOW)).toBe(NOW);
+  test("ja dentro da janela, volta daqui a cinco minutos", () => {
+    // Cada leitura substitui a anterior, por isso vale a pena reler ate ao
+    // corte - a ultima e a que fica.
+    const legs = [{ startsAt: NOW + minutes(20) }];
+    expect(nextWakeUp(legs, NOW)).toBe(NOW + minutes(5));
+  });
+
+  test("passado o corte nao ha mais nada a fazer por essa perna", () => {
+    expect(nextWakeUp([{ startsAt: NOW + minutes(4) }], NOW)).toBeNull();
+    expect(nextWakeUp([{ startsAt: NOW - minutes(1) }], NOW)).toBeNull();
   });
 });
 
@@ -129,17 +134,30 @@ describe("leadMinutes", () => {
 });
 
 describe("acceptSnapshot", () => {
-  const startsAt = iso(NOW + hours(1));
+  // Apito daqui a 30 minutos: a janela abre exatamente agora.
+  const startsAt = iso(NOW + minutes(30));
 
-  test("uma primeira leitura antes do apito entra", () => {
+  test("uma leitura dentro da janela entra", () => {
     expect(acceptSnapshot(undefined, { odd: 1.9, at: iso(NOW) }, startsAt)).toBe(true);
   });
 
   test("uma leitura mais recente substitui a anterior", () => {
     const antiga = { odd: 2.1, at: iso(NOW) };
-    const nova = { odd: 1.95, at: iso(NOW + minutes(30)) };
+    const nova = { odd: 1.95, at: iso(NOW + minutes(10)) };
     expect(acceptSnapshot(antiga, nova, startsAt)).toBe(true);
     expect(acceptSnapshot(nova, antiga, startsAt)).toBe(false);
+  });
+
+  test("cedo demais nao entra - nao e linha de fecho nenhuma", () => {
+    // Quatro horas antes do apito o preco nao diz nada sobre o fecho. Era isto
+    // que a extensao aceitava antes, com uma janela de 48 horas.
+    const cedo = { odd: 1.9, at: iso(NOW - hours(4)) };
+    expect(acceptSnapshot(undefined, cedo, startsAt)).toBe(false);
+  });
+
+  test("dentro dos ultimos 5 minutos nao entra - e aqui que as odds desabam", () => {
+    const tarde = { odd: 1.9, at: iso(NOW + minutes(26)) }; // 4 min do apito
+    expect(acceptSnapshot(undefined, tarde, startsAt)).toBe(false);
   });
 
   test("depois do apito não entra", () => {

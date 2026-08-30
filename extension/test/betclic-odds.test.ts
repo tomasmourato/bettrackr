@@ -121,6 +121,35 @@ describe("paridade com o módulo da extensão", () => {
     expect(parseNgState(html(estado))).toEqual(ext.parseNgState(html(estado)));
   });
 
+  test("os dois módulos veem os MESMOS mercados", () => {
+    // Foi a divergencia que existiu de verdade: o servidor de-vigava e a
+    // extensao nao, por isso a mesma perna valia coisas diferentes conforme
+    // quem a apanhasse.
+    const meu = collectMarkets(mercado([1.23, 5.75, 9]));
+    const dele = ext.collectMarkets(mercado([1.23, 5.75, 9]));
+    expect(meu.size).toBe(dele.size);
+    expect([...meu.values()][0].overround).toBeCloseTo(
+      [...dele.values()][0].overround, 6);
+  });
+
+  test("os dois módulos de-vigam igual", () => {
+    const m = collectMarkets(mercado([1.23, 5.75, 9]));
+    const d = ext.collectMarkets(mercado([1.23, 5.75, 9]));
+    for (const odd of [1.23, 5.75, 9]) {
+      const a = devig(odd, m.get("s-mainSelections-0"));
+      const b = ext.devig(odd, d.get("s-mainSelections-0"));
+      expect(a!.odd).toBe(b.odd);
+      expect(a!.marginPct).toBe(b.marginPct);
+    }
+  });
+
+  test("os dois recusam as mesmas armadilhas", () => {
+    for (const odds of [[1.21, 7.75], [1.42, 2.3, 2.3, 2.65, 2.9], [1.5]]) {
+      expect(collectMarkets(mercado(odds)).size).toBe(
+        ext.collectMarkets(mercado(odds)).size);
+    }
+  });
+
   test("os dois módulos constroem o mesmo caminho", () => {
     for (const evento of ["Benfica - Porto", "Peñarol & Nacional", "", "Ajax - PSV"]) {
       expect(betclicMatchPath("123", evento)).toBe(ext.betclicMatchPath("123", evento));

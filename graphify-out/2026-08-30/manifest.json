@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "routes/betsRoutes.ts": {
-    "mtime": 1788023832.5444994,
-    "seen": 1788024335.2484438,
-    "ast_hash": "a78fe4c3a2f27cb55010a8d81ac539de",
+    "mtime": 1788047898.4645233,
+    "seen": 1788047930.3806467,
+    "ast_hash": "74542681124434af3d160f354dc1552e",
     "semantic_hash": ""
   },
   "scripts/zip-extension.mjs": {
@@ -1674,9 +1674,9 @@
     "semantic_hash": ""
   },
   "extension/test/clv-capture.test.ts": {
-    "mtime": 1788027275.1974833,
-    "seen": 1788044784.5572922,
-    "ast_hash": "0177074450c162679414fb00f13b8fba",
+    "mtime": 1788047922.462506,
+    "seen": 1788047930.3806193,
+    "ast_hash": "0149f7c057640eb5af10b80980034095",
     "semantic_hash": ""
   },
   "lib/betclicOdds.ts": {
@@ -1698,9 +1698,9 @@
     "semantic_hash": ""
   },
   "lib/clvCapture.ts": {
-    "mtime": 1788044419.6712184,
-    "seen": 1788044784.557319,
-    "ast_hash": "a90653178eaed1fc356b8ddda6a1e365",
+    "mtime": 1788047879.776666,
+    "seen": 1788047930.3806357,
+    "ast_hash": "87a05df1de276213650c43e59d0f416f",
     "semantic_hash": ""
   },
   ".github/workflows/teste-acesso-betclic.yml": {
