@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "extension/manifest.json": {
-    "mtime": 1788048373.2975526,
-    "seen": 1788048437.9233122,
-    "ast_hash": "77c54815ae9dd80828aeff821141fd3e",
+    "mtime": 1788131812.4537878,
+    "seen": 1788133100.0793002,
+    "ast_hash": "2518cb8ee2862cdcaadb2f16d28c17bb",
     "semantic_hash": ""
   },
   "extension/popup.js": {
@@ -113,24 +113,6 @@
     "ast_hash": "bb1cf47f92d5d25f0823c76267a18b69",
     "semantic_hash": ""
   },
-  "extension/test/bet-status.test.ts": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.1624792,
-    "ast_hash": "70496aad9e1a457f9488f1f18a7f1e84",
-    "semantic_hash": ""
-  },
-  "extension/test/fixtures/betano-sample.json": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.1624832,
-    "ast_hash": "1cd69ba735a85bba49be448efb9fb41e",
-    "semantic_hash": ""
-  },
-  "extension/test/importers.test.js": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.162485,
-    "ast_hash": "ddf11f3e23b2ad79800325dac7ca8c13",
-    "semantic_hash": ""
-  },
   "middleware/authMiddleware.ts": {
     "mtime": 1787446545.695051,
     "seen": 1787526519.1624925,
@@ -144,9 +126,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788044741.991223,
-    "seen": 1788044784.5573318,
-    "ast_hash": "3cd66212f49e26159917542648eea60d",
+    "mtime": 1788132693.338959,
+    "seen": 1788133100.0793343,
+    "ast_hash": "1a1679ae0440e737c66ff55d0d40864a",
     "semantic_hash": ""
   },
   "routes/authRoutes.ts": {
@@ -264,9 +246,9 @@
     "semantic_hash": ""
   },
   "src/lib/bookmakers.ts": {
-    "mtime": 1787531792.4971554,
-    "seen": 1787570007.4282007,
-    "ast_hash": "a766b4b4b265de4a1c21362f96becd5c",
+    "mtime": 1788132846.1449604,
+    "seen": 1788133100.0794275,
+    "ast_hash": "b2ba1afe8190497760e19b62be34d628",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -288,9 +270,9 @@
     "semantic_hash": ""
   },
   "tsconfig.json": {
-    "mtime": 1787446545.7484167,
-    "seen": 1787526519.1625867,
-    "ast_hash": "12f3b371ac7fcb9f36912941c98de93b",
+    "mtime": 1788132716.788476,
+    "seen": 1788133100.079513,
+    "ast_hash": "9b88f2e85c118b2c88e347c4724a3f2e",
     "semantic_hash": ""
   },
   "vercel.json": {
@@ -305,22 +287,16 @@
     "ast_hash": "c9f028c2792452e76223d9d141250613",
     "semantic_hash": ""
   },
-  "PLAN.md": {
-    "mtime": 1787531792.414012,
-    "seen": 1787570007.4282496,
-    "ast_hash": "125bd8b1d828a46f0f73709091c8f0d6",
-    "semantic_hash": ""
-  },
   "README.md": {
-    "mtime": 1787926858.8399549,
-    "seen": 1787962254.7841618,
-    "ast_hash": "e2a8e66be539b2a35067f2881d0899df",
+    "mtime": 1788132914.6616693,
+    "seen": 1788133100.0795212,
+    "ast_hash": "1a8944aa2f704004f746c8a1be376c0b",
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787926858.8399549,
-    "seen": 1787962254.7841625,
-    "ast_hash": "c8437b0946474237b4df519f991a4375",
+    "mtime": 1788132890.9576223,
+    "seen": 1788133100.0795224,
+    "ast_hash": "a8e24641c3ee61a6d4ecd3e78adb9f0e",
     "semantic_hash": ""
   },
   "extension/README.md": {
@@ -351,12 +327,6 @@
     "mtime": 1787446545.702761,
     "seen": 1787526519.1626601,
     "ast_hash": "9a8427e7548ed6c18de83ecd0dc2921d",
-    "semantic_hash": ""
-  },
-  "extension/test/dashboard-stats.test.ts": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.1624806,
-    "ast_hash": "bf586ebc4926c2a04cc656a582aca3bb",
     "semantic_hash": ""
   },
   ".claude/launch.json": {
@@ -503,30 +473,6 @@
     "ast_hash": "1b863c7a976ae4744ca242c0a70a4a0d",
     "semantic_hash": ""
   },
-  "extension/test/bettrackr-identity.test.js": {
-    "mtime": 1787531792.434567,
-    "seen": 1787570007.428114,
-    "ast_hash": "894c22d2f2cfdfeaf1e0bc3123a045b1",
-    "semantic_hash": ""
-  },
-  "extension/test/filter-params.test.ts": {
-    "mtime": 1787926858.8399549,
-    "seen": 1787962254.7840264,
-    "ast_hash": "da3d2002a1551b68f14cd9f6cb9c9624",
-    "semantic_hash": ""
-  },
-  "extension/test/selection-results.test.ts": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.162488,
-    "ast_hash": "8b5566342a0c5cf65df4a8b633fbe786",
-    "semantic_hash": ""
-  },
-  "extension/test/timeframe.test.ts": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.162489,
-    "ast_hash": "af6fb9b77cc9690d71e9c633da9305cb",
-    "semantic_hash": ""
-  },
   "lib/gemini.ts": {
     "mtime": 1787531792.4696174,
     "seen": 1787570007.4281278,
@@ -540,9 +486,9 @@
     "semantic_hash": ""
   },
   "routes/insightsRoutes.ts": {
-    "mtime": 1788094164.3771951,
-    "seen": 1788094192.2165246,
-    "ast_hash": "2fed8b7a33862e2fa1a18dddc6683b24",
+    "mtime": 1788132066.2815802,
+    "seen": 1788133100.0793443,
+    "ast_hash": "144cb4ef7467a14b45f1b2332ee238a6",
     "semantic_hash": ""
   },
   "routes/socialRoutes.ts": {
@@ -1259,30 +1205,6 @@
     "ast_hash": "b638312fc65b46d7e80053e02384adb5",
     "semantic_hash": ""
   },
-  "extension/test/bet-selection.test.ts": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.162478,
-    "ast_hash": "be7b49cb29113a0b1c52a10555e035a0",
-    "semantic_hash": ""
-  },
-  "extension/test/filtered-bets-summary.test.ts": {
-    "mtime": 1787531792.434567,
-    "seen": 1787570007.4281173,
-    "ast_hash": "ee9fb372e83d0cdfd8306e06dcb8c161",
-    "semantic_hash": ""
-  },
-  "extension/test/long-press.test.ts": {
-    "mtime": 1787446545.5612235,
-    "seen": 1787526519.162486,
-    "ast_hash": "c479356e0521ef6780761d4747449c08",
-    "semantic_hash": ""
-  },
-  "extension/test/selection-display-result.test.ts": {
-    "mtime": 1787531792.435566,
-    "seen": 1787570007.4281232,
-    "ast_hash": "3f36242cc6a85429d11597c03069da65",
-    "semantic_hash": ""
-  },
   "src/components/FilteredBetsSummary.tsx": {
     "mtime": 1787446545.7151244,
     "seen": 1787526519.1625197,
@@ -1517,18 +1439,6 @@
     "ast_hash": "b00624c430ed7d1429e17f1ff6a13ca1",
     "semantic_hash": ""
   },
-  "extension/test/bet-return-profit.test.ts": {
-    "mtime": 1787531792.433563,
-    "seen": 1787570007.4281106,
-    "ast_hash": "262fe1c4da0fb918c80002a181a196ba",
-    "semantic_hash": ""
-  },
-  "extension/test/i18n-labels.test.ts": {
-    "mtime": 1787531792.435566,
-    "seen": 1787570007.4281197,
-    "ast_hash": "251313f15e2da55f3822df9f20ead69d",
-    "semantic_hash": ""
-  },
   "src/lib/storageKeys.ts": {
     "mtime": 1787531792.5026653,
     "seen": 1787570007.4282155,
@@ -1545,12 +1455,6 @@
     "mtime": 1787915719.0562043,
     "seen": 1787918496.0508192,
     "ast_hash": "caa5307cc2133dd8fbb508d2c8feb003",
-    "semantic_hash": ""
-  },
-  "extension/test/bankroll.test.ts": {
-    "mtime": 1787915719.0562043,
-    "seen": 1787918496.0508578,
-    "ast_hash": "0b04d1197a4e3e11001b1be27842b99d",
     "semantic_hash": ""
   },
   "routes/bankrollRoutes.ts": {
@@ -1572,9 +1476,9 @@
     "semantic_hash": ""
   },
   "src/lib/bankroll.ts": {
-    "mtime": 1787915719.0926416,
-    "seen": 1787918496.0510082,
-    "ast_hash": "5233f2df286fbedc880bb2b78d9e12ac",
+    "mtime": 1788132857.7354875,
+    "seen": 1788133100.079419,
+    "ast_hash": "ebbea037a45d3e992f160cb9594bacab",
     "semantic_hash": ""
   },
   "src/lib/bankrollApi.ts": {
@@ -1583,22 +1487,10 @@
     "ast_hash": "89cc02d1c04e1df8a963196e1e9f066f",
     "semantic_hash": ""
   },
-  "extension/test/bankroll-backup.test.ts": {
-    "mtime": 1787915719.0562043,
-    "seen": 1787918496.0508554,
-    "ast_hash": "6250caef2c7ca20f3543886e48e28c6b",
-    "semantic_hash": ""
-  },
   "db/migrations/019_clv_closing_odd.sql": {
     "mtime": 1787926858.8399549,
     "seen": 1787962254.7839966,
     "ast_hash": "217a7f5ebff150d9bdaeacbd2e9e2b33",
-    "semantic_hash": ""
-  },
-  "extension/test/clv.test.ts": {
-    "mtime": 1788027275.1984856,
-    "seen": 1788044784.5572937,
-    "ast_hash": "391488acd6165b3e15e4888b67fb1d37",
     "semantic_hash": ""
   },
   "scripts/run-migration.mjs": {
@@ -1614,9 +1506,9 @@
     "semantic_hash": ""
   },
   "src/lib/clv.ts": {
-    "mtime": 1788027275.2263317,
-    "seen": 1788044784.557466,
-    "ast_hash": "b014aa87ad59c3f1e282cb62b919c7e8",
+    "mtime": 1788132857.9581432,
+    "seen": 1788133100.0794287,
+    "ast_hash": "ff56484d37c56fa444a89103d84c8b32",
     "semantic_hash": ""
   },
   "src/mobile/components/ClosingOddsSheet.tsx": {
@@ -1626,33 +1518,9 @@
     "semantic_hash": ""
   },
   "extension/src/closing-odds.js": {
-    "mtime": 1788048272.9154718,
-    "seen": 1788048437.923318,
-    "ast_hash": "e8607948738dcfae145792aaee3f0bd1",
-    "semantic_hash": ""
-  },
-  "extension/test/closing-odds.test.js": {
-    "mtime": 1788048357.128523,
-    "seen": 1788048437.9233372,
-    "ast_hash": "38bd6b16eadeb2e2621653ed5d937d4a",
-    "semantic_hash": ""
-  },
-  "extension/test/csv-closing-odds.test.ts": {
-    "mtime": 1787962649.572181,
-    "seen": 1788022512.2436256,
-    "ast_hash": "c9c29f5ce12767336125730c6c48ef8f",
-    "semantic_hash": ""
-  },
-  "extension/test/parse-decimal.test.ts": {
-    "mtime": 1787962649.572181,
-    "seen": 1788022512.2436326,
-    "ast_hash": "c53ca2ea9a9a912cfa6234677dd6d976",
-    "semantic_hash": ""
-  },
-  "extension/test/put-closing-odd.test.ts": {
-    "mtime": 1788023832.519431,
-    "seen": 1788024335.2484312,
-    "ast_hash": "290d97c8bfb1db2aeaec10d876880d54",
+    "mtime": 1788132857.1447046,
+    "seen": 1788133100.0793092,
+    "ast_hash": "10f4d1e7d06514cd59474dac98f8b0b9",
     "semantic_hash": ""
   },
   "lib/clvClosingOdds.ts": {
@@ -1667,28 +1535,16 @@
     "ast_hash": "412c5530c53ef930e2ba75571ec840f6",
     "semantic_hash": ""
   },
-  "extension/test/betclic-odds.test.ts": {
-    "mtime": 1788048291.14735,
-    "seen": 1788048437.9233358,
-    "ast_hash": "4ffc3f1a1f5b1636232c22b407db9161",
-    "semantic_hash": ""
-  },
-  "extension/test/clv-capture.test.ts": {
-    "mtime": 1788047922.462506,
-    "seen": 1788047930.3806193,
-    "ast_hash": "0149f7c057640eb5af10b80980034095",
-    "semantic_hash": ""
-  },
   "lib/betclicOdds.ts": {
-    "mtime": 1788089091.5776365,
-    "seen": 1788089610.8553214,
-    "ast_hash": "aac52d91371d56752773b51c4b5cf1c0",
+    "mtime": 1788132857.4324143,
+    "seen": 1788133100.079324,
+    "ast_hash": "19d4f0d584ebb2e44b1f77196368dd5f",
     "semantic_hash": ""
   },
   "routes/clvRoutes.ts": {
-    "mtime": 1788088814.1091855,
-    "seen": 1788089610.8553352,
-    "ast_hash": "25672c5461b616e9dc723d5ef398a44d",
+    "mtime": 1788132089.1188564,
+    "seen": 1788133100.0793428,
+    "ast_hash": "5d2e67643e75549f98510253fb4af378",
     "semantic_hash": ""
   },
   "agent/clv-agent.ts": {
@@ -1698,9 +1554,9 @@
     "semantic_hash": ""
   },
   "lib/clvCapture.ts": {
-    "mtime": 1788047879.776666,
-    "seen": 1788047930.3806357,
-    "ast_hash": "87a05df1de276213650c43e59d0f416f",
+    "mtime": 1788128997.6028678,
+    "seen": 1788133100.079325,
+    "ast_hash": "e27922fd27dbac6d5a61e569576276b3",
     "semantic_hash": ""
   },
   ".github/workflows/teste-acesso-betclic.yml": {
@@ -1713,6 +1569,156 @@
     "mtime": 1788088790.7454028,
     "seen": 1788089610.8552775,
     "ast_hash": "354b1f3f8f893a498db78b39a4a4df18",
+    "semantic_hash": ""
+  },
+  "test/app/bankroll-backup.test.ts": {
+    "mtime": 1788132774.9315414,
+    "seen": 1788133100.0794885,
+    "ast_hash": "b074a79b4a4feab1206abf4881499f45",
+    "semantic_hash": ""
+  },
+  "test/app/bankroll.test.ts": {
+    "mtime": 1787915719.0562043,
+    "seen": 1788133100.07949,
+    "ast_hash": "0b04d1197a4e3e11001b1be27842b99d",
+    "semantic_hash": ""
+  },
+  "test/app/bet-return-profit.test.ts": {
+    "mtime": 1787531792.433563,
+    "seen": 1788133100.0794916,
+    "ast_hash": "262fe1c4da0fb918c80002a181a196ba",
+    "semantic_hash": ""
+  },
+  "test/app/bet-selection.test.ts": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.0794926,
+    "ast_hash": "be7b49cb29113a0b1c52a10555e035a0",
+    "semantic_hash": ""
+  },
+  "test/app/bet-status.test.ts": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.079494,
+    "ast_hash": "70496aad9e1a457f9488f1f18a7f1e84",
+    "semantic_hash": ""
+  },
+  "test/app/clv.test.ts": {
+    "mtime": 1788027275.1984856,
+    "seen": 1788133100.0794947,
+    "ast_hash": "391488acd6165b3e15e4888b67fb1d37",
+    "semantic_hash": ""
+  },
+  "test/app/csv-closing-odds.test.ts": {
+    "mtime": 1787962649.572181,
+    "seen": 1788133100.0794957,
+    "ast_hash": "c9c29f5ce12767336125730c6c48ef8f",
+    "semantic_hash": ""
+  },
+  "test/app/dashboard-stats.test.ts": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.0794964,
+    "ast_hash": "bf586ebc4926c2a04cc656a582aca3bb",
+    "semantic_hash": ""
+  },
+  "test/app/filter-params.test.ts": {
+    "mtime": 1787926858.8399549,
+    "seen": 1788133100.0794976,
+    "ast_hash": "da3d2002a1551b68f14cd9f6cb9c9624",
+    "semantic_hash": ""
+  },
+  "test/app/filtered-bets-summary.test.ts": {
+    "mtime": 1787531792.434567,
+    "seen": 1788133100.0794985,
+    "ast_hash": "ee9fb372e83d0cdfd8306e06dcb8c161",
+    "semantic_hash": ""
+  },
+  "test/app/i18n-labels.test.ts": {
+    "mtime": 1787531792.435566,
+    "seen": 1788133100.0794995,
+    "ast_hash": "251313f15e2da55f3822df9f20ead69d",
+    "semantic_hash": ""
+  },
+  "test/app/long-press.test.ts": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.0795004,
+    "ast_hash": "c479356e0521ef6780761d4747449c08",
+    "semantic_hash": ""
+  },
+  "test/app/parse-decimal.test.ts": {
+    "mtime": 1787962649.572181,
+    "seen": 1788133100.0795016,
+    "ast_hash": "c53ca2ea9a9a912cfa6234677dd6d976",
+    "semantic_hash": ""
+  },
+  "test/app/selection-display-result.test.ts": {
+    "mtime": 1787531792.435566,
+    "seen": 1788133100.0795026,
+    "ast_hash": "3f36242cc6a85429d11597c03069da65",
+    "semantic_hash": ""
+  },
+  "test/app/selection-results.test.ts": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.0795033,
+    "ast_hash": "8b5566342a0c5cf65df4a8b633fbe786",
+    "semantic_hash": ""
+  },
+  "test/app/timeframe.test.ts": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.0795045,
+    "ast_hash": "af6fb9b77cc9690d71e9c633da9305cb",
+    "semantic_hash": ""
+  },
+  "test/extension/bettrackr-identity.test.js": {
+    "mtime": 1788132632.520459,
+    "seen": 1788133100.0795054,
+    "ast_hash": "ac8b985fa488ba7dbbdb93cb0e53729e",
+    "semantic_hash": ""
+  },
+  "test/extension/closing-odds.test.js": {
+    "mtime": 1788132633.192374,
+    "seen": 1788133100.0795064,
+    "ast_hash": "5ed5010d0053cbbd1a97c19870980738",
+    "semantic_hash": ""
+  },
+  "test/extension/fixtures/betano-sample.json": {
+    "mtime": 1787446545.5612235,
+    "seen": 1788133100.0795074,
+    "ast_hash": "1cd69ba735a85bba49be448efb9fb41e",
+    "semantic_hash": ""
+  },
+  "test/extension/importers.test.js": {
+    "mtime": 1788132633.8878083,
+    "seen": 1788133100.0795083,
+    "ast_hash": "b1f87830761aabf2e101e4e14c65230e",
+    "semantic_hash": ""
+  },
+  "test/server/betclic-odds.test.ts": {
+    "mtime": 1788132775.0244348,
+    "seen": 1788133100.0795093,
+    "ast_hash": "98c0e0936e5ddf2263cc513027fba99e",
+    "semantic_hash": ""
+  },
+  "test/server/clv-capture.test.ts": {
+    "mtime": 1788128977.3370106,
+    "seen": 1788133100.07951,
+    "ast_hash": "84606fa986dd3d310289da40a453deb5",
+    "semantic_hash": ""
+  },
+  "test/server/menu-do-dia.test.ts": {
+    "mtime": 1788131790.5689588,
+    "seen": 1788133100.079511,
+    "ast_hash": "0e431f90399d77858abc3cabb6b546ab",
+    "semantic_hash": ""
+  },
+  "test/server/put-closing-odd.test.ts": {
+    "mtime": 1788023832.519431,
+    "seen": 1788133100.079512,
+    "ast_hash": "290d97c8bfb1db2aeaec10d876880d54",
+    "semantic_hash": ""
+  },
+  "docs/PLAN.md": {
+    "mtime": 1788132846.421571,
+    "seen": 1788133100.0795236,
+    "ast_hash": "cf8edd03cddcc2b1c0f6aac47ad1e5ea",
     "semantic_hash": ""
   }
 }

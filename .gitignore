@@ -8,7 +8,19 @@ coverage/
 *.log
 .env*
 !.env.example
+# Grafo de conhecimento: versiona-se o RESULTADO (graph.json, GRAPH_REPORT.md,
+# labels curadas), nao o que e derivado ou da maquina.
 graphify-out/cost.json
+# Cache de AST, com o numero de versao no caminho: muda toda de cada vez que o
+# graphify e actualizado (128 ficheiros trocados so na subida 0.9.48 -> 0.9.53).
+graphify-out/cache/
+# Backups datados que o graphify faz sozinho a cada reconstrucao. Eram 17
+# pastas e 32MB dos 35MB da pasta - e o git ja e o historico.
+graphify-out/20*/
+# Caminhos da maquina de quem correu. O que la estava apontava para
+# /home/ronk/... , de outro computador.
+graphify-out/.graphify_python
+graphify-out/.graphify_root
 .agents/
 .codex/
 # Android (Capacitor) - outputs de build; o projeto android/ em si é versionado
