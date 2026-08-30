@@ -666,6 +666,9 @@ export const PT = {
   // ----------------------------------------------------------------
   // AI Insights (AIInsights + MobileInsights)
   // ----------------------------------------------------------------
+  "insights.margin": "margem {pct}%",
+  "insights.marginHelp":
+    "Quanto a casa cobra neste mercado. Quanto menor, melhor o preço - e a única vantagem que se mede sem ter de adivinhar melhor do que ela.",
   "insights.title": "AI Insights",
   "insights.picksTab": "Dicas de hoje",
   "insights.evaluateTab": "Avaliar aposta",

@@ -660,6 +660,9 @@ export const EN: Record<TKey, Entry> = {
   // ----------------------------------------------------------------
   // AI Insights (AIInsights + MobileInsights)
   // ----------------------------------------------------------------
+  "insights.margin": "{pct}% margin",
+  "insights.marginHelp":
+    "What the bookmaker charges on this market. Lower is a better price - the one edge you can measure without having to out-guess them.",
   "insights.title": "AI Insights",
   "insights.picksTab": "Today's tips",
   "insights.evaluateTab": "Evaluate bet",

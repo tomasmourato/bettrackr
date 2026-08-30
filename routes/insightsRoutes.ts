@@ -86,9 +86,112 @@ interface Pick {
   kickoffLisbon: string;
   market: string;
   selection: string;
+  // O preco a que se pode MESMO apostar. Vem da tabela daily_odds quando ha
+  // captura do dia; so cai no que o modelo diz quando nao ha. Ver resolvePicks.
   approxOdd: number | null;
+  /** O mesmo preco sem a margem da casa. null quando nao houve captura. */
+  /** Id da seleccao na Betclic, quando a escolha veio da ementa de odds reais. */
+  selectionId?: string;
+  noVigOdd?: number | null;
+  /** Margem do mercado, em percentagem. E a vantagem verificavel desta lista. */
+  marginPct?: number | null;
   confidence: number;
   rationale: string;
+}
+
+// ============================================================
+// Odds reais em vez de odds plausiveis
+//
+// Ate aqui o modelo devolvia `approxOdd` - "aproximada", e o nome nao mentia.
+// O prompt chegava a pedir-lhe uma "variedade" de odds, o que e pedir numeros
+// plausiveis: uma dica com um preco que nao existe em lado nenhum nao serve
+// para nada, porque o utilizador vai a casa e o preco e outro.
+//
+// Agora, quando ha captura do dia, o modelo recebe a lista de jogos e precos
+// REAIS e devolve o ID da seleccao que escolheu. O numero e preenchido AQUI,
+// a partir da base de dados. E o mesmo principio que o analisador de apostas
+// ja segue: o modelo julga, o codigo calcula. Assim ele nao pode inventar um
+// preco nem por acidente.
+//
+// Sem captura (agente parado, migracao 020 por aplicar) volta tudo ao que era.
+// ============================================================
+
+interface OpcaoDoDia {
+    selectionId: string;
+    selection: string;
+    odd: number;
+    noVig: number;
+    marginPct: number;
+    market: string;
+    match: string;
+    competition: string | null;
+    kickoffLisbon: string;
+}
+
+/** As seleccoes capturadas para hoje, por id. Vazio quando nao houve captura. */
+async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
+    const out = new Map<string, OpcaoDoDia>();
+    let rows: any[];
+    try {
+        const r = await pool.query(
+            `SELECT event, competition, kickoff_utc, markets
+               FROM daily_odds WHERE odds_date = $1
+              ORDER BY kickoff_utc NULLS LAST LIMIT 60`,
+            [date],
+        );
+        rows = r.rows;
+    } catch (error: any) {
+        // 42P01 = a tabela nao existe: a migracao 020 e aplicada a mao. Nesse
+        // caso as dicas continuam a funcionar como antes, sem odds reais.
+        if (error?.code !== "42P01") console.error("[insights] daily_odds:", error);
+        return out;
+    }
+
+    for (const row of rows) {
+        const hora = row.kickoff_utc
+            ? new Date(row.kickoff_utc).toLocaleTimeString("pt-PT", {
+                  timeZone: "Europe/Lisbon",
+                  hour: "2-digit",
+                  minute: "2-digit",
+              })
+            : "";
+        for (const m of Array.isArray(row.markets) ? row.markets : []) {
+            for (const sel of Array.isArray(m?.selections) ? m.selections : []) {
+                if (!sel?.id) continue;
+                out.set(String(sel.id), {
+                    selectionId: String(sel.id),
+                    selection: String(sel.name ?? ""),
+                    odd: Number(sel.odd),
+                    noVig: Number(sel.noVig),
+                    marginPct: Number(m.marginPct),
+                    market: String(m.name ?? ""),
+                    match: String(row.event ?? ""),
+                    competition: row.competition,
+                    kickoffLisbon: hora,
+                });
+            }
+        }
+    }
+    return out;
+}
+
+/** A ementa que vai no prompt: jogos, mercados e precos reais. */
+function menuDoDia(opcoes: Map<string, OpcaoDoDia>): string {
+    const porJogo = new Map<string, OpcaoDoDia[]>();
+    for (const o of opcoes.values()) {
+        const chave = `${o.kickoffLisbon}|${o.match}|${o.competition ?? ""}|${o.market}`;
+        const g = porJogo.get(chave);
+        if (g) g.push(o);
+        else porJogo.set(chave, [o]);
+    }
+
+    const linhas: string[] = [];
+    for (const [chave, sels] of porJogo) {
+        const [hora, jogo, comp, mercado] = chave.split("|");
+        linhas.push(`${hora} ${jogo}${comp ? ` (${comp})` : ""} - ${mercado} [margem ${sels[0].marginPct}%]`);
+        for (const s of sels) linhas.push(`    ${s.selectionId}  ${s.selection} @ ${s.odd}`);
+    }
+    return linhas.join("\n");
 }
 
 // Normaliza/valida o JSON devolvido pelo modelo. Campos em falta não rebentam
@@ -103,20 +206,27 @@ function sanitizeContent(raw: any): { summary: string; picks: Pick[] } {
       kickoffLisbon: clip(p?.kickoffLisbon, 20),
       market: clip(p?.market, 80),
       selection: clip(p?.selection, 120),
+      // O id da seleccao escolhida quando ha ementa de odds reais. Tem de
+      // sobreviver a esta normalizacao, senao o resolvePicks nao teria por onde
+      // ir buscar o preco verdadeiro.
+      selectionId: clip(p?.selectionId, 40) || undefined,
       approxOdd: Number.isFinite(Number(p?.approxOdd)) && Number(p?.approxOdd) > 1
         ? Number(Number(p.approxOdd).toFixed(2))
         : null,
       confidence: Math.min(5, Math.max(1, Math.round(Number(p?.confidence) || 3))),
       rationale: clip(p?.rationale, 400),
     }))
-    .filter((p: Pick) => p.match && p.selection && p.sport)
+    // Com ementa, o jogo e a seleccao sao preenchidos a partir da base de
+    // dados pelo resolvePicks - exigi-los aqui deitava fora picks validas em
+    // que o modelo se limitou a devolver o id, que e o que lhe pedimos.
+    .filter((p: Pick) => (p.selectionId ? Boolean(p.sport) : p.match && p.selection && p.sport))
     .slice(0, MAX_PICKS);
 
   if (picks.length === 0) throw new Error("O modelo não devolveu picks válidos.");
   return { summary: clip(raw?.summary, 600), picks };
 }
 
-function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang) {
+function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang, menu: string) {
   // Nas repetições reforçamos a instrução de formato: a falha mais comum é o
   // modelo devolver só a prosa da pesquisa, sem o JSON.
   const insist = insistOnJson
@@ -126,12 +236,20 @@ function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang) {
   return `
 Hoje é ${dateLisbon}. És um analista de apostas desportivas experiente e prudente, ${LANG_INSTRUCTION[lang]}.
 
-USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds - inclui apenas eventos que confirmaste na pesquisa.
+${menu
+    ? `ESCOLHE APENAS da lista abaixo. São jogos e ODDS REAIS da Betclic, capturados hoje de madrugada. Cada linha de seleção começa pelo ID que tens de devolver em "selectionId".
+
+NÃO inventes jogos, equipas, mercados nem odds, e NÃO uses seleções que não estejam nesta lista - qualquer pick com um ID que não conste aqui é descartada pelo sistema. NÃO escrevas odds: o preço é preenchido a partir do ID.
+
+USA A PESQUISA GOOGLE apenas para o CONTEXTO de cada jogo: forma recente, lesões, castigos, onze provável, motivação e calendário.
+
+${menu}`
+    : `USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds - inclui apenas eventos que confirmaste na pesquisa.`}
 
 Escolhe 6 a 10 picks para hoje que cumpram tudo isto:
 - Pelo menos 3 desportos diferentes (ex.: futebol, basquetebol, ténis; outros são bem-vindos).
-- Odds variadas: alguns favoritos seguros (odd ~1.30-1.60), alguns equilibrados (~1.80-2.50) e no máximo 1 aposta de valor com odd 3.00+.
-- Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).
+- Odds variadas: alguns favoritos seguros (odd ~1.30-1.60), alguns equilibrados (~1.80-2.50) e no máximo 1 aposta de valor com odd 3.00+.${menu ? "" : `
+- Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).`}
 - Justificação curta (1-2 frases) baseada em forma recente, confrontos, lesões ou contexto - factual, sem promessas.
 
 Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
@@ -145,7 +263,7 @@ Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
       "kickoffLisbon": "HH:MM",
       "market": "mercado",
       "selection": "a escolha concreta",
-      "approxOdd": 1.85,
+      ${menu ? `"selectionId": "o ID exato da linha escolhida na lista acima",` : `"approxOdd": 1.85,`}
       "confidence": 3,
       "rationale": "justificação curta"
     }
@@ -174,6 +292,52 @@ async function callModel(prompt: string): Promise<string> {
 }
 
 /**
+ * Troca os IDs escolhidos pelo modelo pelos precos REAIS da base de dados.
+ *
+ * O modelo nunca escreve um preco: escolhe uma seleccao e o numero vem daqui.
+ * Uma pick com um ID que nao esteja na ementa e DESCARTADA - e a unica forma
+ * de garantir que nada inventado chega ao utilizador. E a mesma disciplina do
+ * analisador de apostas, onde o modelo estima a probabilidade e o codigo faz
+ * as contas.
+ */
+function resolvePicks(
+  conteudo: { summary: string; picks: Pick[] },
+  opcoes: Map<string, OpcaoDoDia>,
+) {
+  const picks: Pick[] = [];
+  let descartadas = 0;
+
+  for (const pick of conteudo.picks) {
+    const id = String((pick as any).selectionId ?? "").trim();
+    const real = opcoes.get(id);
+    if (!real) {
+      descartadas++;
+      continue;
+    }
+    picks.push({
+      ...pick,
+      // Tudo o que e facto vem da captura; do modelo fica so o julgamento.
+      competition: real.competition ?? pick.competition,
+      match: real.match,
+      kickoffLisbon: real.kickoffLisbon || pick.kickoffLisbon,
+      market: real.market,
+      selection: real.selection,
+      approxOdd: real.odd,
+      noVigOdd: real.noVig,
+      marginPct: real.marginPct,
+    });
+  }
+
+  if (descartadas > 0) {
+    console.warn(`[insights] ${descartadas} pick(s) descartada(s) por ID desconhecido.`);
+  }
+  if (picks.length === 0) {
+    throw new Error("Nenhuma pick com seleção real - o modelo ignorou a lista.");
+  }
+  return { summary: conteudo.summary, picks };
+}
+
+/**
  * Gera as dicas com repetições. Cobre as duas falhas reais e observadas:
  * o 503 "high demand" da API, e a resposta sem JSON (o grounding impede
  * responseSchema, por isso o formato nunca é garantido no pedido).
@@ -182,13 +346,23 @@ async function generateInsights(dateLisbon: string, lang: Lang) {
   const started = Date.now();
   let lastError: unknown = new Error("Falha desconhecida ao gerar insights.");
 
+  // As odds reais do dia, quando o agente as capturou. Sem elas o prompt volta
+  // ao que era e o modelo procura os jogos sozinho.
+  const opcoes = await loadDailyOdds(dateLisbon);
+  const menu = opcoes.size > 0 ? menuDoDia(opcoes) : "";
+  console.info(
+    `[insights] ${dateLisbon}: ${opcoes.size} selecao(oes) real(is) disponivel(eis)` +
+      (opcoes.size === 0 ? " - o modelo vai procurar os jogos sozinho" : ""),
+  );
+
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     // Nunca começar uma tentativa que arrisque estourar o limite da função.
     if (attempt > 1 && Date.now() - started > TIME_BUDGET_MS) break;
 
     try {
-      const text = await callModel(buildPrompt(dateLisbon, attempt > 1, lang));
-      return sanitizeContent(extractJson(text));
+      const text = await callModel(buildPrompt(dateLisbon, attempt > 1, lang, menu));
+      const conteudo = sanitizeContent(extractJson(text));
+      return opcoes.size > 0 ? resolvePicks(conteudo, opcoes) : conteudo;
     } catch (err) {
       lastError = err;
       console.warn(
