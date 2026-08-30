@@ -507,7 +507,11 @@ router.post("/submit", async (req, res) => {
 
 /** Limites de sanidade, para um agente avariado nao encher a tabela. */
 const MAX_JOGOS_DIA = 200;
-const MAX_MERCADOS_POR_JOGO = 25;
+// Uma pagina de futebol da 23 mercados completos; o teto e folga, nao corte.
+// Ficava a 25 quando so entravam os `mainSelections` (1 ou 2 por jogo) e agora
+// estaria a raspar - e o corte e pela ordem de chegada, nao pela margem, por
+// isso truncar aqui deitava fora mercados bons por acaso.
+const MAX_MERCADOS_POR_JOGO = 60;
 
 router.post("/daily-odds", async (req, res) => {
     if (!autorizado(req, "CLV_AGENT_SECRET")) {

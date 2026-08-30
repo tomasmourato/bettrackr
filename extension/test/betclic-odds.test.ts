@@ -10,6 +10,7 @@ import {
   lisbonToUtcMs,
   parseNgState,
   readMatchPage,
+  readMatchSnapshot,
 } from "../../lib/betclicOdds";
 // A cópia que corre dentro do Chrome. Os dois módulos existem porque a extensão
 // é empacotada à parte e o bundle do backend não lhe chega; o teste de paridade
@@ -217,8 +218,16 @@ describe("leadMinutesFrom", () => {
 // odds justas inventadas.
 // ------------------------------------------------------------
 
-const mercado = (odds: number[], chave = "mainSelections") => ({
-  [chave]: odds.map((o, i) => ({ id: `s-${chave}-${i}`, odds: o })),
+// O que faz destas seleções UM mercado é partilharem o `betslipMarketId` - o
+// id de mercado da própria casa. A chave onde estão penduradas na página deixou
+// de importar: os mercados que as pessoas mais apostam vivem no
+// `selectionMatrix`, não em `mainSelections`.
+const mercado = (odds: number[], chave = "mainSelections", mid = "mkt-1") => ({
+  [chave]: odds.map((o, i) => ({
+    id: `s-${chave}-${i}`,
+    odds: o,
+    betslipMarketId: mid,
+  })),
 });
 
 describe("collectMarkets", () => {
@@ -241,13 +250,54 @@ describe("collectMarkets", () => {
     expect(collectMarkets(mercado([1.42, 2.3, 2.3, 2.65, 2.9])).size).toBe(0);
   });
 
-  test("o crivo é estrutural, não só pela soma", () => {
-    // Um grupo de 22 seleções chamado "Galatasaray" somava 1.1457 e caía na
-    // banda plausível por acaso - um crivo só pela soma deixava-o passar. O
-    // que o exclui é não estar em `mainSelections`.
-    const odds = [2.5, 3, 4, 6]; // soma 1.15, dentro da banda
-    expect(collectMarkets(mercado(odds, "selections")).size).toBe(0);
-    expect(collectMarkets(mercado(odds, "mainSelections")).size).toBe(4);
+  test("o sítio da página não importa - o id do mercado é que manda", () => {
+    // Antes só contava estar num array `mainSelections`, e isso apanhava um
+    // mercado por página: 3 preços em 401 num Lecce - Roma real. Todo o
+    // Acima/Abaixo, Ambas Marcam e handicap vive em `selectionMatrix`.
+    const odds = [1.85, 1.7];
+    expect(collectMarkets(mercado(odds, "selections")).size).toBe(2);
+    expect(collectMarkets(mercado(odds, "mainSelections")).size).toBe(2);
+  });
+
+  test("sem betslipMarketId não há mercado nenhum", () => {
+    // É o que separa um mercado de um grupo qualquer de odds. Sem o id da
+    // casa não se sabe a que mercado a seleção pertence, e adivinhar pela
+    // forma da página foi o que produziu margens inventadas.
+    const semId = {
+      selections: [
+        { id: "a", odds: 1.85 },
+        { id: "b", odds: 1.7 },
+      ],
+    };
+    expect(collectMarkets(semId).size).toBe(0);
+  });
+
+  test("dois cartões do mesmo mercado juntam-se antes de se julgar a margem", () => {
+    // Caso real: a Betclic parte os marcadores em dois cartões, um por equipa.
+    // O cartão da Roma sozinho somava 1.065 - 6.5% de margem, plausível - e
+    // teria passado. Juntando-lhe o cartão do Lecce, que a casa marca com o
+    // MESMO betslipMarketId, o mercado inteiro dá uma soma impossível e é
+    // recusado, que é o que devia ser.
+    // Odds reais, do cartão "2 golos ou +" de um Lecce - Roma.
+    const roma = [5, 5.5, 8.5, 9.5, 10, 13, 20, 20, 30, 50, 50, 60, 60, 60, 90,
+                  90, 100, 125, 150, 150, 150];          // soma 1.065
+    const lecce = [20, 30, 35, 35, 35, 50, 60, 70, 125, 125, 150, 150, 150, 150,
+                   150, 150, 150, 150, 150, 150, 150, 150, 150];  // soma 0.336
+    const cartao = (odds: number[], quem: string) =>
+      odds.map((o, i) => ({ id: `${quem}-${i}`, odds: o, betslipMarketId: "marcador" }));
+
+    // O cartão sozinho cai na banda plausível...
+    expect(collectMarkets({ splitCardGroups: [{ selections: cartao(roma, "roma") }] }).size)
+      .toBeGreaterThan(0);
+    // ...mas o mercado inteiro, como a casa o define, não.
+    expect(
+      collectMarkets({
+        splitCardGroups: [
+          { selections: cartao(roma, "roma") },
+          { selections: cartao(lecce, "lecce") },
+        ],
+      }).size,
+    ).toBe(0);
   });
 
   test("um mercado de uma seleção só não é mercado", () => {
@@ -257,7 +307,14 @@ describe("collectMarkets", () => {
   test("uma odd em falta invalida o mercado inteiro", () => {
     // Meio mercado dá uma margem errada, e uma margem errada é pior do que
     // margem nenhuma.
-    const meio = { mainSelections: [{ id: "a", odds: 1.23 }, { id: "b" }] };
+    // A seleção sem odd não entra no grupo, e o que sobra - uma odd só - não
+    // chega para ser mercado.
+    const meio = {
+      mainSelections: [
+        { id: "a", odds: 1.23, betslipMarketId: "m" },
+        { id: "b", betslipMarketId: "m" },
+      ],
+    };
     expect(collectMarkets(meio).size).toBe(0);
   });
 });
@@ -310,5 +367,141 @@ describe("readMatchPage com mercados", () => {
 
   test("página sem estado não traz mercado nenhum", () => {
     expect(readMatchPage("<html></html>", "111").markets.size).toBe(0);
+  });
+});
+
+// ------------------------------------------------------------
+// O retrato do jogo, que alimenta as odds diárias das dicas de IA
+//
+// Vive só no servidor - a extensão não o tem - e por isso não entra na
+// paridade. A forma imita a de uma página a sério: o mercado principal em
+// `mainSelections` e o resto dentro de um `selectionMatrix`, uma linha por
+// mercado, cada uma com o seu `betslipMarketId`.
+// ------------------------------------------------------------
+
+const linhaMatriz = (mid: string, a: [string, number], b: [string, number]) => ({
+  selections: [a, b].map(([nome, odd]) => ({
+    selectionOneof: {
+      oneofKind: "selection",
+      selection: { id: `${mid}-${nome}`, name: nome, odds: odd, betslipMarketId: mid },
+    },
+  })),
+});
+
+const pagina = (extra: Record<string, unknown> = {}) => ({
+  pageProps: {
+    match: {
+      matchId: "111",
+      name: "Lecce - Roma",
+      matchDateUtc: "2026-08-31T16:30:00.0000000Z",
+      competition: { name: "Serie A" },
+      // A casa turbinou ALGUMA coisa neste jogo. Não pode pingar para todos
+      // os mercados: o boost é de um mercado, não do jogo.
+      hasBoostedOdds: true,
+      subCategories: [
+        {
+          markets: [
+            {
+              id: "M1",
+              name: "Resultado (Tempo Regulamentar)",
+              mainSelections: [
+                { id: "M1-a", name: "Lecce", odds: 6.9, betslipMarketId: "M1" },
+                { id: "M1-b", name: "Empate", odds: 4.15, betslipMarketId: "M1" },
+                { id: "M1-c", name: "Roma", odds: 1.44, betslipMarketId: "M1" },
+              ],
+            },
+            {
+              id: "M2",
+              name: "Total de golos - acima/abaixo",
+              selectionMatrix: [
+                linhaMatriz("M2", ["Acima de 1,5", 1.27], ["Abaixo de 1,5", 2.93]),
+                linhaMatriz("M2b", ["Acima de 2,5", 1.85], ["Abaixo de 2,5", 1.7]),
+              ],
+            },
+            ...(Array.isArray(extra.markets) ? (extra.markets as unknown[]) : []),
+          ],
+        },
+      ],
+    },
+    // O jogo do lado, que a página traz por arrasto. Nada dele pode entrar.
+    outro: {
+      matchId: "222",
+      name: "Sporting - Braga",
+      matchDateUtc: "2026-08-31T19:00:00.0000000Z",
+      subCategories: [
+        {
+          markets: [
+            {
+              id: "X1",
+              name: "Resultado",
+              mainSelections: [
+                { id: "X1-a", odds: 2, betslipMarketId: "X1" },
+                { id: "X1-b", odds: 2, betslipMarketId: "X1" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  },
+});
+
+describe("readMatchSnapshot", () => {
+  const snap = readMatchSnapshot(html(pagina()), "111")!;
+
+  test("apanha os mercados da matriz, não só o principal", () => {
+    // Era isto que faltava: com o crivo antigo saía 1 mercado por jogo, e as
+    // dicas de IA só tinham o 1X2 para escolher. Numa página real de futebol
+    // passou de 1 para 23.
+    expect(snap.markets.map((m) => m.id).sort()).toEqual(["M1", "M2", "M2b"]);
+  });
+
+  test("cada linha da matriz é o seu próprio mercado, com a sua margem", () => {
+    const m2b = snap.markets.find((m) => m.id === "M2b")!;
+    expect(m2b.selections.map((s) => s.name)).toEqual(["Acima de 2,5", "Abaixo de 2,5"]);
+    expect(m2b.marginPct).toBeCloseTo(12.88, 2);
+  });
+
+  test("o nome é exacto quando a página o dá, herdado quando não dá", () => {
+    // "M2" tem um nó com esse id e nome; "M2b" não tem, e fica com o nome do
+    // mercado que a contém - que é o certo, não é um remendo.
+    expect(snap.markets.find((m) => m.id === "M2")!.name).toBe("Total de golos - acima/abaixo");
+    expect(snap.markets.find((m) => m.id === "M2b")!.name).toBe("Total de golos - acima/abaixo");
+  });
+
+  test("a odd justa é maior do que a crua, e a margem some", () => {
+    const m1 = snap.markets.find((m) => m.id === "M1")!;
+    for (const s of m1.selections) expect(s.noVig).toBeGreaterThan(s.odd);
+    const soma = m1.selections.reduce((a, s) => a + 1 / s.noVig, 0);
+    expect(soma).toBeCloseTo(1, 2);
+  });
+
+  test("o jogo do lado não entra", () => {
+    // O bug que existiu de verdade: um jogo de ténis a ficar com os mercados
+    // de um jogo de futebol da mesma página.
+    expect(snap.markets.some((m) => m.id.startsWith("X"))).toBe(false);
+  });
+
+  test("o boost não pinga do jogo para todos os mercados", () => {
+    expect(snap.markets.every((m) => m.boosted === false)).toBe(true);
+  });
+
+  test("um mercado com soma impossível é recusado", () => {
+    // Os dois cartões de marcadores, juntos pelo id da casa, somam muito acima
+    // da banda. Nenhum deles pode chegar às dicas com uma margem inventada.
+    const cartoes = {
+      markets: [
+        {
+          id: "M9",
+          name: "Marcador",
+          splitCardGroups: [
+            { name: "Lecce", selections: [20, 30, 35].map((o, i) => ({ id: `l${i}`, odds: o, betslipMarketId: "M9" })) },
+            { name: "Roma", selections: [5, 5.5, 8.5].map((o, i) => ({ id: `r${i}`, odds: o, betslipMarketId: "M9" })) },
+          ],
+        },
+      ],
+    };
+    const s = readMatchSnapshot(html(pagina(cartoes)), "111")!;
+    expect(s.markets.some((m) => m.id === "M9")).toBe(false);
   });
 });

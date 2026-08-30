@@ -128,6 +128,12 @@ interface Pick {
 // porque. Levar os N mais baratos auto-ajusta-se - num dia fraco da os que
 // houver, ainda assim os melhores.
 const MENU_MAX_MERCADOS = 20;
+// Teto por jogo. Sem ele os 20 mercados mais baratos do dia saíam quase todos
+// do mesmo jogo: a captura passou de 1 para ~23 mercados por jogo e as cinco
+// linhas de Acima/Abaixo do mesmo jogo têm margens quase iguais, por isso
+// arrumavam-se todas seguidas no topo. As dicas do dia deixariam de ser do dia
+// e passavam a ser de três jogos.
+const MENU_MAX_POR_JOGO = 3;
 /** Teto de sanidade: acima disto ja nao e preco, e uma esmola a casa. */
 const MENU_MARGEM_MAX = 20;
 
@@ -151,6 +157,8 @@ const MENU_ODD_MAX = 6;
 
 interface OpcaoDoDia {
     selectionId: string;
+    /** Id do mercado na casa. Distingue linhas que partilham o mesmo nome. */
+    marketId: string;
     selection: string;
     odd: number;
     noVig: number;
@@ -159,6 +167,36 @@ interface OpcaoDoDia {
     match: string;
     competition: string | null;
     kickoffLisbon: string;
+}
+
+export interface MercadoDoDia {
+    margem: number;
+    opcoes: OpcaoDoDia[];
+}
+
+/**
+ * Os mercados que entram na ementa: os mais baratos primeiro, com teto por jogo.
+ *
+ * Exportada para ser testável. O corte era um `slice` pelos 20 mais baratos e
+ * isso chegava enquanto a captura dava 1 mercado por jogo. Agora dá ~23, e as
+ * cinco linhas de Acima/Abaixo do mesmo jogo têm margens quase iguais - sem
+ * teto, os 20 lugares da ementa iam quase todos para dois ou três jogos e as
+ * "dicas do dia" deixavam de cobrir o dia.
+ */
+export function escolherMercados(mercados: MercadoDoDia[]): MercadoDoDia[] {
+    const ordenados = [...mercados].sort((a, b) => a.margem - b.margem);
+    const porJogo = new Map<string, number>();
+    const escolhidos: MercadoDoDia[] = [];
+
+    for (const m of ordenados) {
+        if (escolhidos.length >= MENU_MAX_MERCADOS) break;
+        const jogo = m.opcoes[0]?.match ?? "";
+        const quantos = porJogo.get(jogo) ?? 0;
+        if (quantos >= MENU_MAX_POR_JOGO) continue;
+        porJogo.set(jogo, quantos + 1);
+        escolhidos.push(m);
+    }
+    return escolhidos;
 }
 
 /** As seleccoes capturadas para hoje, por id. Vazio quando nao houve captura. */
@@ -181,7 +219,7 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
     }
 
     // Achatar em mercados, para se poder ordenar por margem antes de cortar.
-    const mercados: Array<{ margem: number; opcoes: OpcaoDoDia[] }> = [];
+    const mercados: MercadoDoDia[] = [];
     for (const row of rows) {
         const hora = row.kickoff_utc
             ? new Date(row.kickoff_utc).toLocaleTimeString("pt-PT", {
@@ -200,6 +238,7 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
                 if (!(odd >= MENU_ODD_MIN && odd <= MENU_ODD_MAX)) continue;
                 opcoes.push({
                     selectionId: String(sel.id),
+                    marketId: String(m.id ?? ""),
                     selection: String(sel.name ?? ""),
                     odd: Number(sel.odd),
                     noVig: Number(sel.noVig),
@@ -216,10 +255,9 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
         }
     }
 
-    // Do mais barato para o mais caro, e so os primeiros. O Map preserva a
-    // ordem de insercao, por isso a ementa sai ja ordenada.
-    mercados.sort((a, b) => a.margem - b.margem);
-    for (const m of mercados.slice(0, MENU_MAX_MERCADOS)) {
+    // O Map preserva a ordem de insercao, e o escolherMercados devolve-os do
+    // mais barato para o mais caro - por isso a ementa sai ja ordenada.
+    for (const m of escolherMercados(mercados)) {
         for (const o of m.opcoes) out.set(o.selectionId, o);
     }
     return out;
@@ -229,7 +267,11 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
 function menuDoDia(opcoes: Map<string, OpcaoDoDia>): string {
     const porJogo = new Map<string, OpcaoDoDia[]>();
     for (const o of opcoes.values()) {
-        const chave = `${o.kickoffLisbon}|${o.match}|${o.competition ?? ""}|${o.market}`;
+        // O id do mercado entra na chave porque varias linhas partilham o
+        // mesmo nome - "Total de golos - acima/abaixo" e cinco mercados, um por
+        // linha, cada um com a sua margem. Agrupa-las dava um cabecalho com a
+        // margem de uma delas colada as odds de todas.
+        const chave = `${o.kickoffLisbon}|${o.match}|${o.competition ?? ""}|${o.market}|${o.marketId}`;
         const g = porJogo.get(chave);
         if (g) g.push(o);
         else porJogo.set(chave, [o]);

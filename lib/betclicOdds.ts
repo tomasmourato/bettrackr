@@ -42,8 +42,10 @@ export function collectSelectionOdds(state: unknown): Map<string, number> {
 
     const visita = (node: any, depth: number) => {
         // O estado é grande e fundo; o limite evita um ciclo patológico se a
-        // Betclic mudar a forma sem avisar.
-        if (!node || typeof node !== "object" || depth > 14) return;
+        // Betclic mudar a forma sem avisar. A 14 ficavam 12 preços de fora -
+        // os que vivem no fundo do `selectionMatrix` - e uma perna apostada
+        // num deles não tinha odd de fecho nenhuma.
+        if (!node || typeof node !== "object" || depth > 18) return;
         if (Array.isArray(node)) {
             for (const item of node) visita(item, depth + 1);
             return;
@@ -128,39 +130,56 @@ export interface Market {
 /**
  * Os mercados de confiança da página, indexados por id de seleção.
  *
- * O sinal de que um grupo é mesmo um mercado é ESTRUTURAL: só os arrays
- * `mainSelections` contam. Um crivo só pela soma deixava passar um grupo de 22
- * seleções chamado "Galatasaray" que caiu por acaso na banda plausível.
+ * O agrupamento é pelo `betslipMarketId` - o id de mercado da PRÓPRIA casa,
+ * que vem em todas as seleções (medido: 413 preços numa página de futebol,
+ * zero sem ele). Um grupo assim é um mercado por definição, e não uma
+ * suposição nossa a partir da forma da página.
+ *
+ * Antes o crivo era estar num array `mainSelections`. Era estrutural e seguro,
+ * mas apanhava só o mercado principal: na mesma página, 3 preços em 401. Tudo
+ * o que as pessoas apostam a sério - Acima/Abaixo, Ambas Marcam, handicaps,
+ * partes - vive em `selectionMatrix`, que nunca era olhado. Resultado: quase
+ * nenhuma perna ficava com a margem removida e o CLV mostrado continuava a
+ * ser a odd crua, inflacionada pela margem.
+ *
+ * O agrupamento pelo id da casa também é MAIS seguro do que ler cartões soltos.
+ * A Betclic parte um mercado de marcadores em dois cartões, um por equipa; cada
+ * metade tem uma soma sem sentido e uma delas chegou a cair na banda plausível
+ * por acaso (6.5%, com 21 seleções). Juntas pelo id do mercado dão 588% e são
+ * recusadas, que é o que deviam ser.
+ *
+ * O crivo da soma é o mesmo `marketFrom` que o servidor aplica ao que o agente
+ * lhe manda: uma decisão, um sítio.
  */
 export function collectMarkets(state: unknown): Map<string, Market> {
-    const out = new Map<string, Market>();
+    // betslipMarketId -> as seleções que a casa lhe atribui.
+    const grupos = new Map<string, { ids: string[]; odds: number[] }>();
+    const vistos = new Set<string>();
 
     const visita = (node: any, depth: number) => {
-        if (!node || typeof node !== "object" || depth > 14) return;
+        // Fundo o bastante para chegar ao `selectionMatrix`, que vive quatro
+        // níveis abaixo dos mercados simples. A 14 ficavam 12 preços de fora e,
+        // pior, um mercado podia vir cortado a meio - e meio mercado dá uma
+        // margem errada, que é pior do que margem nenhuma.
+        if (!node || typeof node !== "object" || depth > 18) return;
         if (Array.isArray(node)) {
             for (const item of node) visita(item, depth + 1);
             return;
         }
 
-        const grupo = node.mainSelections;
-        if (Array.isArray(grupo) && grupo.length >= MIN_SELECTIONS) {
-            const odds: number[] = [];
-            const ids: string[] = [];
-            let completo = true;
-            for (const sel of grupo) {
-                const odd = Number(sel?.odds);
-                if (sel?.id == null || !Number.isFinite(odd) || odd <= 1) {
-                    completo = false;
-                    break;
-                }
-                odds.push(odd);
-                ids.push(String(sel.id));
-            }
-            if (completo) {
-                const overround = odds.reduce((soma, odd) => soma + 1 / odd, 0);
-                if (overround >= OVERROUND_MIN && overround <= OVERROUND_MAX) {
-                    const market: Market = { odds, overround };
-                    for (const id of ids) out.set(id, market);
+        const odd = Number(node.odds);
+        if (node.id != null && node.betslipMarketId != null && Number.isFinite(odd) && odd > 1) {
+            const id = String(node.id);
+            // A mesma seleção aparece em mais do que um sítio da página; conta uma vez.
+            if (!vistos.has(id)) {
+                vistos.add(id);
+                const chave = String(node.betslipMarketId);
+                const grupo = grupos.get(chave);
+                if (grupo) {
+                    grupo.ids.push(id);
+                    grupo.odds.push(odd);
+                } else {
+                    grupos.set(chave, { ids: [id], odds: [odd] });
                 }
             }
         }
@@ -169,6 +188,13 @@ export function collectMarkets(state: unknown): Map<string, Market> {
     };
 
     visita(state, 0);
+
+    const out = new Map<string, Market>();
+    for (const { ids, odds } of grupos.values()) {
+        const market = marketFrom(ids, odds);
+        if (!market) continue;
+        for (const id of ids) out.set(id, market);
+    }
     return out;
 }
 
@@ -294,56 +320,90 @@ export function readMatchSnapshot(html: string, matchId: string): MatchSnapshot 
     procura(state, 0);
     if (jogo === null) return null;
 
-    const markets: NamedMarket[] = [];
+    // Duas passagens pelo NO DO JOGO. A primeira aprende os nomes e junta as
+    // seleccoes pelo `betslipMarketId` - o id de mercado da propria casa, que e
+    // o mesmo criterio do `collectMarkets`. Antes so entravam os arrays
+    // `mainSelections`, o que dava 1 ou 2 mercados por jogo e deixava de fora o
+    // Acima/Abaixo, o Ambas Marcam e os handicaps - justamente o que o modelo
+    // precisa de ter a serio para escolher pela margem.
+    const nomesPorId = new Map<string, string>();
+    const grupos = new Map<
+        string,
+        { nome: string; boosted: boolean; sels: NamedSelection[] }
+    >();
     const vistos = new Set<string>();
 
-    const visita = (node: any, depth: number) => {
-        if (!node || typeof node !== "object" || depth > 14) return;
+    const visita = (node: any, depth: number, nome: string, boosted: boolean) => {
+        if (!node || typeof node !== "object" || depth > 18) return;
         if (Array.isArray(node)) {
-            for (const item of node) visita(item, depth + 1);
+            for (const item of node) visita(item, depth + 1, nome, boosted);
             return;
         }
 
-        const grupo = node.mainSelections;
-        if (Array.isArray(grupo) && grupo.length >= MIN_SELECTIONS && node.id != null) {
+        const temNome = typeof node.name === "string" && node.name !== "";
+        if (temNome && node.id != null) nomesPorId.set(String(node.id), node.name);
+
+        const odd = Number(node.odds);
+        if (
+            node.id != null &&
+            node.betslipMarketId != null &&
+            Number.isFinite(odd) &&
+            odd > 1
+        ) {
             const id = String(node.id);
             if (!vistos.has(id)) {
-                const odds: number[] = [];
-                const brutas: Array<{ id: string; name: string; odd: number }> = [];
-                let completo = true;
-                for (const sel of grupo) {
-                    const odd = Number(sel?.odds);
-                    if (sel?.id == null || !Number.isFinite(odd) || odd <= 1) {
-                        completo = false;
-                        break;
-                    }
-                    odds.push(odd);
-                    brutas.push({
-                        id: String(sel.id),
-                        name: String(sel.name ?? sel.betslipName ?? ""),
-                        odd,
-                    });
-                }
-                const overround = odds.reduce((soma, o) => soma + 1 / o, 0);
-                if (completo && overround >= OVERROUND_MIN && overround <= OVERROUND_MAX) {
-                    vistos.add(id);
-                    markets.push({
-                        id,
-                        name: String(node.name ?? ""),
-                        marginPct: Number(((overround - 1) * 100).toFixed(2)),
-                        boosted: node.hasBoostedOdds === true,
-                        selections: brutas.map((b) => ({
-                            ...b,
-                            noVig: Number((b.odd * overround).toFixed(3)),
-                        })),
-                    });
-                }
+                vistos.add(id);
+                const chave = String(node.betslipMarketId);
+                // O nome da SELECCAO e o `name` deste no ("Acima de 2,5"); o do
+                // MERCADO e o que vem de cima, por isso usa-se o herdado.
+                const sel: NamedSelection = {
+                    id,
+                    name: String(node.name ?? node.betslipName ?? ""),
+                    odd,
+                    noVig: 0, // preenchido em baixo, quando a margem for conhecida
+                };
+                const grupo = grupos.get(chave);
+                if (grupo) grupo.sels.push(sel);
+                else grupos.set(chave, { nome, boosted, sels: [sel] });
             }
         }
 
-        for (const key of Object.keys(node)) visita(node[key], depth + 1);
+        // O nome e o "turbinado" descem juntos, e so mudam num no que tenha
+        // nome: assim a marca de boost fica colada ao mercado a que pertence e
+        // nao pinga do jogo inteiro para baixo.
+        for (const key of Object.keys(node)) {
+            visita(
+                node[key],
+                depth + 1,
+                temNome ? node.name : nome,
+                temNome ? node.hasBoostedOdds === true : boosted,
+            );
+        }
     };
-    visita(jogo, 0);
+    visita(jogo, 0, String(jogo.name ?? ""), false);
+
+    const markets: NamedMarket[] = [];
+    for (const [chave, grupo] of grupos) {
+        // O MESMO crivo do `collectMarkets`: mercado incompleto ou com uma soma
+        // impossivel nao entra, porque uma margem errada e pior do que nenhuma.
+        const market = marketFrom(
+            grupo.sels.map((s) => s.id),
+            grupo.sels.map((s) => s.odd),
+        );
+        if (!market) continue;
+        markets.push({
+            id: chave,
+            // Quando a pagina traz um no com o id do mercado, o nome e exacto;
+            // senao fica o do mercado que o contem (medido: 19 exactos em 31).
+            name: nomesPorId.get(chave) ?? grupo.nome,
+            marginPct: Number(((market.overround - 1) * 100).toFixed(2)),
+            boosted: grupo.boosted,
+            selections: grupo.sels.map((s) => ({
+                ...s,
+                noVig: Number((s.odd * market.overround).toFixed(3)),
+            })),
+        });
+    }
 
     if (markets.length === 0) return null;
 
