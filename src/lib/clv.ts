@@ -1,6 +1,6 @@
 // src/lib/clv.ts
 // Matemática do CLV (Closing Line Value). Módulo puro (sem React) para poder
-// ser testado como o resto das contas de dinheiro, em extension/test.
+// ser testado como o resto das contas de dinheiro, em test/app.
 //
 // Tudo o que a app media até aqui - lucro, yield, ROI da banca, taxa de acerto
 // - é RESULTADO: depende da sorte e só fica legível ao fim de muitas apostas.

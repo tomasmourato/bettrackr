@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import fixture from "./fixtures/betano-sample.json" with { type: "json" };
-import { mapBetanoBets, parseBetanoMoney } from "../src/mapper-betano.js";
-import { mapBetclicBet } from "../src/mapper.js";
-import { fetchBetanoHistory, createSixMonthWindows } from "../src/betano-history.js";
-import { fetchBetclicHistory } from "../src/betclic-history.js";
-import { mapSolverdeBets, mapSolverdeBet, solverdeRef } from "../src/mapper-solverde.js";
-import { fetchSolverdeHistory } from "../src/solverde-history.js";
-import { importedBetChanged, reconcileImportedBets } from "../src/import-utils.js";
+import { mapBetanoBets, parseBetanoMoney } from "../../extension/src/mapper-betano.js";
+import { mapBetclicBet } from "../../extension/src/mapper.js";
+import { fetchBetanoHistory, createSixMonthWindows } from "../../extension/src/betano-history.js";
+import { fetchBetclicHistory } from "../../extension/src/betclic-history.js";
+import { mapSolverdeBets, mapSolverdeBet, solverdeRef } from "../../extension/src/mapper-solverde.js";
+import { fetchSolverdeHistory } from "../../extension/src/solverde-history.js";
+import { importedBetChanged, reconcileImportedBets } from "../../extension/src/import-utils.js";
 
 describe("Betclic mapper", () => {
   test("maps only explicit selection outcomes", () => {

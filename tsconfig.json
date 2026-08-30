@@ -9,10 +9,25 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["vite/client", "node"],
+    "types": ["vite/client", "node", "bun"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "allowJs": true,
     "noEmit": true
   },
-  "include": ["src", "routes", "middleware", "db", "server.ts", "bootstrap.ts", "vite.config.ts"]
+  // `allowJs` para os testes poderem importar a copia da extensao, que e JS
+  // sem tipos. Sem `checkJs`, esses ficheiros sao lidos mas nao verificados.
+  "include": [
+    "src",
+    "routes",
+    "middleware",
+    "db",
+    "lib",
+    "agent",
+    "scripts",
+    "test",
+    "server.ts",
+    "bootstrap.ts",
+    "vite.config.ts"
+  ]
 }

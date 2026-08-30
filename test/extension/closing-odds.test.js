@@ -11,7 +11,7 @@ import {
   pendingLegsFrom,
   readyToWrite,
   toEpoch,
-} from "../src/closing-odds.js";
+} from "../../extension/src/closing-odds.js";
 
 // A extensão apanha a linha de fecho sozinha. Estes testes fixam as regras que
 // decidem quando ela acorda, que leitura guarda e quando a escreve.

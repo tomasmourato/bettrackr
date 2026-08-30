@@ -13,7 +13,7 @@
 // A cópia da extensão continua a existir porque a extensão é empacotada à parte
 // (scripts/zip-extension.mjs) e tem de correr carregada sem empacotar. As duas
 // cópias são amarradas por um teste de paridade, não por disciplina:
-// extension/test/betclic-odds.test.ts.
+// test/server/betclic-odds.test.ts.
 
 /** O estado que o Angular embute no HTML servido. Sem ele não há preços. */
 export function parseNgState(html: string): unknown {

@@ -22,7 +22,18 @@ function backupFile(payload: unknown): File {
 }
 
 /** Corre o import e devolve o que cada callback recebeu. */
-async function runImport(file: File) {
+// O tipo de retorno vai anotado de propósito. Sem ele o TypeScript segue o
+// fluxo, vê que as duas variáveis só são atribuídas dentro de callbacks - que
+// ele não sabe se correm - e conclui que no `return` continuam a valer o que
+// valiam à partida. `importedMovements` virava `null` e cada acesso a seguir
+// dava "Property ... does not exist on type 'never'".
+interface Importado {
+  message: string;
+  importedBets: Bet[];
+  importedMovements: BankrollMovement[] | null;
+}
+
+async function runImport(file: File): Promise<Importado> {
   let importedBets: Bet[] = [];
   let importedMovements: BankrollMovement[] | null = null;
 

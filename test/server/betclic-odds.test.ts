@@ -15,7 +15,7 @@ import {
 // A cópia que corre dentro do Chrome. Os dois módulos existem porque a extensão
 // é empacotada à parte e o bundle do backend não lhe chega; o teste de paridade
 // abaixo é o que impede as duas de divergirem em silêncio.
-import * as ext from "../src/closing-odds.js";
+import * as ext from "../../extension/src/closing-odds.js";
 
 // Um ng-state em miniatura com a forma real: nós aninhados, preços em `odds`
 // com `id`, e o apito em `matchDateUtc` ao lado de `matchId`. A página a sério
@@ -139,8 +139,11 @@ describe("paridade com o módulo da extensão", () => {
     for (const odd of [1.23, 5.75, 9]) {
       const a = devig(odd, m.get("s-mainSelections-0"));
       const b = ext.devig(odd, d.get("s-mainSelections-0"));
-      expect(a!.odd).toBe(b.odd);
-      expect(a!.marginPct).toBe(b.marginPct);
+      // O `!` dos dois lados: o módulo da extensão é JS, por isso o tipo de
+      // `b` vem inferido e inclui o null que o devig devolve quando não há
+      // mercado. Aqui há - é o que a linha acima acabou de construir.
+      expect(a!.odd).toBe(b!.odd);
+      expect(a!.marginPct).toBe(b!.marginPct);
     }
   });
 

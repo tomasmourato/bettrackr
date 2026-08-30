@@ -1,6 +1,6 @@
 // src/lib/bankroll.ts
 // Matemática da banca. Módulo puro (sem React) para poder ser testado como o
-// resto das contas de dinheiro, em extension/test.
+// resto das contas de dinheiro, em test/app.
 //
 // O saldo NÃO é guardado em lado nenhum: é derivado dos movimentos (dinheiro
 // real a entrar e a sair das casas) mais o lucro líquido das apostas já

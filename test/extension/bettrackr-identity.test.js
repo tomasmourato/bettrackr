@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   runAfterBettrackrVerification,
   verifyBettrackrIdentity,
-} from "../src/bettrackr-identity.js";
+} from "../../extension/src/bettrackr-identity.js";
 
 function response(status, body) {
   return {

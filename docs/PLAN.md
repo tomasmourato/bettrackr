@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Companion to [TODO.md](TODO.md). Nothing here is implemented yet - this is the "how".
+Companion to [TODO.md](../TODO.md). Nothing here is implemented yet - this is the "how".
 
 **Effort legend:** S = under half a day · M = 1-2 days · L = 3+ days.
 Each item: _Goal · Current state · Approach · Files · Data/migration · Risks · Effort · Depends on_.

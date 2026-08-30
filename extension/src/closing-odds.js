@@ -1,6 +1,6 @@
 // extension/src/closing-odds.js
 // Decide QUANDO ler a odd de fecho e O QUE gravar. Módulo puro - sem chrome.*
-// e sem rede - para ser testado como os mappers já são (extension/test).
+// e sem rede - para ser testado como os mappers já são (test/extension).
 //
 // O problema que resolve: a odd de fecho é a última antes de o jogo começar, e
 // ninguém a vai escrever à mão para centenas de apostas. A extensão já tem
