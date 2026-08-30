@@ -26,6 +26,7 @@ import {
     CAPTURE_CUTOFF_MIN,
     CAPTURE_WINDOW_MIN,
     asArray,
+    curaDeHorario,
     legsToRead,
     type Leg,
 } from "../lib/clvCapture.js";
@@ -49,6 +50,7 @@ export {
     CAPTURE_WINDOW_MIN,
     CAPTURE_CUTOFF_MIN,
     legsToRead,
+    curaDeHorario,
     asArray,
 } from "../lib/clvCapture.js";
 
@@ -127,7 +129,11 @@ async function applyToBet(
             if (!selections[index]) continue;
             const antes = selections[index];
             const depois = { ...antes };
-            if (update.startsAtUtc && !antes.startsAtUtc) {
+            // Reescreve-se quando difere, nao so quando falta: um jogo pode
+            // ser adiado depois de a aposta entrar, e quem sabe a horas certas
+            // e a pagina da casa. Quem decide se vale a pena e `curaDeHorario`;
+            // aqui so nao se grava o que ja la esta igual.
+            if (update.startsAtUtc && update.startsAtUtc !== antes.startsAtUtc) {
                 depois.startsAtUtc = update.startsAtUtc;
                 mexeu = true;
             }
@@ -276,9 +282,10 @@ async function aplicar(
             const update: LegUpdate = {};
 
             // Auto-cura: a perna passa a ter o apito sem ambiguidade e, da
-            // próxima vez, é lida na janela certa mesmo para quem não está em
-            // Portugal.
-            if (apito !== null && !leg.exact) update.startsAtUtc = page.kickoffUtc!;
+            // próxima vez, é lida na janela certa - mesmo para quem não está em
+            // Portugal, e mesmo quando o jogo foi adiado depois de importado.
+            const cura = curaDeHorario(apito, leg);
+            if (cura) update.startsAtUtc = cura;
 
             const efetivo = apito ?? leg.kickoff;
             const faltam = efetivo - Date.now();

@@ -128,3 +128,37 @@ export function legsToRead(rows: BetRow[], now: number): Leg[] {
     return legs;
 }
 
+// Quanto tem de divergir o apito anunciado para valer a pena reescrever a perna.
+// Um minuto: abaixo disso é arredondamento e só daria escritas a cada passagem.
+const TOLERANCIA_CURA_MS = 60_000;
+
+/**
+ * O apito a gravar na perna, ou `null` quando não há nada a corrigir.
+ *
+ * O horário que a Betclic anuncia na própria página do jogo manda sobre o que
+ * a aposta trouxe do importador - e manda SEMPRE, não apenas quando a perna
+ * chega sem `startsAtUtc`.
+ *
+ * Até 30/08/2026 a correção só se aplicava a pernas sem `startsAtUtc`, na
+ * suposição de que um horário importado era exato. Não é. Nesse dia uma aposta
+ * em Jaime Faria - Jenson Brooksby foi importada com apito às 17:20Z e a
+ * Betclic passou a anunciar 19:00Z - no ténis a ordem de jogos escorrega horas.
+ * A perna foi lida na janela do horário velho, o horário certo estava na
+ * página, e foi deitado fora aqui. Às 17:15Z saiu da janela e nunca mais foi
+ * pedida: o jogo começou às 19:00Z sem odd de fecho nenhuma.
+ *
+ * Corrigido o horário, a perna volta sozinha à janela certa - a leitura que
+ * descobre o adiamento é a mesma que o conserta, sem custar um pedido a mais.
+ */
+export function curaDeHorario(
+    anunciadoMs: number | null,
+    leg: Pick<Leg, "kickoff" | "exact">,
+): string | null {
+    if (anunciadoMs === null || Number.isNaN(anunciadoMs)) return null;
+    // Normalizado à saída: a Betclic serve o instante com sete casas decimais
+    // ("2026-08-30T19:00:00.0000000Z") e não é isso que se guarda na aposta.
+    const iso = new Date(anunciadoMs).toISOString();
+    // Sem horário fiável, qualquer anúncio é melhor do que a estimativa.
+    if (!leg.exact) return iso;
+    return Math.abs(anunciadoMs - leg.kickoff) > TOLERANCIA_CURA_MS ? iso : null;
+}

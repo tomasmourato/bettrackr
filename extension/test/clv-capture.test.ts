@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { legsToRead } from "../../routes/clvRoutes";
+import { curaDeHorario, legsToRead } from "../../routes/clvRoutes";
 
 // Quais as pernas que o cron vai mesmo ler numa passagem. É aqui que se decide
 // se a linha de fecho é apanhada perto do apito, se uma perna preenchida à mão
@@ -152,5 +152,55 @@ describe("agrupamento", () => {
 
   test("uma aposta sem selections não rebenta a passagem", () => {
     expect(legsToRead([{ id: "b1", selections: null, metadata: {} }], AGORA)).toHaveLength(0);
+  });
+});
+
+describe("adiamento: o apito anunciado manda sobre o importado", () => {
+  // Caso real, 30/08/2026. A aposta em Jaime Faria - Jenson Brooksby foi
+  // importada com apito às 17:20Z; a Betclic passou a anunciar 19:00Z. A perna
+  // foi lida na janela do horário velho e o horário certo, que estava na
+  // página, era deitado fora porque a perna já tinha `startsAtUtc`. Às 17:15Z
+  // saiu da janela e nunca mais foi pedida - o jogo começou sem odd de fecho.
+  const importado = Date.parse("2026-08-30T17:20:00Z");
+  const anunciado = Date.parse("2026-08-30T19:00:00.0000000Z");
+
+  test("uma perna com horário exato TAMBÉM se corrige", () => {
+    expect(curaDeHorario(anunciado, { kickoff: importado, exact: true })).toBe(
+      "2026-08-30T19:00:00.000Z",
+    );
+  });
+
+  test("corrigido o horário, a perna volta à janela certa", () => {
+    // 16:54Z: lida pelo horário velho (faltavam 26 min para as 17:20).
+    const leitura = Date.parse("2026-08-30T16:54:00Z");
+    const velha = leg({ startsAtUtc: new Date(importado).toISOString() });
+    expect(legsToRead([bet([velha])], leitura)).toHaveLength(1);
+
+    // Com o apito verdadeiro gravado, deixa de ser pedida já a seguir...
+    const curada = leg({
+      startsAtUtc: curaDeHorario(anunciado, { kickoff: importado, exact: true })!,
+    });
+    expect(legsToRead([bet([curada])], leitura)).toHaveLength(0);
+    // ...e volta na janela do apito a sério, que é o que faltava acontecer.
+    expect(
+      legsToRead([bet([curada])], Date.parse("2026-08-30T18:40:00Z")),
+    ).toHaveLength(1);
+  });
+
+  test("um desvio de segundos não dá escrita nenhuma", () => {
+    // Senão gravava-se a perna a cada passagem só por arredondamento.
+    expect(
+      curaDeHorario(importado + 30_000, { kickoff: importado, exact: true }),
+    ).toBeNull();
+  });
+
+  test("sem horário fiável, qualquer anúncio serve", () => {
+    expect(curaDeHorario(anunciado, { kickoff: importado, exact: false })).toBe(
+      "2026-08-30T19:00:00.000Z",
+    );
+  });
+
+  test("página sem apito não estraga o que lá está", () => {
+    expect(curaDeHorario(null, { kickoff: importado, exact: true })).toBeNull();
   });
 });
