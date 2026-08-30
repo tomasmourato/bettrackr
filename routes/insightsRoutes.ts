@@ -246,11 +246,15 @@ USA A PESQUISA GOOGLE apenas para o CONTEXTO de cada jogo: forma recente, lesõe
 ${menu}`
     : `USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds - inclui apenas eventos que confirmaste na pesquisa.`}
 
-Escolhe 6 a 10 picks para hoje que cumpram tudo isto:
-- Pelo menos 3 desportos diferentes (ex.: futebol, basquetebol, ténis; outros são bem-vindos).
-- Odds variadas: alguns favoritos seguros (odd ~1.30-1.60), alguns equilibrados (~1.80-2.50) e no máximo 1 aposta de valor com odd 3.00+.${menu ? "" : `
+Escolhe entre 3 e 8 picks para hoje. Se hoje não houver 3 que prestem, devolve MENOS - uma lista curta e boa vale mais do que uma lista cheia por obrigação.
+
+Como escolher:
+- Pelo MÉRITO de cada aposta, uma a uma. Não há quota de desportos nem de odds: não escolhas nada para "variar", nem para incluir um azarão, nem para cobrir um desporto que hoje não tem nada de jeito.${menu ? `
+- Entre duas escolhas de mérito parecido, prefere a do mercado com MENOR margem (vem indicada em cada linha da lista). É onde o preço é melhor, e é a única vantagem que não depende de acertares mais do que a casa.` : `
 - Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).`}
 - Justificação curta (1-2 frases) baseada em forma recente, confrontos, lesões ou contexto - factual, sem promessas.
+
+"confidence" é de 1 a 5 e tem de significar isto: 1 = palpite fraco; 2 = ligeira preferência; 3 = fundamentada mas equilibrada; 4 = forte, vários sinais independentes a apontar no mesmo sentido; 5 = muito forte, e deve ser raro. Não uses 5 mais do que uma vez.
 
 Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
 {
