@@ -21,7 +21,12 @@
 // Sozinho faz uma passagem e sai - quem o chama de 5 em 5 minutos é o cron da
 // máquina. Assim uma passagem encravada nunca impede a seguinte.
 
-import { readMatchPage, type Market } from "../lib/betclicOdds.js";
+import {
+    parseNgState,
+    readMatchPage,
+    readMatchSnapshot,
+    type Market,
+} from "../lib/betclicOdds.js";
 
 const BASE = process.env.BETTRACKR_BASE || "https://betrackr.vercel.app";
 const SECRET = process.env.BETTRACKR_AGENT_SECRET || "";
@@ -41,6 +46,19 @@ const MAX_JOGOS = 25;
 interface Trabalho {
     matchId: string;
     path: string;
+}
+
+/** O mesmo caminho que o servidor constroi. A Betclic canoniza pelo id. */
+function betclicPath(matchId: string, event: string): string {
+    const slug =
+        String(event || "evento")
+            .normalize("NFD")
+            .replace(/[̀-ͯ]/g, "")
+            .toLowerCase()
+            .replace(/&/g, " e ")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "") || "evento";
+    return `/futebol-sfootball/evento-c0/${slug}-m${encodeURIComponent(matchId)}`;
 }
 
 function log(...partes: unknown[]) {
@@ -154,7 +172,143 @@ async function passagem() {
     );
 }
 
-passagem().catch((e) => {
+// ============================================================
+// Modo diario (--daily): as odds do dia para as dicas de IA
+//
+// Corre uma vez de madrugada. Descobre os jogos do dia nas listagens publicas,
+// le a pagina de cada um e entrega os mercados COMPLETOS ao BetTrackr, que os
+// valida e guarda. Depois disto o modelo deixa de inventar precos.
+//
+// Nao tem nada a ver com a odd de fecho: sao precos de madrugada, muito antes
+// do apito. O CLV continua a vir da passagem de 5 em 5 minutos.
+// ============================================================
+
+// Listagens de onde os jogos sao descobertos. Facil de estender: acrescenta o
+// caminho, que a forma da pagina e a mesma.
+const LISTAGENS = ["futebol-sfootball", "tenis-stennis", "basquetebol-sbasketball"];
+const MAX_JOGOS_DIA = 40;
+
+// Pausa entre paginas. NAO e cosmetica: 59 paginas seguidas sem pausa
+// nenhuma - cerca de um pedido por segundo durante um minuto - foi quanto
+// bastou para a Betclic bloquear um IP RESIDENCIAL, com a mesma pagina de
+// bloqueio que serve aos datacenters. Correr de madrugada nao da pressa
+// nenhuma, por isso vale mais ir devagar e nao ser expulso.
+const PAUSA_MS = Number(process.env.CLV_PAUSA_MS) || 4000;
+
+const dorme = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** O dia em Lisboa, que e o dia desportivo que a app mostra. */
+function hojeEmLisboa() {
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Lisbon" });
+}
+
+/** Levantado quando a casa nos recusa. Para tudo - nunca se insiste. */
+class Recusado extends Error {
+    constructor(readonly status: number) {
+        super(`http-${status}`);
+    }
+}
+
+async function paginaBetclic(caminho: string) {
+    const res = await fetch(`${BETCLIC}${caminho}`, {
+        headers: { "User-Agent": UA, "Accept-Language": "pt-PT,pt;q=0.9" },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    // Um 403 e a casa a dizer que ja chega. Insistir mais 40 vezes so prolonga
+    // o bloqueio; a passagem para e tenta amanha.
+    if (res.status === 403 || res.status === 429) throw new Recusado(res.status);
+    return res.ok ? await res.text() : null;
+}
+
+async function descobrirJogos(dia: string) {
+    const jogos = new Map<string, { matchId: string; event: string }>();
+
+    for (const listagem of LISTAGENS) {
+        try {
+            const html = await paginaBetclic(`/${listagem}`);
+            if (!html) {
+                log(`listagem ${listagem}: sem resposta util`);
+                continue;
+            }
+            const visita = (n: any, d: number) => {
+                if (!n || typeof n !== "object" || d > 14) return;
+                if (Array.isArray(n)) return n.forEach((x) => visita(x, d + 1));
+                if (n.matchId && typeof n.matchDateUtc === "string") {
+                    // So os jogos DE HOJE - a listagem traz os proximos dias.
+                    const emLisboa = new Date(n.matchDateUtc).toLocaleDateString("en-CA", {
+                        timeZone: "Europe/Lisbon",
+                    });
+                    if (emLisboa === dia && !jogos.has(String(n.matchId))) {
+                        jogos.set(String(n.matchId), {
+                            matchId: String(n.matchId),
+                            event: String(n.name ?? ""),
+                        });
+                    }
+                }
+                for (const k of Object.keys(n)) visita(n[k], d + 1);
+            };
+            visita(parseNgState(html), 0);
+        } catch (e: any) {
+            if (e instanceof Recusado) throw e;
+            log(`listagem ${listagem} falhou: ${e?.name || e}`);
+        }
+        await dorme(PAUSA_MS);
+    }
+
+    return [...jogos.values()].slice(0, MAX_JOGOS_DIA);
+}
+
+async function passagemDiaria() {
+    if (!SECRET) {
+        log("ERRO: falta BETTRACKR_AGENT_SECRET.");
+        process.exitCode = 1;
+        return;
+    }
+
+    const dia = hojeEmLisboa();
+    const encontrados = await descobrirJogos(dia);
+    log(`${dia}: ${encontrados.length} jogo(s) nas listagens`);
+    if (encontrados.length === 0) return;
+
+    const jogos = [];
+    let semMercado = 0;
+    for (const j of encontrados) {
+        try {
+            const html = await paginaBetclic(betclicPath(j.matchId, j.event));
+            const snap = html ? readMatchSnapshot(html, j.matchId) : null;
+            // Sem mercado completo nao ha nada de confianca a guardar.
+            if (snap) jogos.push(snap);
+            else semMercado++;
+        } catch (e: any) {
+            if (e instanceof Recusado) {
+                // Entregar o que ja se leu vale mais do que perder a passagem
+                // toda por causa do bloqueio.
+                log(`recusado pela casa (${e.message}) ao fim de ${jogos.length} jogo(s) - a parar`);
+                break;
+            }
+            semMercado++;
+        }
+        await dorme(PAUSA_MS);
+    }
+
+    if (jogos.length === 0) {
+        log("nenhum jogo com mercado completo - nada enviado");
+        process.exitCode = 1;
+        return;
+    }
+
+    const r = await bettrackr("/api/clv/daily-odds", {
+        method: "POST",
+        body: JSON.stringify({ dia, jogos }),
+    });
+    log(
+        `entregues ${jogos.length} jogo(s) (${semMercado} sem mercado util) -> ` +
+            `${r.gravados} gravado(s), ${r.recusados} recusado(s)`,
+    );
+}
+
+const diario = process.argv.includes("--daily");
+(diario ? passagemDiaria() : passagem()).catch((e) => {
     log("passagem falhou:", e?.message || e);
     process.exitCode = 1;
 });

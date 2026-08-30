@@ -488,6 +488,121 @@ router.post("/submit", async (req, res) => {
     }
 });
 
+// ============================================================
+// Odds do dia, para as dicas de IA
+//
+// O agente le as paginas publicas de madrugada e entrega aqui os retratos. O
+// servidor valida e guarda; nao acredita na margem que lhe mandam, recalcula-a.
+//
+// Isto NAO e linha de fecho e nao serve para CLV: sao precos de madrugada,
+// muito antes do apito.
+// ============================================================
+
+/** Limites de sanidade, para um agente avariado nao encher a tabela. */
+const MAX_JOGOS_DIA = 200;
+const MAX_MERCADOS_POR_JOGO = 25;
+
+router.post("/daily-odds", async (req, res) => {
+    if (!autorizado(req, "CLV_AGENT_SECRET")) {
+        res.status(401).json({ error: "Nao autorizado." });
+        return;
+    }
+    const jogos = req.body?.jogos;
+    if (!Array.isArray(jogos)) {
+        res.status(400).json({ error: "jogos tem de ser um array." });
+        return;
+    }
+
+    // O dia desportivo em Lisboa, nao em UTC: e o que o utilizador ve.
+    const dia =
+        typeof req.body?.dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.body.dia)
+            ? req.body.dia
+            : new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Lisbon" });
+
+    let gravados = 0;
+    let recusados = 0;
+    try {
+        for (const jogo of jogos.slice(0, MAX_JOGOS_DIA)) {
+            const matchId = String(jogo?.matchId ?? "");
+            const event = String(jogo?.event ?? "").slice(0, 200);
+            if (!matchId || !event) {
+                recusados++;
+                continue;
+            }
+
+            // Cada mercado e RE-VALIDADO com o mesmo crivo do de-vig: o agente
+            // traz precos, o servidor decide o que e um mercado completo e
+            // recalcula a margem. Uma margem vinda de fora nunca entra crua.
+            const markets = [];
+            for (const m of (Array.isArray(jogo?.markets) ? jogo.markets : []).slice(
+                0,
+                MAX_MERCADOS_POR_JOGO,
+            )) {
+                const sels = Array.isArray(m?.selections) ? m.selections : [];
+                const market = marketFrom(
+                    sels.map((x: any) => x?.id),
+                    sels.map((x: any) => x?.odd),
+                );
+                if (!market) continue;
+                markets.push({
+                    id: String(m?.id ?? ""),
+                    name: String(m?.name ?? "").slice(0, 120),
+                    marginPct: Number(((market.overround - 1) * 100).toFixed(2)),
+                    boosted: m?.boosted === true,
+                    selections: sels.map((x: any, i: number) => ({
+                        id: String(x?.id ?? ""),
+                        name: String(x?.name ?? "").slice(0, 120),
+                        odd: market.odds[i],
+                        noVig: Number((market.odds[i] * market.overround).toFixed(3)),
+                    })),
+                });
+            }
+            if (markets.length === 0) {
+                recusados++;
+                continue;
+            }
+
+            const apito =
+                typeof jogo?.kickoffUtc === "string" && !Number.isNaN(Date.parse(jogo.kickoffUtc))
+                    ? new Date(jogo.kickoffUtc).toISOString()
+                    : null;
+
+            await pool.query(
+                `INSERT INTO daily_odds (odds_date, match_id, event, competition, kickoff_utc, markets, captured_at)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, timezone('utc', now()))
+                 ON CONFLICT (odds_date, match_id) DO UPDATE
+                   SET event = EXCLUDED.event,
+                       competition = EXCLUDED.competition,
+                       kickoff_utc = EXCLUDED.kickoff_utc,
+                       markets = EXCLUDED.markets,
+                       captured_at = EXCLUDED.captured_at`,
+                [
+                    dia,
+                    matchId,
+                    event,
+                    jogo?.competition ? String(jogo.competition).slice(0, 160) : null,
+                    apito,
+                    JSON.stringify(markets),
+                ],
+            );
+            gravados++;
+        }
+
+        console.info(`[clv][dia] ${dia}: ${gravados} jogo(s) gravado(s), ${recusados} recusado(s).`);
+        res.json({ ok: true, dia, gravados, recusados });
+    } catch (error: any) {
+        console.error("[clv] /daily-odds falhou:", error);
+        // A tabela pode simplesmente nao existir: a migracao 020 e aplicada a mao.
+        const emFalta = error?.code === "42P01";
+        res.status(emFalta ? 503 : 500).json({
+            ok: false,
+            error: emFalta
+                ? "A tabela daily_odds nao existe - falta aplicar db/migrations/020_daily_odds.sql."
+                : error?.message,
+        });
+    }
+});
+
 router.get("/capture", async (req, res) => {
     if (!autorizado(req, "CRON_SECRET")) {
         res.status(401).json({ error: "Não autorizado." });

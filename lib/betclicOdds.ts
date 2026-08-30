@@ -220,6 +220,143 @@ export function devig(odd: number, market: Market | undefined): FairOdd | null {
     };
 }
 
+// ------------------------------------------------------------
+// Retrato de um jogo, para as dicas do dia
+//
+// A captura da odd de fecho so precisa de precos por id. Isto precisa de mais:
+// nomes legiveis, para o modelo de linguagem poder falar do jogo, e a margem de
+// cada mercado, que e a unica vantagem REAL que se pode oferecer sem ter de
+// adivinhar melhor do que a casa - apostar onde ela cobra menos.
+// ------------------------------------------------------------
+
+export interface NamedSelection {
+    id: string;
+    name: string;
+    /** O preco como a casa o mostra, com a margem dela dentro. */
+    odd: number;
+    /** O mesmo preco sem a margem. E a melhor estimativa de probabilidade. */
+    noVig: number;
+}
+
+export interface NamedMarket {
+    id: string;
+    name: string;
+    /** Margem da casa neste mercado, em percentagem. */
+    marginPct: number;
+    /** A casa turbinou alguma seleccao deste mercado? */
+    boosted: boolean;
+    selections: NamedSelection[];
+}
+
+export interface MatchSnapshot {
+    matchId: string;
+    event: string;
+    competition: string | null;
+    kickoffUtc: string | null;
+    markets: NamedMarket[];
+}
+
+/**
+ * Os mercados de confianca de um jogo, com nomes e ja sem margem.
+ *
+ * Mesmo crivo do collectMarkets - so `mainSelections`, e so quando a soma das
+ * probabilidades cai na banda plausivel. Um mercado incompleto daria margem
+ * negativa e odds "justas" maiores do que as reais.
+ */
+export function readMatchSnapshot(html: string, matchId: string): MatchSnapshot | null {
+    const state = parseNgState(html);
+    if (state === null) return null;
+
+    const alvo = String(matchId);
+
+    // O NO DO JOGO, e nao a pagina toda.
+    //
+    // Uma pagina de jogo traz dezenas de outros jogos (medido: 210 nos de jogo
+    // numa so pagina). E os proprios nos de MERCADO tambem carregam matchId, o
+    // que da 24 nos com o mesmo id. Recolher mercados da pagina inteira atribuia
+    // o 1X2 de um jogo de futebol a um jogo de tenis - aconteceu mesmo.
+    //
+    // O que distingue o jogo de um mercado seu e o `matchDateUtc`: so o jogo o
+    // tem. A partir daqui so se olha para dentro dele.
+    let jogo: any = null;
+    const procura = (node: any, depth: number) => {
+        if (jogo !== null || !node || typeof node !== "object" || depth > 14) return;
+        if (Array.isArray(node)) {
+            for (const item of node) procura(item, depth + 1);
+            return;
+        }
+        if (String(node.matchId) === alvo && typeof node.matchDateUtc === "string") {
+            jogo = node;
+            return;
+        }
+        for (const key of Object.keys(node)) procura(node[key], depth + 1);
+    };
+    procura(state, 0);
+    if (jogo === null) return null;
+
+    const markets: NamedMarket[] = [];
+    const vistos = new Set<string>();
+
+    const visita = (node: any, depth: number) => {
+        if (!node || typeof node !== "object" || depth > 14) return;
+        if (Array.isArray(node)) {
+            for (const item of node) visita(item, depth + 1);
+            return;
+        }
+
+        const grupo = node.mainSelections;
+        if (Array.isArray(grupo) && grupo.length >= MIN_SELECTIONS && node.id != null) {
+            const id = String(node.id);
+            if (!vistos.has(id)) {
+                const odds: number[] = [];
+                const brutas: Array<{ id: string; name: string; odd: number }> = [];
+                let completo = true;
+                for (const sel of grupo) {
+                    const odd = Number(sel?.odds);
+                    if (sel?.id == null || !Number.isFinite(odd) || odd <= 1) {
+                        completo = false;
+                        break;
+                    }
+                    odds.push(odd);
+                    brutas.push({
+                        id: String(sel.id),
+                        name: String(sel.name ?? sel.betslipName ?? ""),
+                        odd,
+                    });
+                }
+                const overround = odds.reduce((soma, o) => soma + 1 / o, 0);
+                if (completo && overround >= OVERROUND_MIN && overround <= OVERROUND_MAX) {
+                    vistos.add(id);
+                    markets.push({
+                        id,
+                        name: String(node.name ?? ""),
+                        marginPct: Number(((overround - 1) * 100).toFixed(2)),
+                        boosted: node.hasBoostedOdds === true,
+                        selections: brutas.map((b) => ({
+                            ...b,
+                            noVig: Number((b.odd * overround).toFixed(3)),
+                        })),
+                    });
+                }
+            }
+        }
+
+        for (const key of Object.keys(node)) visita(node[key], depth + 1);
+    };
+    visita(jogo, 0);
+
+    if (markets.length === 0) return null;
+
+    return {
+        matchId: alvo,
+        event: String(jogo.name ?? ""),
+        competition:
+            typeof jogo.competition?.name === "string" ? jogo.competition.name : null,
+        kickoffUtc: typeof jogo.matchDateUtc === "string" ? jogo.matchDateUtc : null,
+        markets,
+    };
+}
+
 export interface MatchPage {
     /** id da seleção -> preço corrente. */
     odds: Map<string, number>;
