@@ -284,6 +284,12 @@ Como escolher:
 - Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).`}
 - Justificação curta (1-2 frases) baseada em forma recente, confrontos, lesões ou contexto - factual, sem promessas.
 
+O PREÇO JÁ SABE QUEM É MAIS FORTE. "Esta equipa é melhor" NÃO é razão para uma pick - isso já está no preço, e é precisamente por isso que a odd é baixa. Só escolhe quando tiveres uma razão que o preço ainda NÃO reflete: uma ausência anunciada há pouco, rotação provável por causa do calendário, um regresso importante, motivação assimétrica, um contexto que a linha ainda não absorveu.
+
+NÃO CONFUNDAS PROVÁVEL COM BOM. São coisas diferentes. Uma odd de 1.05 é quase certa e é uma má aposta: arrisca-se muito para ganhar quase nada, e uma única derrota rara apaga dezenas de vitórias. Abaixo de 1.40 só deve entrar alguma coisa se a tua razão for mesmo excecional - e nunca abaixo de 1.20.
+
+TESTE FINAL, aplica-o a cada pick antes de a incluíres: se a justificação se resumir a "é o favorito" ou "é a equipa mais forte", APAGA a pick. Isso não é uma dica, é ler a tabela classificativa. Preferir devolver 3 picks com razão a 8 sem ela.
+
 "confidence" é de 1 a 5 e tem de significar isto: 1 = palpite fraco; 2 = ligeira preferência; 3 = fundamentada mas equilibrada; 4 = forte, vários sinais independentes a apontar no mesmo sentido; 5 = muito forte, e deve ser raro. Não uses 5 mais do que uma vez.
 
 Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
