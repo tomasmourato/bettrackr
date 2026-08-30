@@ -142,6 +142,13 @@ const MENU_MARGEM_MAX = 20;
 // derrota rara apaga dezenas de vitorias. Nao e uma dica, e ler a classificacao.
 const MENU_ODD_MIN = 1.2;
 
+// E o teto, pela mesma razao. Sem ele saiu uma pick a 80.00 - num dia em que a
+// mesma lista dava Brighton a 3.78 com motivo. Acima de 6 ja nao e uma leitura
+// do jogo, e um bilhete de loteria, e numa lista de dicas diarias isso e ruido
+// com ar de analise. Numero discutivel; a regra, essa, nao pode ficar ao
+// criterio do modelo - ja se viu que nao pega.
+const MENU_ODD_MAX = 6;
+
 interface OpcaoDoDia {
     selectionId: string;
     selection: string;
@@ -189,7 +196,8 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
             const opcoes: OpcaoDoDia[] = [];
             for (const sel of Array.isArray(m?.selections) ? m.selections : []) {
                 if (!sel?.id) continue;
-                if (!(Number(sel.odd) >= MENU_ODD_MIN)) continue;
+                const odd = Number(sel.odd);
+                if (!(odd >= MENU_ODD_MIN && odd <= MENU_ODD_MAX)) continue;
                 opcoes.push({
                     selectionId: String(sel.id),
                     selection: String(sel.name ?? ""),
