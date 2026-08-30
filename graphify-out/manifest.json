@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "routes/insightsRoutes.ts": {
-    "mtime": 1788089798.1592507,
-    "seen": 1788089894.7668293,
-    "ast_hash": "489fed7792fef5103b2182bea4c6c9c4",
+    "mtime": 1788094164.3771951,
+    "seen": 1788094192.2165246,
+    "ast_hash": "2fed8b7a33862e2fa1a18dddc6683b24",
     "semantic_hash": ""
   },
   "routes/socialRoutes.ts": {

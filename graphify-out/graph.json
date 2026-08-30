@@ -872,6 +872,19 @@
       "source_location": "L142"
     },
     {
+      "id": "routes_bankrollroutes_kind",
+      "label": "Kind",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 116,
+      "community_name": "pool.ts",
+      "file_type": "code",
+      "norm_label": "kind",
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L30"
+    },
+    {
       "id": "extension_test_csv_closing_odds_test_filereadershim",
       "label": "FileReaderShim",
       "_callable": true,
@@ -891,7 +904,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "socialprops",
       "source_file": "src/components/Social.tsx",
@@ -904,7 +917,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "mobilesocialprops",
       "source_file": "src/mobile/screens/MobileSocial.tsx",
@@ -917,7 +930,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "friend",
       "source_file": "src/types.ts",
@@ -930,7 +943,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "friendrequest",
       "source_file": "src/types.ts",
@@ -943,7 +956,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "usersearchresult",
       "source_file": "src/types.ts",
@@ -1899,26 +1912,13 @@
       "source_location": "L3"
     },
     {
-      "id": "routes_bankrollroutes_kind",
-      "label": "Kind",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "server.ts",
-      "file_type": "code",
-      "norm_label": "kind",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L30"
-    },
-    {
       "id": "src_lib_betsapi_apibetrow",
       "label": "ApiBetRow",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "apibetrow",
       "source_file": "src/lib/betsApi.ts",
@@ -1935,7 +1935,7 @@
       "file_type": "code",
       "norm_label": "evaluatedleg",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L391"
+      "source_location": "L425"
     },
     {
       "id": "routes_insightsroutes_lang",
@@ -1961,7 +1961,7 @@
       "file_type": "code",
       "norm_label": "opcaododia",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L119"
+      "source_location": "L134"
     },
     {
       "id": "routes_insightsroutes_pick",
@@ -4221,28 +4221,52 @@
       "source_location": "L38"
     },
     {
-      "id": "routes_settingsroutes_cleanenabled",
-      "label": "cleanEnabled()",
+      "id": "routes_bankrollroutes_cleanamount",
+      "label": "cleanAmount()",
       "_callable": true,
       "_origin": "ast",
       "community": 116,
       "community_name": "pool.ts",
       "file_type": "code",
-      "norm_label": "cleanenabled()",
-      "source_file": "routes/settingsRoutes.ts",
-      "source_location": "L26"
+      "norm_label": "cleanamount()",
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L47"
     },
     {
-      "id": "routes_settingsroutes_cleanlanguage",
-      "label": "cleanLanguage()",
+      "id": "routes_bankrollroutes_cleankind",
+      "label": "cleanKind()",
       "_callable": true,
       "_origin": "ast",
       "community": 116,
       "community_name": "pool.ts",
       "file_type": "code",
-      "norm_label": "cleanlanguage()",
-      "source_file": "routes/settingsRoutes.ts",
-      "source_location": "L39"
+      "norm_label": "cleankind()",
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L36"
+    },
+    {
+      "id": "routes_bankrollroutes_cleannote",
+      "label": "cleanNote()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 116,
+      "community_name": "pool.ts",
+      "file_type": "code",
+      "norm_label": "cleannote()",
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L61"
+    },
+    {
+      "id": "routes_bankrollroutes_cleanoccurredat",
+      "label": "cleanOccurredAt()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 116,
+      "community_name": "pool.ts",
+      "file_type": "code",
+      "norm_label": "cleanoccurredat()",
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L73"
     },
     {
       "id": "extension_test_bankroll_backup_test_backupfile",
@@ -4394,23 +4418,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "social()",
       "source_file": "src/components/Social.tsx",
       "source_location": "L33"
     },
     {
-      "id": "src_lib_authapi_authfetch",
-      "label": "authFetch()",
+      "id": "src_lib_authapi_parsejsonresponse",
+      "label": "parseJsonResponse()",
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
-      "norm_label": "authfetch()",
+      "norm_label": "parsejsonresponse()",
       "source_file": "src/lib/authApi.ts",
-      "source_location": "L169"
+      "source_location": "L25"
     },
     {
       "id": "src_lib_socialapi_acceptfriendrequest",
@@ -4418,7 +4442,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "acceptfriendrequest()",
       "source_file": "src/lib/socialApi.ts",
@@ -4430,7 +4454,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "fetchfriendbets()",
       "source_file": "src/lib/socialApi.ts",
@@ -4442,7 +4466,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "listfriends()",
       "source_file": "src/lib/socialApi.ts",
@@ -4454,7 +4478,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "listrequests()",
       "source_file": "src/lib/socialApi.ts",
@@ -4466,7 +4490,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "removefriend()",
       "source_file": "src/lib/socialApi.ts",
@@ -4478,7 +4502,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "removefriendrequest()",
       "source_file": "src/lib/socialApi.ts",
@@ -4490,7 +4514,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "searchusers()",
       "source_file": "src/lib/socialApi.ts",
@@ -4502,7 +4526,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "sendfriendrequest()",
       "source_file": "src/lib/socialApi.ts",
@@ -4514,7 +4538,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "avatar()",
       "source_file": "src/mobile/screens/MobileSocial.tsx",
@@ -4526,7 +4550,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "mobilesocial()",
       "source_file": "src/mobile/screens/MobileSocial.tsx",
@@ -7017,52 +7041,40 @@
       "source_location": "L17"
     },
     {
-      "id": "routes_bankrollroutes_cleanamount",
-      "label": "cleanAmount()",
+      "id": "routes_accountsroutes_cleanbookmaker",
+      "label": "cleanBookmaker()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
       "community_name": "server.ts",
       "file_type": "code",
-      "norm_label": "cleanamount()",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L47"
+      "norm_label": "cleanbookmaker()",
+      "source_file": "routes/accountsRoutes.ts",
+      "source_location": "L40"
     },
     {
-      "id": "routes_bankrollroutes_cleankind",
-      "label": "cleanKind()",
+      "id": "routes_accountsroutes_cleanlabel",
+      "label": "cleanLabel()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
       "community_name": "server.ts",
       "file_type": "code",
-      "norm_label": "cleankind()",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L36"
+      "norm_label": "cleanlabel()",
+      "source_file": "routes/accountsRoutes.ts",
+      "source_location": "L20"
     },
     {
-      "id": "routes_bankrollroutes_cleannote",
-      "label": "cleanNote()",
+      "id": "routes_accountsroutes_cleanusername",
+      "label": "cleanUsername()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
       "community_name": "server.ts",
       "file_type": "code",
-      "norm_label": "cleannote()",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L61"
-    },
-    {
-      "id": "routes_bankrollroutes_cleanoccurredat",
-      "label": "cleanOccurredAt()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "server.ts",
-      "file_type": "code",
-      "norm_label": "cleanoccurredat()",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L73"
+      "norm_label": "cleanusername()",
+      "source_file": "routes/accountsRoutes.ts",
+      "source_location": "L29"
     },
     {
       "id": "routes_socialroutes_relationshipwith",
@@ -7118,23 +7130,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "usebets()",
       "source_file": "src/hooks/useBets.ts",
       "source_location": "L21"
     },
     {
-      "id": "src_lib_authapi_parsejsonresponse",
-      "label": "parseJsonResponse()",
+      "id": "src_lib_authapi_authfetch",
+      "label": "authFetch()",
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
-      "norm_label": "parsejsonresponse()",
+      "norm_label": "authfetch()",
       "source_file": "src/lib/authApi.ts",
-      "source_location": "L25"
+      "source_location": "L169"
     },
     {
       "id": "src_lib_betsapi_createbet",
@@ -7142,7 +7154,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "createbet()",
       "source_file": "src/lib/betsApi.ts",
@@ -7154,7 +7166,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "createbets()",
       "source_file": "src/lib/betsApi.ts",
@@ -7166,7 +7178,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "deleteallbets()",
       "source_file": "src/lib/betsApi.ts",
@@ -7178,7 +7190,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "deletebet()",
       "source_file": "src/lib/betsApi.ts",
@@ -7190,7 +7202,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "fetchbets()",
       "source_file": "src/lib/betsApi.ts",
@@ -7202,7 +7214,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "mapbetfromapi()",
       "source_file": "src/lib/betsApi.ts",
@@ -7214,7 +7226,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "mapbettoapi()",
       "source_file": "src/lib/betsApi.ts",
@@ -7226,7 +7238,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "normalizeselections()",
       "source_file": "src/lib/betsApi.ts",
@@ -7238,7 +7250,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "setbetclosingodd()",
       "source_file": "src/lib/betsApi.ts",
@@ -7250,7 +7262,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "setbetignored()",
       "source_file": "src/lib/betsApi.ts",
@@ -7262,7 +7274,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "updatebet()",
       "source_file": "src/lib/betsApi.ts",
@@ -7274,7 +7286,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "parsebetmetadata()",
       "source_file": "src/lib/betStatus.ts",
@@ -7710,7 +7722,7 @@
       "file_type": "code",
       "norm_label": "buildevalprompt()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L397"
+      "source_location": "L431"
     },
     {
       "id": "routes_insightsroutes_buildevalsummary",
@@ -7722,7 +7734,7 @@
       "file_type": "code",
       "norm_label": "buildevalsummary()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L562"
+      "source_location": "L596"
     },
     {
       "id": "routes_insightsroutes_buildprompt",
@@ -7734,7 +7746,7 @@
       "file_type": "code",
       "norm_label": "buildprompt()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L229"
+      "source_location": "L257"
     },
     {
       "id": "routes_insightsroutes_callevalmodel",
@@ -7746,7 +7758,7 @@
       "file_type": "code",
       "norm_label": "callevalmodel()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L453"
+      "source_location": "L487"
     },
     {
       "id": "routes_insightsroutes_callmodel",
@@ -7758,7 +7770,7 @@
       "file_type": "code",
       "norm_label": "callmodel()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L276"
+      "source_location": "L310"
     },
     {
       "id": "routes_insightsroutes_clampprob",
@@ -7770,7 +7782,7 @@
       "file_type": "code",
       "norm_label": "clampprob()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L479"
+      "source_location": "L513"
     },
     {
       "id": "routes_insightsroutes_cleanlang",
@@ -7794,7 +7806,7 @@
       "file_type": "code",
       "norm_label": "ensureinsightsfordate()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L624"
+      "source_location": "L658"
     },
     {
       "id": "routes_insightsroutes_evaluatebet",
@@ -7806,7 +7818,7 @@
       "file_type": "code",
       "norm_label": "evaluatebet()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L600"
+      "source_location": "L634"
     },
     {
       "id": "routes_insightsroutes_generateinsights",
@@ -7818,7 +7830,7 @@
       "file_type": "code",
       "norm_label": "generateinsights()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L345"
+      "source_location": "L379"
     },
     {
       "id": "routes_insightsroutes_loaddailyodds",
@@ -7830,7 +7842,7 @@
       "file_type": "code",
       "norm_label": "loaddailyodds()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L132"
+      "source_location": "L147"
     },
     {
       "id": "routes_insightsroutes_menudodia",
@@ -7842,7 +7854,7 @@
       "file_type": "code",
       "norm_label": "menudodia()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L179"
+      "source_location": "L207"
     },
     {
       "id": "routes_insightsroutes_outputlanguageblock",
@@ -7866,7 +7878,7 @@
       "file_type": "code",
       "norm_label": "resolvepicks()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L303"
+      "source_location": "L337"
     },
     {
       "id": "routes_insightsroutes_sanitizecontent",
@@ -7878,7 +7890,7 @@
       "file_type": "code",
       "norm_label": "sanitizecontent()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L199"
+      "source_location": "L227"
     },
     {
       "id": "routes_insightsroutes_sanitizeevaluation",
@@ -7890,7 +7902,7 @@
       "file_type": "code",
       "norm_label": "sanitizeevaluation()",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L486"
+      "source_location": "L520"
     },
     {
       "id": "routes_insightsroutes_todayinlisbon",
@@ -9465,42 +9477,6 @@
       "source_location": "L42"
     },
     {
-      "id": "routes_accountsroutes_cleanbookmaker",
-      "label": "cleanBookmaker()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 92,
-      "community_name": "authMiddleware.ts",
-      "file_type": "code",
-      "norm_label": "cleanbookmaker()",
-      "source_file": "routes/accountsRoutes.ts",
-      "source_location": "L40"
-    },
-    {
-      "id": "routes_accountsroutes_cleanlabel",
-      "label": "cleanLabel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 92,
-      "community_name": "authMiddleware.ts",
-      "file_type": "code",
-      "norm_label": "cleanlabel()",
-      "source_file": "routes/accountsRoutes.ts",
-      "source_location": "L20"
-    },
-    {
-      "id": "routes_accountsroutes_cleanusername",
-      "label": "cleanUsername()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 92,
-      "community_name": "authMiddleware.ts",
-      "file_type": "code",
-      "norm_label": "cleanusername()",
-      "source_file": "routes/accountsRoutes.ts",
-      "source_location": "L29"
-    },
-    {
       "id": "routes_authroutes_cleanclient",
       "label": "cleanClient()",
       "_callable": true,
@@ -9583,6 +9559,30 @@
       "norm_label": "validatepassword()",
       "source_file": "routes/authRoutes.ts",
       "source_location": "L53"
+    },
+    {
+      "id": "routes_settingsroutes_cleanenabled",
+      "label": "cleanEnabled()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "authMiddleware.ts",
+      "file_type": "code",
+      "norm_label": "cleanenabled()",
+      "source_file": "routes/settingsRoutes.ts",
+      "source_location": "L26"
+    },
+    {
+      "id": "routes_settingsroutes_cleanlanguage",
+      "label": "cleanLanguage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "authMiddleware.ts",
+      "file_type": "code",
+      "norm_label": "cleanlanguage()",
+      "source_file": "routes/settingsRoutes.ts",
+      "source_location": "L39"
     },
     {
       "id": "extension_test_put_closing_odd_test_importpayload",
@@ -10433,26 +10433,26 @@
       "source_location": "L1"
     },
     {
-      "id": "package_devdependencies_capacitor_cli",
-      "label": "@capacitor/cli",
+      "id": "package_devdependencies_tailwindcss",
+      "label": "tailwindcss",
       "_origin": "ast",
       "community": 104,
-      "community_name": "@capacitor/cli",
+      "community_name": "tailwindcss",
       "file_type": "code",
-      "norm_label": "@capacitor/cli",
+      "norm_label": "tailwindcss",
       "source_file": "package.json",
-      "source_location": "L47"
+      "source_location": "L58"
     },
     {
-      "id": "capacitor_cli",
-      "label": "@capacitor/cli",
+      "id": "tailwindcss",
+      "label": "tailwindcss",
       "_origin": "ast",
       "community": 104,
-      "community_name": "@capacitor/cli",
+      "community_name": "tailwindcss",
       "file_type": "concept",
-      "norm_label": "@capacitor/cli",
+      "norm_label": "tailwindcss",
       "source_file": "package.json",
-      "source_location": "L47"
+      "source_location": "L58"
     },
     {
       "id": "src_components_bankrollcard",
@@ -10807,48 +10807,37 @@
       "source_location": "L1"
     },
     {
-      "id": "routes_settingsroutes",
-      "label": "settingsRoutes.ts",
+      "id": "routes_bankrollroutes",
+      "label": "bankrollRoutes.ts",
       "_origin": "ast",
       "community": 116,
       "community_name": "pool.ts",
       "file_type": "code",
-      "norm_label": "settingsroutes.ts",
-      "source_file": "routes/settingsRoutes.ts",
+      "norm_label": "bankrollroutes.ts",
+      "source_file": "routes/bankrollRoutes.ts",
       "source_location": "L1"
     },
     {
-      "id": "routes_settingsroutes_router",
+      "id": "routes_bankrollroutes_router",
       "label": "router",
       "_origin": "ast",
       "community": 116,
       "community_name": "pool.ts",
       "file_type": "code",
       "norm_label": "router",
-      "source_file": "routes/settingsRoutes.ts",
-      "source_location": "L16"
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L14"
     },
     {
-      "id": "routes_settingsroutes_supported_bookmakers",
-      "label": "SUPPORTED_BOOKMAKERS",
+      "id": "routes_bankrollroutes_valid_kinds",
+      "label": "VALID_KINDS",
       "_origin": "ast",
       "community": 116,
       "community_name": "pool.ts",
       "file_type": "code",
-      "norm_label": "supported_bookmakers",
-      "source_file": "routes/settingsRoutes.ts",
-      "source_location": "L20"
-    },
-    {
-      "id": "routes_settingsroutes_supported_languages",
-      "label": "SUPPORTED_LANGUAGES",
-      "_origin": "ast",
-      "community": 116,
-      "community_name": "pool.ts",
-      "file_type": "code",
-      "norm_label": "supported_languages",
-      "source_file": "routes/settingsRoutes.ts",
-      "source_location": "L23"
+      "norm_label": "valid_kinds",
+      "source_file": "routes/bankrollRoutes.ts",
+      "source_location": "L29"
     },
     {
       "id": "filesystem",
@@ -10932,7 +10921,7 @@
       "label": "Social.tsx",
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "social.tsx",
       "source_file": "src/components/Social.tsx",
@@ -10943,7 +10932,7 @@
       "label": "socialApi.ts",
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "socialapi.ts",
       "source_file": "src/lib/socialApi.ts",
@@ -10954,7 +10943,7 @@
       "label": "MobileSocial.tsx",
       "_origin": "ast",
       "community": 118,
-      "community_name": "authFetch",
+      "community_name": "parseJsonResponse",
       "file_type": "code",
       "norm_label": "mobilesocial.tsx",
       "source_file": "src/mobile/screens/MobileSocial.tsx",
@@ -13269,37 +13258,26 @@
       "source_location": "L1"
     },
     {
-      "id": "routes_bankrollroutes",
-      "label": "bankrollRoutes.ts",
+      "id": "routes_accountsroutes",
+      "label": "accountsRoutes.ts",
       "_origin": "ast",
       "community": 28,
       "community_name": "server.ts",
       "file_type": "code",
-      "norm_label": "bankrollroutes.ts",
-      "source_file": "routes/bankrollRoutes.ts",
+      "norm_label": "accountsroutes.ts",
+      "source_file": "routes/accountsRoutes.ts",
       "source_location": "L1"
     },
     {
-      "id": "routes_bankrollroutes_router",
+      "id": "routes_accountsroutes_router",
       "label": "router",
       "_origin": "ast",
       "community": 28,
       "community_name": "server.ts",
       "file_type": "code",
       "norm_label": "router",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L14"
-    },
-    {
-      "id": "routes_bankrollroutes_valid_kinds",
-      "label": "VALID_KINDS",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "server.ts",
-      "file_type": "code",
-      "norm_label": "valid_kinds",
-      "source_file": "routes/bankrollRoutes.ts",
-      "source_location": "L29"
+      "source_file": "routes/accountsRoutes.ts",
+      "source_location": "L10"
     },
     {
       "id": "routes_billingroutes_router",
@@ -13460,7 +13438,7 @@
       "label": "selection-results.test.ts",
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "selection-results.test.ts",
       "source_file": "extension/test/selection-results.test.ts",
@@ -13471,7 +13449,7 @@
       "label": "useBets.ts",
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "usebets.ts",
       "source_file": "src/hooks/useBets.ts",
@@ -13482,7 +13460,7 @@
       "label": "betsApi.ts",
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "betsapi.ts",
       "source_file": "src/lib/betsApi.ts",
@@ -13493,7 +13471,7 @@
       "label": "VALID_FREEBET_TYPES",
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "valid_freebet_types",
       "source_file": "src/lib/betsApi.ts",
@@ -13504,7 +13482,7 @@
       "label": "VALID_ORIGINS",
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "valid_origins",
       "source_file": "src/lib/betsApi.ts",
@@ -13515,7 +13493,7 @@
       "label": "VALID_SELECTION_RESULTS",
       "_origin": "ast",
       "community": 29,
-      "community_name": "parseJsonResponse",
+      "community_name": "authFetch",
       "file_type": "code",
       "norm_label": "valid_selection_results",
       "source_file": "src/lib/betsApi.ts",
@@ -14512,15 +14490,15 @@
       "source_location": "L46"
     },
     {
-      "id": "package_devdependencies_tailwindcss",
-      "label": "tailwindcss",
+      "id": "package_devdependencies_capacitor_cli",
+      "label": "@capacitor/cli",
       "_origin": "ast",
       "community": 4,
       "community_name": "devDependencies",
       "file_type": "code",
-      "norm_label": "tailwindcss",
+      "norm_label": "@capacitor/cli",
       "source_file": "package.json",
-      "source_location": "L58"
+      "source_location": "L47"
     },
     {
       "id": "package_devdependencies_types_jsonwebtoken",
@@ -14578,15 +14556,15 @@
       "source_location": "L62"
     },
     {
-      "id": "tailwindcss",
-      "label": "tailwindcss",
+      "id": "capacitor_cli",
+      "label": "@capacitor/cli",
       "_origin": "ast",
       "community": 4,
       "community_name": "devDependencies",
       "file_type": "concept",
-      "norm_label": "tailwindcss",
+      "norm_label": "@capacitor/cli",
       "source_file": "package.json",
-      "source_location": "L58"
+      "source_location": "L47"
     },
     {
       "id": "types_jsonwebtoken",
@@ -16690,28 +16668,6 @@
       "source_location": "L4"
     },
     {
-      "id": "routes_accountsroutes",
-      "label": "accountsRoutes.ts",
-      "_origin": "ast",
-      "community": 92,
-      "community_name": "authMiddleware.ts",
-      "file_type": "code",
-      "norm_label": "accountsroutes.ts",
-      "source_file": "routes/accountsRoutes.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_accountsroutes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 92,
-      "community_name": "authMiddleware.ts",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "routes/accountsRoutes.ts",
-      "source_location": "L10"
-    },
-    {
       "id": "routes_authroutes",
       "label": "authRoutes.ts",
       "_origin": "ast",
@@ -16743,6 +16699,50 @@
       "norm_label": "router",
       "source_file": "routes/authRoutes.ts",
       "source_location": "L16"
+    },
+    {
+      "id": "routes_settingsroutes",
+      "label": "settingsRoutes.ts",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "authMiddleware.ts",
+      "file_type": "code",
+      "norm_label": "settingsroutes.ts",
+      "source_file": "routes/settingsRoutes.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_settingsroutes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "authMiddleware.ts",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "routes/settingsRoutes.ts",
+      "source_location": "L16"
+    },
+    {
+      "id": "routes_settingsroutes_supported_bookmakers",
+      "label": "SUPPORTED_BOOKMAKERS",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "authMiddleware.ts",
+      "file_type": "code",
+      "norm_label": "supported_bookmakers",
+      "source_file": "routes/settingsRoutes.ts",
+      "source_location": "L20"
+    },
+    {
+      "id": "routes_settingsroutes_supported_languages",
+      "label": "SUPPORTED_LANGUAGES",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "authMiddleware.ts",
+      "file_type": "code",
+      "norm_label": "supported_languages",
+      "source_file": "routes/settingsRoutes.ts",
+      "source_location": "L23"
     },
     {
       "id": "extension_test_put_closing_odd_test",
@@ -21276,7 +21276,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L398",
+      "source_location": "L432",
       "weight": 1.0
     },
     {
@@ -21288,7 +21288,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L272",
+      "source_location": "L306",
       "weight": 1.0
     },
     {
@@ -21300,7 +21300,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L454",
+      "source_location": "L488",
       "weight": 1.0
     },
     {
@@ -21312,7 +21312,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L277",
+      "source_location": "L311",
       "weight": 1.0
     },
     {
@@ -21324,7 +21324,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L633",
+      "source_location": "L667",
       "weight": 1.0
     },
     {
@@ -21336,7 +21336,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L607",
+      "source_location": "L641",
       "weight": 1.0
     },
     {
@@ -21348,7 +21348,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L607",
+      "source_location": "L641",
       "weight": 1.0
     },
     {
@@ -21360,7 +21360,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L608",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -21372,7 +21372,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L609",
+      "source_location": "L643",
       "weight": 1.0
     },
     {
@@ -21384,7 +21384,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L609",
+      "source_location": "L643",
       "weight": 1.0
     },
     {
@@ -21396,7 +21396,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L351",
+      "source_location": "L385",
       "weight": 1.0
     },
     {
@@ -21408,7 +21408,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L352",
+      "source_location": "L386",
       "weight": 1.0
     },
     {
@@ -21420,7 +21420,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L363",
+      "source_location": "L397",
       "weight": 1.0
     },
     {
@@ -21432,7 +21432,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L363",
+      "source_location": "L397",
       "weight": 1.0
     },
     {
@@ -21444,7 +21444,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L364",
+      "source_location": "L398",
       "weight": 1.0
     },
     {
@@ -21456,7 +21456,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L364",
+      "source_location": "L398",
       "weight": 1.0
     },
     {
@@ -21468,7 +21468,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L365",
+      "source_location": "L399",
       "weight": 1.0
     },
     {
@@ -21480,7 +21480,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L497",
+      "source_location": "L531",
       "weight": 1.0
     },
     {
@@ -21492,7 +21492,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L558",
+      "source_location": "L592",
       "weight": 1.0
     },
     {
@@ -51127,7 +51127,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L119",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -51138,18 +51138,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L132",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_insightsroutes",
-      "target": "routes_insightsroutes_menudodia",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L179",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -51165,13 +51154,24 @@
     },
     {
       "source": "routes_insightsroutes",
+      "target": "routes_insightsroutes_menudodia",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/insightsRoutes.ts",
+      "source_location": "L207",
+      "weight": 1.0
+    },
+    {
+      "source": "routes_insightsroutes",
       "target": "routes_insightsroutes_sanitizecontent",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L199",
+      "source_location": "L227",
       "weight": 1.0
     },
     {
@@ -51182,7 +51182,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L229",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -51193,7 +51193,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L276",
+      "source_location": "L310",
       "weight": 1.0
     },
     {
@@ -51204,7 +51204,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L303",
+      "source_location": "L337",
       "weight": 1.0
     },
     {
@@ -51215,7 +51215,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L345",
+      "source_location": "L379",
       "weight": 1.0
     },
     {
@@ -51242,28 +51242,6 @@
     },
     {
       "source": "routes_insightsroutes",
-      "target": "routes_insightsroutes_evaluatedleg",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L391",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_insightsroutes",
-      "target": "routes_insightsroutes_buildevalprompt",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L397",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_insightsroutes",
       "target": "routes_insightsroutes_cleanlang",
       "relation": "contains",
       "_origin": "ast",
@@ -51275,13 +51253,24 @@
     },
     {
       "source": "routes_insightsroutes",
-      "target": "routes_insightsroutes_callevalmodel",
+      "target": "routes_insightsroutes_evaluatedleg",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L453",
+      "source_location": "L425",
+      "weight": 1.0
+    },
+    {
+      "source": "routes_insightsroutes",
+      "target": "routes_insightsroutes_buildevalprompt",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/insightsRoutes.ts",
+      "source_location": "L431",
       "weight": 1.0
     },
     {
@@ -51297,13 +51286,24 @@
     },
     {
       "source": "routes_insightsroutes",
+      "target": "routes_insightsroutes_callevalmodel",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/insightsRoutes.ts",
+      "source_location": "L487",
+      "weight": 1.0
+    },
+    {
+      "source": "routes_insightsroutes",
       "target": "routes_insightsroutes_clampprob",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L479",
+      "source_location": "L513",
       "weight": 1.0
     },
     {
@@ -51314,7 +51314,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L486",
+      "source_location": "L520",
       "weight": 1.0
     },
     {
@@ -51336,7 +51336,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L562",
+      "source_location": "L596",
       "weight": 1.0
     },
     {
@@ -51347,18 +51347,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L600",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_insightsroutes",
-      "target": "routes_insightsroutes_ensureinsightsfordate",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L624",
+      "source_location": "L634",
       "weight": 1.0
     },
     {
@@ -51370,6 +51359,17 @@
       "confidence_score": 1.0,
       "source_file": "routes/insightsRoutes.ts",
       "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "routes_insightsroutes",
+      "target": "routes_insightsroutes_ensureinsightsfordate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/insightsRoutes.ts",
+      "source_location": "L658",
       "weight": 1.0
     },
     {
@@ -58949,7 +58949,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L684",
+      "source_location": "L718",
       "weight": 1.0
     },
     {
@@ -58961,7 +58961,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "routes/insightsRoutes.ts",
-      "source_location": "L685",
+      "source_location": "L719",
       "weight": 1.0
     },
     {
@@ -59443,5 +59443,5 @@
       "source_file": "public/pwa-512x512.png"
     }
   ],
-  "built_at_commit": "f03b73934809d7916cb41dc11b4c627a3c418c9b"
+  "built_at_commit": "3abafc7807e23907c6fe699ab8f7a1245abf5fdf"
 }

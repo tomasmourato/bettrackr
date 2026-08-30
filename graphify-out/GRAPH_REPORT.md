@@ -1,7 +1,7 @@
 # Graph Report - bettrackr  (2026-08-30)
 
 ## Corpus Check
-- 222 files · ~253,134 words
+- 222 files · ~253,529 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f03b7393`
+- Built from commit: `3abafc78`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -44,7 +44,7 @@
 - content-bettrackr.js
 - migrate.mjs
 - server.ts
-- parseJsonResponse
+- authFetch
 - users
 - content-betclic.js
 - check-i18n.mjs
@@ -115,7 +115,7 @@
 - Gallery.tsx
 - Dashboard.tsx
 - authApi.ts
-- @capacitor/cli
+- tailwindcss
 - Bet
 - index.ts
 - tsx
@@ -126,7 +126,7 @@
 - bankroll.ts
 - pool.ts
 - dataTransfer.ts
-- authFetch
+- parseJsonResponse
 - daily_insights
 - haptics.ts
 - esbuild
@@ -209,7 +209,7 @@ Nodes (47): bcryptjs, @capacitor/android, @capacitor/app, @capacitor/camera, @ca
 
 ### Community 4 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): devDependencies, tailwindcss, @types/jsonwebtoken, @types/pg, @types/react, typescript, vite-plugin-pwa, tailwindcss (+5 more)
+Nodes (13): @capacitor/cli, devDependencies, @capacitor/cli, @types/jsonwebtoken, @types/pg, @types/react, typescript, vite-plugin-pwa (+5 more)
 
 ### Community 5 - "insightsRoutes.ts"
 Cohesion: 0.12
@@ -276,12 +276,12 @@ Cohesion: 0.40
 Nodes (4): dir, files, isLocalDb, pool
 
 ### Community 28 - "server.ts"
-Cohesion: 0.09
-Nodes (13): Bucket, rateLimit(), Kind, router, VALID_KINDS, router, router, router (+5 more)
+Cohesion: 0.10
+Nodes (11): Bucket, rateLimit(), router, router, router, router, app, execFileAsync (+3 more)
 
-### Community 29 - "parseJsonResponse"
+### Community 29 - "authFetch"
 Cohesion: 0.27
-Nodes (18): useBets(), parseJsonResponse(), ApiBetRow, createBet(), createBets(), deleteAllBets(), deleteBet(), fetchBets() (+10 more)
+Nodes (18): useBets(), authFetch(), ApiBetRow, createBet(), createBets(), deleteAllBets(), deleteBet(), fetchBets() (+10 more)
 
 ### Community 30 - "users"
 Cohesion: 0.16
@@ -336,8 +336,8 @@ Cohesion: 0.10
 Nodes (30): ErrorBoundary, Props, State, storedLanguage(), EN, buildValue(), DICTS, I18nContext (+22 more)
 
 ### Community 92 - "authMiddleware.ts"
-Cohesion: 0.13
-Nodes (11): authenticatedUserFromRequest(), authenticateToken(), cookieValue(), getJwtSecret(), SESSION_COOKIE, tokenFromRequest(), router, getJwtSecret() (+3 more)
+Cohesion: 0.12
+Nodes (13): authenticatedUserFromRequest(), authenticateToken(), cookieValue(), getJwtSecret(), SESSION_COOKIE, tokenFromRequest(), getJwtSecret(), KNOWN_CLIENTS (+5 more)
 
 ### Community 93 - "betsRoutes.ts"
 Cohesion: 0.16
@@ -384,16 +384,16 @@ Cohesion: 0.23
 Nodes (9): calculateBankroll(), countsTowardsBalance(), countsTowardsExposure(), dayOf(), Event, round2(), toTimestamp(), BankrollMovementKind (+1 more)
 
 ### Community 116 - "pool.ts"
-Cohesion: 0.24
-Nodes (6): connect(), getPool(), query(), router, SUPPORTED_BOOKMAKERS, SUPPORTED_LANGUAGES
+Cohesion: 0.20
+Nodes (6): connect(), getPool(), query(), Kind, router, VALID_KINDS
 
 ### Community 117 - "dataTransfer.ts"
 Cohesion: 0.14
 Nodes (11): runImport(), umaAposta, cell(), FileReaderShim, header(), reimport(), BANKROLL_KINDS, buildBetsCSV() (+3 more)
 
-### Community 118 - "authFetch"
+### Community 118 - "parseJsonResponse"
 Cohesion: 0.34
-Nodes (16): Social(), SocialProps, authFetch(), acceptFriendRequest(), fetchFriendBets(), listFriends(), listRequests(), removeFriend() (+8 more)
+Nodes (16): Social(), SocialProps, parseJsonResponse(), acceptFriendRequest(), fetchFriendBets(), listFriends(), listRequests(), removeFriend() (+8 more)
 
 ### Community 133 - "haptics.ts"
 Cohesion: 0.13
@@ -463,9 +463,9 @@ Nodes (3): gradlew script, die(), warn()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `combineClosingOdds()` connect `clv.ts` to `types.ts`, `BetsManager.tsx`, `clvRoutes.ts`, `dataTransfer.ts`, `parseJsonResponse`?**
+- **Why does `combineClosingOdds()` connect `clv.ts` to `types.ts`, `BetsManager.tsx`, `clvRoutes.ts`, `dataTransfer.ts`, `authFetch`?**
   _High betweenness centrality (0.116) - this node is a cross-community bridge._
-- **Why does `useI18n()` connect `useI18n` to `types.ts`, `DesktopApp.tsx`, `Dashboard.tsx`, `authApi.ts`, `Bet`, `MobileInsights.tsx`, `BetsManager.tsx`, `MobileBets.tsx`, `MobileDashboard.tsx`, `MobileAdmin.tsx`, `authFetch`, `index.tsx`, `ClosingOddsSheet.tsx`?**
+- **Why does `useI18n()` connect `useI18n` to `types.ts`, `DesktopApp.tsx`, `Dashboard.tsx`, `authApi.ts`, `Bet`, `MobileInsights.tsx`, `BetsManager.tsx`, `MobileBets.tsx`, `MobileDashboard.tsx`, `MobileAdmin.tsx`, `parseJsonResponse`, `index.tsx`, `ClosingOddsSheet.tsx`?**
   _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **What connects `Trabalho`, `LISTAGENS`, `diario` to the rest of the system?**
   _419 weakly-connected nodes found - possible documentation gaps or missing edges._

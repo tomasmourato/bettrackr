@@ -116,6 +116,21 @@ interface Pick {
 // Sem captura (agente parado, migracao 020 por aplicar) volta tudo ao que era.
 // ============================================================
 
+// A ementa vai ORDENADA pela margem e CORTADA, em vez de se pedir ao modelo
+// que prefira os mercados baratos.
+//
+// Pedir nao funcionou: com a instrucao la, escolheu quatro em seis nos mercados
+// de 17-20% tendo La Liga a 6% disponivel. Leu a margem e nao a usou. Cortar a
+// lista nao e uma sugestao que se possa ignorar - o caro deixa de existir.
+//
+// Um numero fixo seria fragil: hoje ha 33 jogos, numa terca ha uma fracao
+// disso, e um limite de 12% podia deixar a lista vazia sem ninguem perceber
+// porque. Levar os N mais baratos auto-ajusta-se - num dia fraco da os que
+// houver, ainda assim os melhores.
+const MENU_MAX_MERCADOS = 20;
+/** Teto de sanidade: acima disto ja nao e preco, e uma esmola a casa. */
+const MENU_MARGEM_MAX = 20;
+
 interface OpcaoDoDia {
     selectionId: string;
     selection: string;
@@ -147,6 +162,8 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
         return out;
     }
 
+    // Achatar em mercados, para se poder ordenar por margem antes de cortar.
+    const mercados: Array<{ margem: number; opcoes: OpcaoDoDia[] }> = [];
     for (const row of rows) {
         const hora = row.kickoff_utc
             ? new Date(row.kickoff_utc).toLocaleTimeString("pt-PT", {
@@ -156,21 +173,32 @@ async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
               })
             : "";
         for (const m of Array.isArray(row.markets) ? row.markets : []) {
+            const margem = Number(m.marginPct);
+            if (!Number.isFinite(margem) || margem > MENU_MARGEM_MAX) continue;
+            const opcoes: OpcaoDoDia[] = [];
             for (const sel of Array.isArray(m?.selections) ? m.selections : []) {
                 if (!sel?.id) continue;
-                out.set(String(sel.id), {
+                opcoes.push({
                     selectionId: String(sel.id),
                     selection: String(sel.name ?? ""),
                     odd: Number(sel.odd),
                     noVig: Number(sel.noVig),
-                    marginPct: Number(m.marginPct),
+                    marginPct: margem,
                     market: String(m.name ?? ""),
                     match: String(row.event ?? ""),
                     competition: row.competition,
                     kickoffLisbon: hora,
                 });
             }
+            if (opcoes.length > 0) mercados.push({ margem, opcoes });
         }
+    }
+
+    // Do mais barato para o mais caro, e so os primeiros. O Map preserva a
+    // ordem de insercao, por isso a ementa sai ja ordenada.
+    mercados.sort((a, b) => a.margem - b.margem);
+    for (const m of mercados.slice(0, MENU_MAX_MERCADOS)) {
+        for (const o of m.opcoes) out.set(o.selectionId, o);
     }
     return out;
 }
@@ -239,6 +267,8 @@ Hoje é ${dateLisbon}. És um analista de apostas desportivas experiente e prude
 ${menu
     ? `ESCOLHE APENAS da lista abaixo. São jogos e ODDS REAIS da Betclic, capturados hoje de madrugada. Cada linha de seleção começa pelo ID que tens de devolver em "selectionId".
 
+A lista já vem ORDENADA do mercado mais barato para o mais caro - a margem de cada um está indicada. Os mercados caros foram removidos antes de chegarem aqui, por isso não precisas de te preocupar com isso: qualquer um serve em termos de preço, e os primeiros servem melhor.
+
 NÃO inventes jogos, equipas, mercados nem odds, e NÃO uses seleções que não estejam nesta lista - qualquer pick com um ID que não conste aqui é descartada pelo sistema. NÃO escrevas odds: o preço é preenchido a partir do ID.
 
 USA A PESQUISA GOOGLE apenas para o CONTEXTO de cada jogo: forma recente, lesões, castigos, onze provável, motivação e calendário.
@@ -250,7 +280,7 @@ Escolhe entre 3 e 8 picks para hoje. Se hoje não houver 3 que prestem, devolve 
 
 Como escolher:
 - Pelo MÉRITO de cada aposta, uma a uma. Não há quota de desportos nem de odds: não escolhas nada para "variar", nem para incluir um azarão, nem para cobrir um desporto que hoje não tem nada de jeito.${menu ? `
-- Entre duas escolhas de mérito parecido, prefere a do mercado com MENOR margem (vem indicada em cada linha da lista). É onde o preço é melhor, e é a única vantagem que não depende de acertares mais do que a casa.` : `
+- Entre duas escolhas de mérito parecido, prefere a que aparece MAIS ACIMA na lista: está lá porque a casa cobra menos nesse mercado.` : `
 - Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).`}
 - Justificação curta (1-2 frases) baseada em forma recente, confrontos, lesões ou contexto - factual, sem promessas.
 
