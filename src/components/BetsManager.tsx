@@ -20,7 +20,7 @@ import {
   ArrowDown,
   CheckSquare
 } from "lucide-react";
-import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType, SelectionResult } from "../types";
+import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType } from "../types";
 import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, parseDecimal, safeNum, selectBetsForFinancialSummary } from "../utils";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { hasCashoutSignal } from "../lib/betStatus";
@@ -28,6 +28,11 @@ import FilterDropdown from "./FilterDropdown";
 import FilteredBetsSummary from "./FilteredBetsSummary";
 import FiltersBar from "./FiltersBar";
 import { betClv, combineClosingOdds, needsClosingOdd } from "../lib/clv";
+import {
+  combineFormOdds,
+  mergeSelection,
+  type FormSelectionRow,
+} from "../lib/betFormSelections";
 import TimeframeFilter, {
   EMPTY_TIMEFRAME_FILTER,
   resolveTimeframeRange,
@@ -208,18 +213,12 @@ export default function BetsManager({
   const [formDateTime, setFormDateTime] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [formSettledReturn, setFormSettledReturn] = useState("");
-  const [formSelections, setFormSelections] = useState<Array<{
-    event: string;
-    market: string;
-    choice: string;
-    odd: string;
-    /** Odd de fecho desta perna; vazia enquanto não se souber. */
-    closingOdd: string;
-    // Hora do apito. Não editável - vem da extensão - mas anda por aqui para
-    // uma edição à mão não a deitar fora sem querer.
-    startsAt?: string;
-    result?: SelectionResult;
-  }>>([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
+  // A forma da linha e a regra que a funde com a perna gravada vivem em
+  // src/lib/betFormSelections.ts, partilhadas com o formulário do mobile: as
+  // duas cópias já tinham divergido (esta preservava o `result`, a outra não).
+  const [formSelections, setFormSelections] = useState<FormSelectionRow[]>([
+    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "" },
+  ]);
 
   useEffect(() => {
     if (!detailBet) return;
@@ -236,18 +235,10 @@ export default function BetsManager({
   }, [detailBet]);
 
   // Combined Odd Calculator based on selections
-  const calculatedOdd = useMemo(() => {
-    let multiplier = 1;
-    let validCount = 0;
-    formSelections.forEach(s => {
-      const parsed = parseDecimal(s.odd);
-      if (parsed !== null && parsed > 0) {
-        multiplier *= parsed;
-        validCount++;
-      }
-    });
-    return validCount > 0 ? Number(multiplier.toFixed(2)) : 1.00;
-  }, [formSelections]);
+  const calculatedOdd = useMemo(
+    () => combineFormOdds(formSelections, parseDecimal),
+    [formSelections],
+  );
 
   // Real-time calculations for potential return in the form
   // Odd de fecho combinada: null enquanto faltar a de uma perna que seja.
@@ -255,7 +246,13 @@ export default function BetsManager({
   const calculatedClosingOdd = useMemo(
     () =>
       combineClosingOdds(
-        formSelections.map((s) => ({ closingOdd: parseDecimal(s.closingOdd) ?? undefined })),
+        // O `result` vai junto: uma perna anulada não entra na linha de fecho,
+        // tal como não entra na odd. Sem isto a pré-visualização discordava do
+        // que o servidor iria gravar.
+        formSelections.map((s) => ({
+          closingOdd: parseDecimal(s.closingOdd) ?? undefined,
+          result: s.result,
+        })),
       ),
     [formSelections]
   );
@@ -739,6 +736,8 @@ export default function BetsManager({
       closingOdd: s.closingOdd ? String(s.closingOdd) : "",
       startsAt: s.startsAt,
       result: s.result,
+      // A perna inteira, para o que o formulário não edita sobreviver.
+      original: s,
     })));
     setIsModalOpen(true);
   };
@@ -810,16 +809,14 @@ export default function BetsManager({
       if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
         closingOddInvalid = true;
       }
-      selections.push({
-        id: `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
-        event: s.event.trim(),
-        market: s.market.trim(),
-        choice: s.choice.trim(),
-        odd: oddVal ?? 0,
-        ...(closingVal !== null && closingVal > 1 ? { closingOdd: closingVal } : {}),
-        ...(s.startsAt ? { startsAt: s.startsAt } : {}),
-        ...(s.result ? { result: s.result } : {}),
-      });
+      selections.push(
+        mergeSelection(
+          s,
+          `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
+          oddVal ?? 0,
+          closingVal,
+        ),
+      );
     });
 
     if (!isValid) {
