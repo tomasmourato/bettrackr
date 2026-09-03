@@ -29,13 +29,17 @@ create extension if not exists pg_net;
 --    select vault.create_secret('<o-mesmo-que-o-CRON_SECRET>', 'cron_secret');
 
 -- 3. A passagem, de 5 em 5 minutos.
---    Domínio de produção já preenchido (projeto bettrackrv2 na Vercel).
+--    Domínio de produção já preenchido (bettrackr.dev).
+--
+--    Mudar de domínio NÃO chega a mudar aqui: o url fica gravado dentro do
+--    trabalho já agendado. Depois de editar isto é preciso voltar a correr
+--    o bloco à mão, precedido de select cron.unschedule('clv-capture');
 select cron.schedule(
   'clv-capture',
   '*/5 * * * *',
   $$
     select net.http_get(
-      url := 'https://betrackr.vercel.app/api/clv/capture',
+      url := 'https://bettrackr.dev/api/clv/capture',
       headers := jsonb_build_object(
         'Authorization',
         'Bearer ' || (select decrypted_secret

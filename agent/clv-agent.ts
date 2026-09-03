@@ -28,7 +28,7 @@ import {
     type Market,
 } from "../lib/betclicOdds.js";
 
-const BASE = process.env.BETTRACKR_BASE || "https://betrackr.vercel.app";
+const BASE = process.env.BETTRACKR_BASE || "https://bettrackr.dev";
 const SECRET = process.env.BETTRACKR_AGENT_SECRET || "";
 const BETCLIC = "https://www.betclic.pt";
 

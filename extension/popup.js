@@ -47,7 +47,7 @@ function applySubscription(status, base) {
     info.trialEndsAt && new Date(info.trialEndsAt) <= new Date()
       ? "O período experimental terminou - a extensão precisa de uma subscrição ativa."
       : "A extensão precisa de uma subscrição ativa.";
-  paywallLink.href = `${base || "https://betrackr.vercel.app"}/settings`;
+  paywallLink.href = `${base || "https://bettrackr.dev"}/settings`;
   return false;
 }
 
@@ -129,7 +129,7 @@ async function loadAccounts() {
   try {
     const stored = await chrome.storage.local.get(["bettrackrToken", "bettrackrBase", "importAccountChoices"]);
     if (!stored.bettrackrToken) return;
-    const base = stored.bettrackrBase || "https://betrackr.vercel.app";
+    const base = stored.bettrackrBase || "https://bettrackr.dev";
     const saved = stored.importAccountChoices && typeof stored.importAccountChoices === "object"
       ? stored.importAccountChoices
       : {};

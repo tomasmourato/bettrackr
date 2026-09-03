@@ -23,11 +23,15 @@ import {
 } from "./closing-odds.js";
 
 const PAGE_SIZE = 20;
-const DEFAULT_BETTRACKR_BASE = "https://betrackr.vercel.app";
+const DEFAULT_BETTRACKR_BASE = "https://bettrackr.dev";
 const BETTRACKR_APP_URLS = [
+  "https://bettrackr.dev/*",
+  "https://www.bettrackr.dev/*",
+  // Dominios *.vercel.app anteriores ao dominio proprio. Ficam aqui ate
+  // deixarem de servir a app: enquanto so redirecionarem, o separador acaba
+  // no dominio novo (que ja esta na lista), mas uma extensao antiga que ainda
+  // nao tenha sido recarregada continua a precisar deles para a ponte.
   "https://betrackr.vercel.app/*",
-  // Dominio anterior ao rename do projeto. Fica aqui ate deixar de servir a
-  // app, senao as extensoes ja instaladas perdem a ponte com o site.
   "https://gestordebets.vercel.app/*",
   "http://localhost/*",
   "http://127.0.0.1/*",

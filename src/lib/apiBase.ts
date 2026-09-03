@@ -14,10 +14,15 @@
 // projeto na Vercel deixou o domínio antigo a devolver só 301. Por isso a app
 // nativa faz os pedidos pelo HTTP nativo (CapacitorHttp em capacitor.config.ts),
 // que segue redirecionamentos e ignora CORS; um domínio que redirecione para o
-// novo continua a funcionar. Um domínio próprio (que sobrevive a mudanças de
-// nome do projeto) seria mais seguro do que este *.vercel.app.
+// novo continua a funcionar.
+//
+// Daqui em diante é um domínio próprio, que era exatamente o que faltava: nem o
+// nome do projeto na Vercel nem uma mudança de alojamento voltam a partir os
+// APKs já instalados - reaponta-se o DNS. Em troca, os *.vercel.app anteriores
+// (gestordebets e betrackr) TÊM de continuar a redirecionar para cá enquanto
+// houver instalações antigas a chamá-los.
 
-const PRODUCTION_API = "https://betrackr.vercel.app";
+const PRODUCTION_API = "https://bettrackr.dev";
 
 /** True quando a app corre dentro da shell nativa do Capacitor. */
 export function isNativeApp(): boolean {
