@@ -231,6 +231,48 @@ describe("combineClosingOdds", () => {
     expect(combineClosingOdds([leg(2.1), leg(1)])).toBeNull();
     expect(combineClosingOdds([leg(2.1), leg(0)])).toBeNull();
   });
+
+  // ----------------------------------------------------------
+  // Pernas anuladas
+  //
+  // Quando um jogo não se realiza, a casa devolve àquela perna o valor 1 e
+  // volta a liquidar o boletim com as restantes - a odd da aposta desce.
+  // A linha de fecho tem de descer com ela, senão comparam-se coisas
+  // diferentes.
+  // ----------------------------------------------------------
+  const anulada = (closingOdd?: number) => ({ closingOdd, result: "ANULADA" });
+
+  test("a perna anulada sai do produto", () => {
+    // Caso real de 31/08/2026: Coquimbo Unido @1.43 (fecho 1.33) anulado,
+    // Saprissa @1.21 (fecho 1.16) ganho. A Betclic pagou a 1.21.
+    expect(combineClosingOdds([anulada(1.33), leg(1.16)])).toBe(1.16);
+  });
+
+  test("o CLV deixa de ser um número inventado", () => {
+    // A odd que a casa pagou, contra a linha de fecho das pernas que contaram.
+    const fecho = combineClosingOdds([anulada(1.33), leg(1.16)])!;
+    expect(Number((((1.21 / fecho) - 1) * 100).toFixed(1))).toBe(4.3);
+    // Com a perna anulada lá dentro, a combinada era 1.33 x 1.16 arredondado
+    // às duas casas com que fica gravada - 1.54 - e o painel mostrava -21.4%,
+    // que era o preço de uma perna dividido pela linha de duas.
+    const errado = Number((1.33 * 1.16).toFixed(2));
+    expect(errado).toBe(1.54);
+    expect(Number((((1.21 / errado) - 1) * 100).toFixed(1))).toBe(-21.4);
+  });
+
+  test("uma perna anulada SEM odd de fecho não trava a combinada", () => {
+    // O jogo não se realizou, por isso não há linha de fecho nenhuma para ler.
+    // Antes isto deixava a múltipla eternamente "incompleta".
+    expect(combineClosingOdds([anulada(undefined), leg(1.16)])).toBe(1.16);
+  });
+
+  test("todas anuladas não dá combinada", () => {
+    expect(combineClosingOdds([anulada(1.33), anulada(1.16)])).toBeNull();
+  });
+
+  test("as pernas que contam continuam a ter de estar completas", () => {
+    expect(combineClosingOdds([anulada(1.33), leg(2.1), leg(undefined)])).toBeNull();
+  });
 });
 
 describe("kickoffOf e needsClosingOdd com o apito", () => {

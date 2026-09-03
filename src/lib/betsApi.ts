@@ -103,7 +103,9 @@ export function mapBetFromApi(row: ApiBetRow): Bet {
     // nunca poderem discordar sobre o que é uma múltipla completa.
     closingOddNoVig:
       combineClosingOdds(
-        selections.map((s) => ({ closingOdd: s.closingOddNoVig })),
+        // O `result` vai junto: sem ele, a combinada sem margem incluia as
+        // pernas anuladas que a crua ja exclui, e as duas discordavam.
+        selections.map((s) => ({ closingOdd: s.closingOddNoVig, result: s.result })),
       ) ?? undefined,
     isFreebet: row.is_freebet === true,
     freebetType: VALID_FREEBET_TYPES.includes(row.freebet_type)

@@ -12,12 +12,19 @@ import { normalizeBetStatus } from "../src/lib/betStatus.js";
 // separadamente do frontend; não deve depender de módulos da camada `src` nem
 // de uma resolução de imports TypeScript adicional para arrancar.
 function combineClosingOdds(
-    selections: Array<{ closingOdd?: unknown }> | undefined,
+    selections: Array<{ closingOdd?: unknown; result?: unknown }> | undefined,
 ): number | null {
     if (!Array.isArray(selections) || selections.length === 0) return null;
 
+    // Uma perna anulada sai do produto, tal como ja saiu da odd da aposta: a
+    // casa devolve-lhe o valor 1 quando o jogo nao se realiza. Manter-la aqui
+    // punha o preco de uma perna a ser dividido pela linha de duas. A razao
+    // longa esta em lib/clvClosingOdds.ts, que tem a copia irma desta regra.
+    const contam = selections.filter((selection) => selection?.result !== "ANULADA");
+    if (contam.length === 0) return null;
+
     let product = 1;
-    for (const selection of selections) {
+    for (const selection of contam) {
         const odd = Number(selection?.closingOdd);
         if (!Number.isFinite(odd) || odd <= 1) return null;
         product *= odd;
