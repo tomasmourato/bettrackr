@@ -833,6 +833,29 @@ aria-label={t("bets.selectAria")}
                   <div className="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
                     <span>{t("bets.field.stake")} {money(safeNum(bet.stake))}</span>
                     <span>{t("bets.field.odd")} {safeNum(bet.odd).toFixed(2)}</span>
+                    {/* CLV no cartão, e não só na folha de detalhe.
+                        No desktop é uma coluna da lista, sempre à vista; aqui
+                        estava escondido atrás de um toque, e um número que
+                        obriga a procurá-lo é um número que ninguém lê. Leva cor
+                        e fundo próprio porque é um sinal, não metadados: o
+                        resto desta linha é cinzento de propósito. */}
+                    {(() => {
+                      const clv = betClv(bet);
+                      if (!clv) return null;
+                      const acima = clv.clvPct >= 0;
+                      return (
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-bold tabular-nums ${
+                            acima
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {t("clv.title")} {acima ? "+" : ""}
+                          {clv.clvPct.toFixed(1)}%
+                        </span>
+                      );
+                    })()}
                     <span className="ml-auto">{bet.dateTime?.slice(11, 16) || ""}</span>
                   </div>
                 </div>
