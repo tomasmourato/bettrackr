@@ -24,6 +24,36 @@
 
 const PRODUCTION_API = "https://bettrackr.dev";
 
+/**
+ * Os domínios por onde a app sabe procurar uma atualização, por ordem.
+ *
+ * Existe por causa de uma armadilha que já fechou a porta duas vezes: o
+ * domínio da API fica gravado dentro do APK, e quando ele deixa de servir
+ * (301 sem CORS, projeto renomeado, alias apagado) a app perde a base de dados
+ * E o `/app-version.json` que a curaria. Fica presa, sem canal remoto nenhum
+ * para lhe chegar uma correção - o único remédio é reinstalar à mão.
+ *
+ * Com uma lista, o canal de atualização sobrevive à morte de qualquer um deles:
+ * basta que UM continue de pé para a app se conseguir puxar para a frente. Não
+ * salva as instalações que já existem - essas foram compiladas com o que
+ * tinham -, fecha a armadilha daqui em diante.
+ *
+ * O custo em funcionamento normal é zero: só se tenta o seguinte quando o
+ * anterior falha.
+ *
+ * Não há risco de um domínio velho empurrar um bundle velho: quem decide é o
+ * `buildTime` em liveUpdate.ts, e um build mais antigo do que o instalado é
+ * sempre ignorado.
+ */
+export const UPDATE_BASES: readonly string[] = [
+    // Primeiro o que esta build usa para tudo o resto.
+    PRODUCTION_API,
+    // Depois os anteriores, que continuam ligados ao mesmo projeto na Vercel
+    // enquanto houver instalações antigas a chamá-los.
+    "https://betrackr.vercel.app",
+    "https://gestordebets.vercel.app",
+];
+
 /** True quando a app corre dentro da shell nativa do Capacitor. */
 export function isNativeApp(): boolean {
   try {
