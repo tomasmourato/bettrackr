@@ -889,6 +889,11 @@ export const PT = {
     "O valor esperado acumulado das tuas apostas medido contra a linha de fecho.",
   "clv.noVig": "CLV sem margem",
   "clv.noVigValue": "{n} · {pct}",
+  "clv.locked.title": "O CLV faz parte da subscrição",
+  "clv.locked.desc": "A odd de fecho é apanhada sozinha pouco antes do apito e diz-te se apostaste a um preço melhor do que o do mercado. É a única medida que separa a decisão da sorte.",
+  "clv.locked.cta": "Ver subscrição",
+  "clv.locked.short": "O CLV faz parte da subscrição",
+  "billing.includes.clv": "CLV: a odd de fecho apanhada sozinha e a análise que mostra se bates o mercado",
   "clv.noVigHelp":
     "O mesmo CLV, mas contra a linha de fecho já sem a margem da casa. É a medida honesta e dá sempre um número mais baixo: a margem estava a inflacionar o CLV. Só conta as apostas em que o mercado completo estava disponível.",
   "clv.promo": "Promoções",

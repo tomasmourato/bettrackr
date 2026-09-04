@@ -883,6 +883,11 @@ export const EN: Record<TKey, Entry> = {
   "clv.chartDesc": "The expected value of your bets so far, measured against the closing line.",
   "clv.noVig": "No-vig CLV",
   "clv.noVigValue": "{n} · {pct}",
+  "clv.locked.title": "CLV is part of the subscription",
+  "clv.locked.desc": "The closing line is captured on its own just before kick-off and tells you whether you bet at a better price than the market. It is the one measure that separates the decision from the luck.",
+  "clv.locked.cta": "See subscription",
+  "clv.locked.short": "CLV is part of the subscription",
+  "billing.includes.clv": "CLV: the closing line captured for you, and the analysis that shows if you beat the market",
   "clv.noVigHelp":
     "The same CLV, but against the closing line with the bookmaker's margin removed. It is the honest measure and always reads lower: the margin was inflating CLV. Only counts bets where the full market was available.",
   "clv.promo": "Promos",

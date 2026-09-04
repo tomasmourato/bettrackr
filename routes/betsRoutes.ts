@@ -5,7 +5,13 @@ import {
     AuthenticatedRequest,
     authenticateToken,
 } from "../middleware/authMiddleware.js";
-import { requireSubscriptionForExtension } from "../middleware/accessMiddleware.js";
+import {
+    attachAccess,
+    requireSubscription,
+    requireSubscriptionForExtension,
+    type AccessRequest,
+} from "../middleware/accessMiddleware.js";
+import { semClv } from "../lib/clvVisibility.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
 
 // Mantém esta regra dentro do bundle backend. A rota é compilada pela Vercel
@@ -132,6 +138,11 @@ router.use(authenticateToken);
 // A extensão é funcionalidade paga; o registo manual de apostas não. Só os
 // pedidos feitos com um token da extensão passam pelo portão da subscrição.
 router.use(requireSubscriptionForExtension);
+
+// A odd de fecho e o CLV sao pagos, mas registar e ler apostas nao. Por isso o
+// acesso e CARREGADO aqui sem recusar nada: quem decide o que fazer com ele sao
+// os handlers, que cortam o CLV do payload de quem nao tem subscricao.
+router.use(attachAccess);
 
 // Colunas devolvidas ao frontend - lista única partilhada com o SSR (server.ts).
 const BET_COLUMNS = BET_SELECT_COLUMNS;
@@ -349,7 +360,7 @@ function dbErrorMessage(error: any): string | null {
 // ============================================================
 // GET /api/bets  -> lista só as bets do utilizador autenticado
 // ============================================================
-router.get("/", async (req: AuthenticatedRequest, res) => {
+router.get("/", async (req: AccessRequest, res) => {
     try {
         const result = await pool.query(
             `SELECT ${BET_COLUMNS}
@@ -358,7 +369,10 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
        ORDER BY date_time DESC NULLS LAST, created_at DESC`,
             [req.user!.id],
         );
-        res.json({ bets: result.rows });
+        // Sem subscricao, a odd de fecho nem sai daqui. Esconder a coluna no
+        // ecra deixava o valor a vista de quem abrisse a consola do browser.
+        const entitled = req.access?.entitled === true;
+        res.json({ bets: entitled ? result.rows : result.rows.map(semClv) });
     } catch (error) {
         console.error("Erro ao listar bets:", error);
         res.status(500).json({ error: "Erro ao obter as bets." });
@@ -493,14 +507,22 @@ router.post("/bulk", async (req: AuthenticatedRequest, res) => {
 // PUT /api/bets/:id  -> substitui os campos editáveis de uma bet
 // (o frontend envia sempre a aposta completa)
 // ============================================================
-router.put("/:id", async (req: AuthenticatedRequest, res) => {
+router.put("/:id", async (req: AccessRequest, res) => {
     const { id } = req.params;
 
-    // Só se abre transação quando há odds de fecho a salvar do payload. O
-    // bloqueio da linha é preciso pela mesma razão do PATCH /:id/closing-odd:
-    // a captura automática pode estar a escrever a odd de fecho no preciso
-    // momento em que a importação reescreve a aposta.
-    const client = ownsClosingOdds(req.body) ? null : await pool.connect();
+    // Sem subscrição, o corpo NUNCA manda nas odds de fecho - mesmo que as
+    // traga. Não é só o ecrã que as esconde: a esta conta o servidor também não
+    // as devolve, por isso um PUT vindo dela traria o que ela viu, ou seja
+    // nada, e gravá-lo apagava odds de fecho que estavam lá. Cair no ramo de
+    // preservação é o que faz com que uma subscrição em pausa não custe
+    // histórico a ninguém.
+    const mandaNasOdds = ownsClosingOdds(req.body) && req.access?.entitled === true;
+
+    // Só se abre transação quando há odds de fecho a preservar. O bloqueio da
+    // linha é preciso pela mesma razão do PATCH /:id/closing-odd: a captura
+    // automática pode estar a escrever a odd de fecho no preciso momento em que
+    // a importação reescreve a aposta.
+    const client = mandaNasOdds ? null : await pool.connect();
     let committed = false;
 
     try {
@@ -632,7 +654,7 @@ router.patch("/:id/ignore", async (req: AuthenticatedRequest, res) => {
 // inteira de volta - revalidando estado, seleções e metadata só para escrever
 // um número. `closingOdd: null` limpa o valor (volta a "ainda não se sabe").
 // ============================================================
-router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
+router.patch("/:id/closing-odd", requireSubscription, async (req: AuthenticatedRequest, res) => {
     const raw = req.body?.closingOdd;
     let closingOdd: number | null = null;
     if (raw !== undefined && raw !== null && raw !== "") {

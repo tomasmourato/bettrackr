@@ -86,6 +86,13 @@ function MobileShell(props: ShellProps) {
     subscription && !subscription.entitled && PAID_TABS.has(activeTab),
   );
 
+  // O CLV é pago, mas não é um separador - vive dentro do Painel e dos
+  // Boletins, que são grátis. Enquanto `subscription` for null assume-se que
+  // sim: o servidor não devolve valor nenhum entretanto, por isso não há nada
+  // a escapar-se, e piscar um cadeado seria pior.
+  const clvEnabled = subscription ? subscription.entitled : true;
+  const goToSubscription = () => navigateToTab("SETTINGS");
+
   // Status bar edge-to-edge + estilo por tema, e esconder o splash.
   useNativeChrome(isDark);
 
@@ -184,12 +191,12 @@ function MobileShell(props: ShellProps) {
               >
                 {activeTab === "DASHBOARD" && (
                   <PullToRefresh onRefresh={onRefresh}>
-                    <MobileDashboard bankrollMovements={bankrollMovements} bets={bets} currency={preferences.currency} isDark={isDark} accounts={accounts} onOpenBets={navigateToFilteredBets} onSetClosingOdd={onSetClosingOdd} />
+                    <MobileDashboard bankrollMovements={bankrollMovements} bets={bets} currency={preferences.currency} isDark={isDark} accounts={accounts} onOpenBets={navigateToFilteredBets} onSetClosingOdd={clvEnabled ? onSetClosingOdd : undefined} clvEnabled={clvEnabled} onSubscribe={goToSubscription} />
                   </PullToRefresh>
                 )}
                 {activeTab === "BETS" && (
                   <PullToRefresh onRefresh={onRefresh}>
-                    <MobileBets bets={bets} currency={preferences.currency} onAddBet={onAddBet} onAddBets={onDuplicateBets} onUpdateBet={onUpdateBet} onIgnoreBet={onIgnoreBet} onDeleteBet={onDeleteBet} accounts={accounts} />
+                    <MobileBets bets={bets} currency={preferences.currency} onAddBet={onAddBet} onAddBets={onDuplicateBets} onUpdateBet={onUpdateBet} onIgnoreBet={onIgnoreBet} onDeleteBet={onDeleteBet} accounts={accounts} clvEnabled={clvEnabled} onSubscribe={goToSubscription} />
                   </PullToRefresh>
                 )}
                 {blockedByPaywall && subscription && (

@@ -14,6 +14,7 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
 import { combineClosingOdds } from "../lib/clvClosingOdds.js";
+import { ENTITLED_SQL } from "../lib/entitlements.js";
 import {
     betclicMatchPath,
     devig,
@@ -205,13 +206,24 @@ async function applyToBet(
  * decisao de o que ler nao.
  */
 async function trabalho(now: number) {
+    // So contas com subscricao entram na captura. O CLV e funcionalidade paga, e
+    // esta passagem custa dinheiro a serio: e o agente a ler paginas da Betclic
+    // numa ligacao residencial, com um teto de pedidos por passagem. Ler por
+    // quem nao paga era gastar esse teto - e o que o dono do telemovel aguenta
+    // pedir a casa - com trabalho que ninguem contratou.
+    //
+    // O filtro e o MESMO ENTITLED_SQL que o painel de gestao usa, para nao haver
+    // duas respostas diferentes a pergunta "esta conta tem acesso?".
     const { rows } = await pool.query<BetRow>(
-        `SELECT id, selections, metadata
-           FROM bets
-          WHERE status = 'POR_LIQUIDAR'
-            AND is_ignored = false
-            AND lower(bookmaker) = 'betclic'
-            AND jsonb_typeof(selections) = 'array'
+        `SELECT b.id, b.selections, b.metadata
+           FROM bets b
+           JOIN users u ON u.id = b.user_id
+           LEFT JOIN subscriptions s ON s.user_id = u.id
+          WHERE b.status = 'POR_LIQUIDAR'
+            AND b.is_ignored = false
+            AND lower(b.bookmaker) = 'betclic'
+            AND jsonb_typeof(b.selections) = 'array'
+            AND ${ENTITLED_SQL}
           LIMIT 2000`,
     );
 

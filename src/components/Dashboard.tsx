@@ -20,6 +20,7 @@ import { Bet, BetStatus, BookieAccount, BankrollMovement, DashboardStats } from 
 import { calculateDashboardStats, safeNum } from "../utils";
 import { calculateBankroll } from "../lib/bankroll";
 import { calculateClv } from "../lib/clv";
+import { ClvLockPanel } from "./ClvLock";
 import ClosingOddsModal from "./ClosingOddsModal";
 import type { ClosingOddInput } from "../lib/betsApi";
 import { useI18n } from "../lib/i18n";
@@ -68,6 +69,13 @@ interface DashboardProps {
   // Movimentos da banca. Ausente na vista de um amigo: o saldo é privado e a
   // secção da banca simplesmente não aparece.
   bankrollMovements?: BankrollMovement[];
+  // O CLV é funcionalidade paga. A false, a secção inteira dá lugar ao cartão
+  // que a explica - incluindo o apelo a preencher odds de fecho, que não faz
+  // sentido oferecer a quem não as pode gravar. Omitido = ligado, para a vista
+  // de um amigo e o SSR não terem de saber disto.
+  clvEnabled?: boolean;
+  // Leva à subscrição. Sem isto o cadeado informa mas não resolve.
+  onSubscribe?: () => void;
   // Gravar a odd de fecho a partir da caixa de entrada do CLV. Ausente na
   // vista de um amigo, que é só de leitura - aí a secção mostra os números
   // mas não oferece o preenchimento.
@@ -93,7 +101,7 @@ export interface DashboardBetsFilters {
   dateTo?: string;
 }
 
-export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch, bankrollMovements, onSetClosingOdd }: DashboardProps) {
+export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets, accounts = [], initialSearch, bankrollMovements, onSetClosingOdd, clvEnabled = true, onSubscribe }: DashboardProps) {
   const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   // Filtros do dashboard (D2): recalculam TODAS as estatísticas/gráficos para o
   // subconjunto escolhido. As opções vêm da lista completa; o cálculo usa a
@@ -727,7 +735,9 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
 
       {/* CLV: a odd apanhada contra a linha de fecho. Ao contrário do resto do
           painel, inclui as apostas por liquidar - é essa a graça da métrica. */}
-      {clv.hasData ? (
+      {!clvEnabled ? (
+        <ClvLockPanel onSubscribe={onSubscribe} />
+      ) : clv.hasData ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="bg-white dark:bg-zinc-900 rounded-sm p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between" id="card-clv">
             <div className="flex justify-between items-start">
@@ -884,7 +894,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         )
       )}
 
-      {isClosingOddsOpen && onSetClosingOdd && (
+      {isClosingOddsOpen && clvEnabled && onSetClosingOdd && (
         <ClosingOddsModal
           bets={allBets}
           onClose={() => setIsClosingOddsOpen(false)}

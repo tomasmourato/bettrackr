@@ -28,6 +28,7 @@ import FilterDropdown from "./FilterDropdown";
 import FilteredBetsSummary from "./FilteredBetsSummary";
 import FiltersBar from "./FiltersBar";
 import { betClv, combineClosingOdds, needsClosingOdd } from "../lib/clv";
+import { ClvLockInline } from "./ClvLock";
 import {
   combineFormOdds,
   mergeSelection,
@@ -62,6 +63,12 @@ interface BetsManagerProps {
   onIgnoreBet: (id: string, ignored: boolean, comment?: string | null) => void | Promise<void>;
   onDeleteBet: (id: string) => void | Promise<void>;
   initialSearch?: string;
+  // O CLV é funcionalidade paga. A false, a coluna dá lugar a um cadeado e o
+  // filtro por CLV desaparece - filtrar por um valor que não vem do servidor
+  // só daria listas vazias sem explicação. Omitido = ligado.
+  clvEnabled?: boolean;
+  // Leva à subscrição, a partir do cadeado.
+  onSubscribe?: () => void;
 }
 
 type SortField = "date" | "stake" | "odd" | "profit" | "clv";
@@ -100,7 +107,9 @@ export default function BetsManager({
   onIgnoreBet,
   onDeleteBet,
   initialSearch,
-  accounts = []
+  accounts = [],
+  clvEnabled = true,
+  onSubscribe
 }: BetsManagerProps) {
   const { t, locale, formatMoney, formatSignedMoney } = useI18n();
   const initialFilters = useMemo(
@@ -1097,17 +1106,19 @@ export default function BetsManager({
             ariaLabel={t("filters.moneyAria")}
           />
 
-          <FilterDropdown
-            className="flex-1 min-w-40"
-            value={clvFilter}
-            options={[
-              { value: "ALL", label: t("clv.filter.all") },
-              { value: "TRACKED", label: t("clv.filter.tracked") },
-              { value: "MISSING", label: t("clv.filter.missing") }
-            ]}
-            onChange={setClvFilter}
-            ariaLabel={t("clv.filterAria")}
-          />
+          {clvEnabled && (
+            <FilterDropdown
+              className="flex-1 min-w-40"
+              value={clvFilter}
+              options={[
+                { value: "ALL", label: t("clv.filter.all") },
+                { value: "TRACKED", label: t("clv.filter.tracked") },
+                { value: "MISSING", label: t("clv.filter.missing") }
+              ]}
+              onChange={setClvFilter}
+              ariaLabel={t("clv.filterAria")}
+            />
+          )}
 
           <TimeframeFilter
             className="flex-1 min-w-40"
@@ -1493,6 +1504,15 @@ title={t("bets.ignoredTitle")}
                   {/* CLV: "-" quando ainda não há odd de fecho. A coluna existe
                       sempre para o cabeçalho poder ordenar por ela. */}
                   <div className="hidden sm:flex flex-col min-w-[48px]">
+                    {/* Sem subscrição não há valor nenhum para mostrar nem para
+                        ordenar: o servidor não devolve a odd de fecho a estas
+                        contas. Fica o cadeado, que diz onde a ir buscar. */}
+                    {!clvEnabled ? (
+                      <span className="self-end">
+                        <ClvLockInline onSubscribe={onSubscribe} />
+                      </span>
+                    ) : (
+                      <>
                     {sortButton("bets.sort.clv", "clv", "self-end")}
                     {(() => {
                       const clv = betClv(bet);
@@ -1510,6 +1530,8 @@ title={t("bets.ignoredTitle")}
                         </span>
                       );
                     })()}
+                      </>
+                    )}
                   </div>
                   <div className="flex flex-col min-w-[75px]">
                     {sortButton(isSettled ? "bets.sort.profit" : "bets.sort.potential", "profit", "self-end")}

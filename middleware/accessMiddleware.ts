@@ -143,3 +143,30 @@ export async function requireAdmin(
     res.status(500).json({ error: "Erro ao validar as permissões." });
   }
 }
+
+/**
+ * Carrega o acesso e segue - nunca recusa.
+ *
+ * Existe para as rotas que toda a gente pode usar mas cujo CONTEUDO muda com a
+ * subscricao. As apostas sao disso o caso: registar e ler apostas e gratis, mas
+ * a odd de fecho e o CLV sao pagos, por isso o handler precisa de saber quem
+ * esta do outro lado sem que o pedido seja rejeitado.
+ *
+ * Se a leitura falhar, segue como NAO entitled: numa duvida sobre acesso pago,
+ * fechar e o lado seguro para errar.
+ */
+export async function attachAccess(
+  req: AccessRequest,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.user?.id) {
+    try {
+      const access = await loadAccess(req.user.id);
+      if (access) req.access = access;
+    } catch (error) {
+      console.error("Erro ao ler o acesso (segue sem ele):", error);
+    }
+  }
+  next();
+}
