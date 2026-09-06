@@ -1,14 +1,14 @@
 // A fusão entre o que o formulário edita e a perna como ela estava.
 //
 // PORQUE EXISTE
-// O formulário edita cinco campos por perna: evento, mercado, escolha, odd e
-// odd de fecho. A perna gravada tem muito mais - `sourceRef`, `startsAtUtc`,
-// `result`, o de-vig, `isBoosted`, `sport`, `betType` - e nada disso tem caixa
-// no ecrã. Enquanto se listou campo a campo o que havia a preservar, cada
-// campo novo era esquecido: o `startsAt` foi lembrado, o `result` só no
-// desktop, e o resto perdia-se ao gravar. Abrir e gravar uma aposta importada
-// apagava o `sourceRef` (e com ele a hipótese de o agente voltar a ler a
-// perna), o `startsAtUtc` e a marca de anulada.
+// O formulário edita seis campos por perna: evento, mercado, escolha, odd, odd
+// de fecho e odd original. A perna gravada tem muito mais - `sourceRef`,
+// `startsAtUtc`, `result`, o de-vig, `isBoosted`, `sport`, `betType` - e nada
+// disso tem caixa no ecrã. Enquanto se listou campo a campo o que havia a
+// preservar, cada campo novo era esquecido: o `startsAt` foi lembrado, o
+// `result` só no desktop, e o resto perdia-se ao gravar. Abrir e gravar uma
+// aposta importada apagava o `sourceRef` (e com ele a hipótese de o agente
+// voltar a ler a perna), o `startsAtUtc` e a marca de anulada.
 //
 // A regra passa a ser a inversa: parte-se da perna INTEIRA e substitui-se o
 // que o formulário edita. Um campo novo em Selection fica preservado sozinho.
@@ -26,6 +26,11 @@ export interface FormSelectionRow {
   odd: string;
   /** Odd de fecho desta perna; vazia enquanto não se souber. */
   closingOdd: string;
+  /**
+   * Odd de ANTES do boost; vazia quando não houve boost (o normal). É contra
+   * ela que o CLV se mede - ver Selection.originalOdd e src/lib/clv.ts.
+   */
+  originalOdd?: string;
   // Hora do apito. Não é editável - vem da extensão - mas anda por aqui para
   // uma edição à mão não a deitar fora sem querer.
   startsAt?: string;
@@ -46,12 +51,16 @@ export interface FormSelectionRow {
  * margem vão atrás: pertencem à odd crua de onde saíram, e deixá-las ao lado
  * de uma odd nova era guardar uma margem que já não é de lado nenhum. É a
  * mesma regra que o servidor aplica em applyToBet.
+ *
+ * A odd original segue a mesma lei: o formulário mostra-a, logo o formulário
+ * manda nela. Ausente (ou <= 1) apaga a que estivesse gravada.
  */
 export function mergeSelection(
   row: FormSelectionRow,
   id: string,
   odd: number,
   closingOdd: number | null,
+  originalOdd: number | null = null,
 ): Selection {
   const merged: Selection = {
     ...(row.original ?? {}),
@@ -69,6 +78,9 @@ export function mergeSelection(
     delete merged.closingOddNoVig;
     delete merged.closingOddMargin;
   }
+
+  if (originalOdd !== null && originalOdd > 1) merged.originalOdd = originalOdd;
+  else delete merged.originalOdd;
 
   if (row.startsAt) merged.startsAt = row.startsAt;
   if (row.result) merged.result = row.result;

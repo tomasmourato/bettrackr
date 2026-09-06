@@ -8,6 +8,7 @@ import {
   kickoffOf,
   needsClosingOdd,
   betClvNoVig,
+  originalOddOf,
 } from "../../src/lib/clv";
 import type { Bet, BetStatus } from "../../src/types";
 
@@ -491,5 +492,145 @@ describe("calculateClv com odds sem margem", () => {
     const s = calculateClv([bet({ odd: 2.2, closingOdd: 2 })]);
     expect(s.noVigBets).toBe(0);
     expect(s.noVigAvgClvPct).toBe(0);
+  });
+});
+
+// ------------------------------------------------------------
+// A odd de ANTES do boost
+//
+// O caso real: Athletic Bilbao - Atlético de Madrid, 2026-09-05. A odd de 2.32
+// foi turbinada para 2.98 com um item promocional; a linha fechou em 2.37. A
+// app dizia +25.74% de CLV a uma escolha que ficou ABAIXO do mercado - o CLV
+// estava a medir a generosidade da casa, não a qualidade da escolha.
+// ------------------------------------------------------------
+
+/** A perna daquela aposta, com e sem o preço de antes do boost. */
+function turbinada(over: Partial<Bet["selections"][number]> = {}) {
+  return {
+    id: "s-boost",
+    event: "Athletic Bilbao - Atlético de Madrid",
+    market: "Equipa tem 2 golos de vantagem ou vence (tempo reg.)",
+    choice: "Atlético de Madrid",
+    odd: 2.98,
+    closingOdd: 2.37,
+    ...over,
+  };
+}
+
+describe("odd original (antes do boost)", () => {
+  test("o caso real: mede-se pela odd original, não pela turbinada", () => {
+    const b = bet({
+      odd: 2.98,
+      closingOdd: 2.37,
+      stake: 10,
+      status: "PERDIDA",
+      selections: [turbinada({ originalOdd: 2.32 })],
+    });
+    // 2.32 / 2.37 - 1 = -2.11% (e não os +25.74% que a app mostrava).
+    expect(betClv(b)!.clvPct).toBe(-2.11);
+    expect(betClv(b)!.moneyClv).toBe(-0.21);
+    expect(betClv(b)!.beatClose).toBe(false);
+  });
+
+  test("sem odd original nada muda: continua a medir-se pela odd apanhada", () => {
+    const b = bet({ odd: 2.98, closingOdd: 2.37, stake: 10, selections: [turbinada()] });
+    expect(betClv(b)!.clvPct).toBe(25.74);
+  });
+
+  test("numa múltipla, só a perna turbinada troca de preço", () => {
+    const b = bet({
+      type: "MULTIPLA",
+      odd: 4.47, // 2.98 * 1.50
+      closingOdd: 3.55,
+      selections: [
+        turbinada({ originalOdd: 2.32, closingOdd: 2.37 }),
+        { id: "s-2", event: "B", market: "Vencedor", choice: "x", odd: 1.5, closingOdd: 1.5 },
+      ],
+    });
+    // 2.32 * 1.50 = 3.48 contra 3.55 -> -1.97%
+    expect(originalOddOf(b)).toBe(3.48);
+    expect(betClv(b)!.clvPct).toBe(-1.97);
+  });
+
+  test("perna anulada leva o boost com ela", () => {
+    // O jogo turbinado não se realizou: a casa liquidou o boletim sem ele, e
+    // o que resta é uma aposta normal medida pela odd que se apanhou.
+    const b = bet({
+      type: "MULTIPLA",
+      odd: 1.5,
+      closingOdd: 1.45,
+      selections: [
+        turbinada({ originalOdd: 2.32, result: "ANULADA" }),
+        { id: "s-2", event: "B", market: "Vencedor", choice: "x", odd: 1.5, closingOdd: 1.45 },
+      ],
+    });
+    expect(originalOddOf(b)).toBeNull();
+    // 1.50 / 1.45 - 1 = +3.45%
+    expect(betClv(b)!.clvPct).toBe(3.45);
+  });
+
+  test("sem nenhuma perna com preço original, originalOddOf é null", () => {
+    expect(originalOddOf(bet({ selections: [turbinada()] }))).toBeNull();
+    expect(originalOddOf(bet({ selections: [] }))).toBeNull();
+  });
+
+  test("um preço original impossível é ignorado, não usado", () => {
+    const b = bet({ odd: 2.98, closingOdd: 2.37, selections: [turbinada({ originalOdd: 0.5 })] });
+    expect(originalOddOf(b)).toBeNull();
+    expect(betClv(b)!.clvPct).toBe(25.74);
+  });
+
+  test("boletim com preço original mas perna impossível não se mede", () => {
+    // Meio preço original não dá meio boletim: preferível não medir do que
+    // cair de volta para a odd turbinada, que é justamente o número errado.
+    const b = bet({
+      type: "MULTIPLA",
+      odd: 2.98,
+      closingOdd: 2.37,
+      selections: [
+        turbinada({ originalOdd: 2.32 }),
+        { id: "s-2", event: "B", market: "Vencedor", choice: "x", odd: 1, closingOdd: 1.2 },
+      ],
+    });
+    expect(betClv(b)).toBeNull();
+  });
+
+  test("marca a aposta como promocional mesmo sem isBoosted nem rótulo", () => {
+    // O caso real veio de CSV: a Betclic não mandou is_boosted_odd e o mercado
+    // não tem "boost" no nome. O preço original é o sinal que faltava.
+    expect(isPromoBet(bet({ selections: [turbinada({ originalOdd: 2.32 })] }))).toBe(true);
+    expect(isPromoBet(bet({ selections: [turbinada()] }))).toBe(false);
+  });
+
+  test("com preço original a promocional volta a contar para as médias", () => {
+    const r = calculateClv(
+      [
+        bet({ odd: 2.1, closingOdd: 2, stake: 10 }), // normal: +5%
+        bet({
+          odd: 2.98,
+          closingOdd: 2.37,
+          stake: 10,
+          selections: [turbinada({ originalOdd: 2.32 })],
+        }), // turbinada, mas com preço comparável: -2.11%
+      ],
+      NOW,
+    );
+    expect(r.ratedBets).toBe(2);
+    expect(r.promoBets).toBe(0);
+    // (5 - 2.11) / 2 = 1.45 - e não os +15.37% que a odd turbinada dava.
+    expect(r.avgClvPct).toBe(1.45);
+    expect(r.beatCloseRate).toBe(50);
+  });
+
+  test("a medida sem margem também usa o preço original", () => {
+    const b = bet({
+      odd: 2.98,
+      closingOdd: 2.37,
+      closingOddNoVig: 2.5,
+      stake: 10,
+      selections: [turbinada({ originalOdd: 2.32, closingOddNoVig: 2.5 })],
+    });
+    // 2.32 / 2.50 - 1 = -7.2%
+    expect(betClvNoVig(b)!.clvPct).toBe(-7.2);
   });
 });

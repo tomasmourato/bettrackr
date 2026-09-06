@@ -47,7 +47,7 @@ export function useBetForm(accounts: BookieAccount[]) {
   const [notes, setNotes] = useState("");
   const [settledReturn, setSettledReturn] = useState("");
   const [selections, setSelections] = useState<FormSelection[]>([
-    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "" },
+    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "", originalOdd: "" },
   ]);
 
   // Odd de fecho combinada, irmã do calculatedOdd: null enquanto faltar a odd
@@ -115,7 +115,9 @@ export function useBetForm(accounts: BookieAccount[]) {
     setDateTime(nowLocal());
     setNotes("");
     setSettledReturn("");
-    setSelections([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
+    setSelections([
+      { event: "", market: "", choice: "", odd: "1.80", closingOdd: "", originalOdd: "" },
+    ]);
     setError(null);
   };
 
@@ -159,6 +161,7 @@ export function useBetForm(accounts: BookieAccount[]) {
         choice: s.choice,
         odd: s.odd.toString(),
         closingOdd: s.closingOdd ? String(s.closingOdd) : "",
+        originalOdd: s.originalOdd ? String(s.originalOdd) : "",
         startsAt: s.startsAt,
         result: s.result,
         // A perna inteira, para o que o formulário não edita sobreviver.
@@ -174,7 +177,10 @@ export function useBetForm(accounts: BookieAccount[]) {
   };
 
   const addSelection = () => {
-    setSelections((prev) => [...prev, { event: "", market: "", choice: "", odd: "1.50", closingOdd: "" }]);
+    setSelections((prev) => [
+      ...prev,
+      { event: "", market: "", choice: "", odd: "1.50", closingOdd: "", originalOdd: "" },
+    ]);
   };
 
   const removeSelection = (index: number) => {
@@ -213,6 +219,7 @@ export function useBetForm(accounts: BookieAccount[]) {
     let isValid = true;
 
     let closingOddInvalid = false;
+    let originalOddInvalid = false;
 
     selections.forEach((s, idx) => {
       const oddVal = parseDecimal(s.odd);
@@ -225,12 +232,19 @@ export function useBetForm(accounts: BookieAccount[]) {
       if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
         closingOddInvalid = true;
       }
+      // A odd original (antes do boost) segue a mesma regra: opcional, mas
+      // preenchida tem de ser uma odd a sério - é sobre ela que o CLV é medido.
+      const originalVal = parseDecimal(s.originalOdd ?? "");
+      if ((s.originalOdd ?? "").trim() !== "" && (originalVal === null || originalVal <= 1)) {
+        originalOddInvalid = true;
+      }
       built.push(
         mergeSelection(
           s,
           `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
           oddVal ?? 0,
           closingVal,
+          originalVal,
         ),
       );
     });
@@ -242,6 +256,11 @@ export function useBetForm(accounts: BookieAccount[]) {
 
     if (closingOddInvalid) {
       setError(t("bets.error.closingOdd"));
+      return null;
+    }
+
+    if (originalOddInvalid) {
+      setError(t("bets.error.originalOdd"));
       return null;
     }
 

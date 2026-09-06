@@ -27,7 +27,7 @@ import { Bet, BookieAccount, BetStatus } from "../../types";
 import { AVAILABLE_BOOKMAKERS, safeNum, calculateBetReturnAndProfit, selectBetsForFinancialSummary } from "../../utils";
 import FilteredBetsSummary from "../../components/FilteredBetsSummary";
 import { useBetForm } from "../../hooks/useBetForm";
-import { betClv, needsClosingOdd } from "../../lib/clv";
+import { betClv, needsClosingOdd, originalOddOf } from "../../lib/clv";
 import { ClvLockInline, ClvLockPanel } from "../../components/ClvLock";
 import { useI18n, type TFn, type TKey } from "../../lib/i18n";
 import { selectionHaptic } from "../../lib/haptics";
@@ -992,6 +992,8 @@ label={t("bets.bulk.deleteAria")}
             {clvEnabled && (() => {
               const clv = betClv(detailBet);
               if (!clv) return null;
+              // Turbinada: o CLV foi medido sobre o preço de antes do boost.
+              const original = originalOddOf(detailBet);
               return (
                 <MobileCard className="!p-3">
                   <div className="flex items-center justify-between">
@@ -1019,6 +1021,14 @@ label={t("bets.bulk.deleteAria")}
                       </p>
                     </div>
                   </div>
+                  {original !== null && (
+                    <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400">
+                      {t("clv.boostedNote", {
+                        original: original.toFixed(2),
+                        boosted: safeNum(detailBet.odd).toFixed(2),
+                      })}
+                    </p>
+                  )}
                 </MobileCard>
               );
             })()}
@@ -1593,6 +1603,18 @@ placeholder={t("bets.field.odd")}
                       className={inputClasses}
                     />
                   </div>
+                  {/* Odd de antes do boost: linha própria porque três caixas
+                      lado a lado não cabem no telemóvel. Vazia = não houve
+                      boost; preenchida, é ela que o CLV mede. */}
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={s.originalOdd ?? ""}
+                    onChange={(e) => form.changeSelection(i, "originalOdd", e.target.value)}
+                    placeholder={t("clv.originalOdd")}
+                    aria-label={t("clv.originalOddAria")}
+                    className={inputClasses}
+                  />
                 </MobileCard>
               ))}
               {form.type === "MULTIPLA" && (

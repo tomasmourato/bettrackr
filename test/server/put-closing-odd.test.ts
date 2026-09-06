@@ -143,3 +143,57 @@ describe("withStoredClosingOdds", () => {
     expect(withStoredClosingOdds(importPayload(), stored).selections[0].closingOdd).toBe(1.85);
   });
 });
+
+// ------------------------------------------------------------
+// A odd de antes do boost viaja pela mesma regra
+//
+// É escrita à mão na app - a Betclic não a manda nem no CSV nem na API. Sem
+// isto, a primeira reimportação do bot (que acontece sozinha quando a aposta
+// liquida) apagava-a e o CLV voltava a ser medido pela odd turbinada.
+// ------------------------------------------------------------
+
+describe("withStoredClosingOdds e a odd original", () => {
+  const storedComBoost = () =>
+    storedRow({
+      selections: [
+        {
+          id: "betclic-9-0",
+          event: "Benfica vs Porto",
+          market: "Vencedor",
+          choice: "Benfica",
+          odd: 2.98,
+          closingOdd: 2.37,
+          originalOdd: 2.32,
+          sourceRef: { selectionId: "s-100" },
+        },
+      ],
+    });
+
+  test("a reimportação não apaga o preço de antes do boost", () => {
+    const merged = withStoredClosingOdds(importPayload(), storedComBoost());
+    expect(merged.selections[0].originalOdd).toBe(2.32);
+    expect(merged.selections[0].closingOdd).toBe(2.37);
+  });
+
+  test("uma perna que traga a sua odd original continua a mandar", () => {
+    const body = importPayload({
+      selections: [
+        {
+          id: "betclic-9-0",
+          event: "Benfica vs Porto",
+          market: "Vencedor",
+          choice: "Benfica",
+          odd: 2.98,
+          originalOdd: 2.4,
+          sourceRef: { selectionId: "s-100" },
+        },
+      ],
+    });
+    expect(withStoredClosingOdds(body, storedComBoost()).selections[0].originalOdd).toBe(2.4);
+  });
+
+  test("sem nada gravado, a perna fica como veio", () => {
+    const merged = withStoredClosingOdds(importPayload(), storedRow());
+    expect(merged.selections[0].originalOdd).toBeUndefined();
+  });
+});

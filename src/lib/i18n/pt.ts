@@ -378,6 +378,8 @@ export const PT = {
   "bets.error.bookmaker": "Por favor define a casa de apostas.",
   "bets.form.closingOddPlaceholder": "2.00",
   "bets.error.closingOdd": "A odd de fecho tem de ser maior que 1 (ou deixa-a em branco).",
+  "bets.form.originalOddPlaceholder": "2.32",
+  "bets.error.originalOdd": "A odd original tem de ser maior que 1 (ou deixa-a em branco).",
   "bets.error.selections":
     "Por favor preenche todos os campos das seleções com valores válidos (odds devem ser maiores que 1.0).",
 
@@ -899,7 +901,7 @@ export const PT = {
   "clv.promo": "Promoções",
   "clv.promoValue": "{n} · {pct}",
   "clv.promoHelp":
-    "Boosts, odds turbo e missões ficam de fora das médias: a odd está acima do mercado por construção, por isso bater a linha com ela não diz nada sobre a escolha.",
+    "Boosts, odds turbo e missões sem odd original registada ficam de fora das médias: a odd turbinada está acima do mercado por construção, por isso bater a linha com ela não diz nada sobre a escolha. Escreve a odd de antes do boost na aposta e ela volta a contar, medida por esse preço.",
   "clv.byBookmaker": "CLV por casa",
   "clv.help":
     "A odd de fecho é usada tal como a registas, com a margem da casa incluída - por isso estes números pecam por defeito. O que interessa é a tendência e a comparação entre casas.",
@@ -912,6 +914,15 @@ export const PT = {
   "clv.closingOddShort": "Fecho",
   "clv.closingOddAria": "Odd de fecho da aposta",
   "clv.closingOddHint": "A última odd antes de o evento começar.",
+
+  // Odd original: o preço de antes do boost
+  "clv.originalOdd": "Odd original (antes do boost)",
+  "clv.originalOddShort": "Original",
+  "clv.originalOddAria": "Odd desta perna antes do boost",
+  "clv.originalOddHint":
+    "Só para odds turbinadas: a odd que a casa dava antes do boost. É contra ela que o CLV é medido - a turbinada está acima do mercado por construção. Vazio quando não houve boost.",
+  "clv.boostedNote":
+    "Medido sobre a odd original @{original}, turbinada para @{boosted}.",
 
   // Caixa de entrada: preencher as odds em falta
   "clv.fill.title": "Preencher odds de fecho",

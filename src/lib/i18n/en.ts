@@ -372,6 +372,8 @@ export const EN: Record<TKey, Entry> = {
   "bets.error.bookmaker": "Please set the bookmaker.",
   "bets.form.closingOddPlaceholder": "2.00",
   "bets.error.closingOdd": "The closing odd must be greater than 1 (or leave it blank).",
+  "bets.form.originalOddPlaceholder": "2.32",
+  "bets.error.originalOdd": "The original odd must be greater than 1 (or leave it blank).",
   "bets.error.selections":
     "Please fill in every selection field with valid values (odds must be greater than 1.0).",
 
@@ -893,7 +895,7 @@ export const EN: Record<TKey, Entry> = {
   "clv.promo": "Promos",
   "clv.promoValue": "{n} · {pct}",
   "clv.promoHelp":
-    "Boosts, enhanced odds and missions are kept out of the averages: the price is above the market by construction, so beating the close with one says nothing about the pick.",
+    "Boosts, enhanced odds and missions with no original odd recorded are kept out of the averages: the boosted price is above the market by construction, so beating the close with one says nothing about the pick. Record the pre-boost odd on the bet and it counts again, measured at that price.",
   "clv.byBookmaker": "CLV by bookmaker",
   "clv.help":
     "The closing odd is used exactly as you record it, bookmaker margin included - so these numbers understate your edge. What matters is the trend and the comparison between bookmakers.",
@@ -906,6 +908,15 @@ export const EN: Record<TKey, Entry> = {
   "clv.closingOddShort": "Close",
   "clv.closingOddAria": "Closing odd of the bet",
   "clv.closingOddHint": "The last odd before the event starts.",
+
+  // Original odd: the price before the boost
+  "clv.originalOdd": "Original odd (before the boost)",
+  "clv.originalOddShort": "Original",
+  "clv.originalOddAria": "Odd of this leg before the boost",
+  "clv.originalOddHint":
+    "Only for boosted odds: the odd the bookmaker offered before the boost. That is what the CLV is measured against - a boosted price is above the market by construction. Leave blank when there was no boost.",
+  "clv.boostedNote":
+    "Measured against the original odd @{original}, boosted to @{boosted}.",
 
   // Inbox: fill in the missing odds
   "clv.fill.title": "Fill in closing odds",

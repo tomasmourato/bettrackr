@@ -34,6 +34,19 @@ export interface Selection {
   // Odd turbinada pela casa (a Betclic marca-a em is_boosted_odd). Está acima
   // do mercado por construção, por isso fica fora das médias do CLV.
   isBoosted?: boolean;
+  // A odd ANTES do boost - o preço que o mercado dava sem a promoção.
+  //
+  // Quando existe, `odd` continua a ser o preço TURBINADO (é o que a casa
+  // paga, e é sobre ele que o retorno e o lucro são calculados) e esta é a
+  // odd contra a qual o CLV se mede: comparar uma odd turbinada com a linha
+  // de fecho media a generosidade da casa, não a qualidade da escolha - uma
+  // 2.32 turbinada para 2.98 contra um fecho de 2.37 dava +25.7% de CLV a uma
+  // escolha que na verdade ficou 2.1% ABAIXO do mercado.
+  //
+  // A casa não a manda (nem no CSV nem na API da Betclic, que só marca
+  // is_boosted_odd): é escrita à mão no formulário. Ausente = não houve boost,
+  // ou não se sabe qual era o preço original.
+  originalOdd?: number;
   // Identificadores da perna na casa de apostas, para se poder voltar a pedir
   // o preço corrente. Nomes genéricos de propósito: hoje só a Betclic os dá.
   sourceRef?: {

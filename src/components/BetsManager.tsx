@@ -27,7 +27,7 @@ import { hasCashoutSignal } from "../lib/betStatus";
 import FilterDropdown from "./FilterDropdown";
 import FilteredBetsSummary from "./FilteredBetsSummary";
 import FiltersBar from "./FiltersBar";
-import { betClv, combineClosingOdds, needsClosingOdd } from "../lib/clv";
+import { betClv, combineClosingOdds, needsClosingOdd, originalOddOf } from "../lib/clv";
 import { ClvLockInline } from "./ClvLock";
 import {
   combineFormOdds,
@@ -226,7 +226,7 @@ export default function BetsManager({
   // src/lib/betFormSelections.ts, partilhadas com o formulário do mobile: as
   // duas cópias já tinham divergido (esta preservava o `result`, a outra não).
   const [formSelections, setFormSelections] = useState<FormSelectionRow[]>([
-    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "" },
+    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "", originalOdd: "" },
   ]);
 
   useEffect(() => {
@@ -699,7 +699,9 @@ export default function BetsManager({
     setFormDateTime(new Date().toISOString().replace("T", " ").slice(0, 16));
     setFormNotes("");
     setFormSettledReturn("");
-    setFormSelections([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
+    setFormSelections([
+      { event: "", market: "", choice: "", odd: "1.80", closingOdd: "", originalOdd: "" },
+    ]);
     setFormError(null);
   };
 
@@ -743,6 +745,7 @@ export default function BetsManager({
       choice: s.choice,
       odd: s.odd.toString(),
       closingOdd: s.closingOdd ? String(s.closingOdd) : "",
+      originalOdd: s.originalOdd ? String(s.originalOdd) : "",
       startsAt: s.startsAt,
       result: s.result,
       // A perna inteira, para o que o formulário não edita sobreviver.
@@ -767,7 +770,10 @@ export default function BetsManager({
 
   // Add Selection inside form
   const addSelection = () => {
-    setFormSelections([...formSelections, { event: "", market: "", choice: "", odd: "1.50", closingOdd: "" }]);
+    setFormSelections([
+      ...formSelections,
+      { event: "", market: "", choice: "", odd: "1.50", closingOdd: "", originalOdd: "" },
+    ]);
   };
 
   // Remove Selection inside form
@@ -806,6 +812,7 @@ export default function BetsManager({
     let isValid = true;
     
     let closingOddInvalid = false;
+    let originalOddInvalid = false;
 
     formSelections.forEach((s, idx) => {
       const oddVal = parseDecimal(s.odd);
@@ -818,12 +825,19 @@ export default function BetsManager({
       if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
         closingOddInvalid = true;
       }
+      // A odd original (antes do boost) segue a mesma regra: opcional, mas
+      // preenchida tem de ser uma odd a sério - é sobre ela que o CLV é medido.
+      const originalVal = parseDecimal(s.originalOdd ?? "");
+      if ((s.originalOdd ?? "").trim() !== "" && (originalVal === null || originalVal <= 1)) {
+        originalOddInvalid = true;
+      }
       selections.push(
         mergeSelection(
           s,
           `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
           oddVal ?? 0,
           closingVal,
+          originalVal,
         ),
       );
     });
@@ -835,6 +849,11 @@ export default function BetsManager({
 
     if (closingOddInvalid) {
       setFormError(t("bets.error.closingOdd"));
+      return;
+    }
+
+    if (originalOddInvalid) {
+      setFormError(t("bets.error.originalOdd"));
       return;
     }
 
@@ -1733,6 +1752,9 @@ aria-label={t("bets.details.close")}
               {(() => {
                 const clv = betClv(detailBet);
                 if (!clv) return null;
+                // Aposta turbinada: o CLV foi medido sobre o preço de antes do
+                // boost, e o painel diz de onde veio o número.
+                const original = originalOddOf(detailBet);
                 return (
                   <section>
                     <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
@@ -1758,6 +1780,14 @@ aria-label={t("bets.details.close")}
                         </p>
                       </div>
                     </div>
+                    {original !== null && (
+                      <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400">
+                        {t("clv.boostedNote", {
+                          original: original.toFixed(2),
+                          boosted: safeNum(detailBet.odd).toFixed(2),
+                        })}
+                      </p>
+                    )}
                   </section>
                 );
               })()}
@@ -2207,6 +2237,21 @@ placeholder={t("bets.form.choicePlaceholder")}
                             aria-label={t("clv.closingOddAria")}
                             value={sel.closingOdd}
                             onChange={(e) => handleSelectionChange(idx, "closingOdd", e.target.value)}
+                          />
+                        </div>
+                        {/* Odd de antes do boost: vazia quando não houve boost.
+                            Preenchida, é ela (e não a turbinada) que o CLV mede. */}
+                        <div>
+                          <label className="block text-zinc-400 dark:text-zinc-500 text-[10px] uppercase font-bold mb-0.5">{t("clv.originalOddShort")}</label>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="w-full px-2.5 py-1.5 rounded-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 font-mono text-[11px]"
+                            placeholder={t("bets.form.originalOddPlaceholder")}
+                            aria-label={t("clv.originalOddAria")}
+                            title={t("clv.originalOddHint")}
+                            value={sel.originalOdd ?? ""}
+                            onChange={(e) => handleSelectionChange(idx, "originalOdd", e.target.value)}
                           />
                         </div>
                       </div>

@@ -95,23 +95,41 @@ function asSelections(raw: unknown): any[] {
  * O corpo recebido, com as odds de fecho (e a marca de captura) que já estavam
  * gravadas. Só preenche o que vier vazio: uma perna que traga odd de fecho
  * própria continua a mandar, e a combinada é derivada a jusante como sempre.
+ *
+ * A odd ORIGINAL (a de antes do boost) viaja pela mesma regra e pela mesma
+ * razão: é escrita à mão na app, a casa nunca a manda, e sem isto a primeira
+ * reimportação do bot - que acontece sozinha assim que a aposta liquida -
+ * apagava-a e o CLV voltava a ser medido pela odd turbinada.
  */
 export function withStoredClosingOdds(body: any, stored: any): any {
     const incoming = asSelections(body?.selections);
     const previous = asSelections(stored?.selections);
 
     const byKey = new Map<string, number>();
+    const originalByKey = new Map<string, number>();
     previous.forEach((selection, index) => {
+        const key = legKey(selection, index);
         const odd = Number(selection?.closingOdd);
-        if (Number.isFinite(odd) && odd > 1) byKey.set(legKey(selection, index), odd);
+        if (Number.isFinite(odd) && odd > 1) byKey.set(key, odd);
+        const original = Number(selection?.originalOdd);
+        if (Number.isFinite(original) && original > 1) originalByKey.set(key, original);
     });
 
     const selections = incoming.map((selection, index) => {
-        if (selection?.closingOdd !== undefined && selection?.closingOdd !== null) {
-            return selection;
+        const key = legKey(selection, index);
+        let merged = selection;
+
+        if (merged?.closingOdd === undefined || merged?.closingOdd === null) {
+            const odd = byKey.get(key);
+            if (odd !== undefined) merged = { ...merged, closingOdd: odd };
         }
-        const odd = byKey.get(legKey(selection, index));
-        return odd === undefined ? selection : { ...selection, closingOdd: odd };
+
+        if (merged?.originalOdd === undefined || merged?.originalOdd === null) {
+            const original = originalByKey.get(key);
+            if (original !== undefined) merged = { ...merged, originalOdd: original };
+        }
+
+        return merged;
     });
 
     // A metadata da aposta é substituída por inteiro pela importação; só a

@@ -131,3 +131,50 @@ describe("combineFormOdds", () => {
     expect(combineFormOdds([], parseDecimal)).toBe(1.0);
   });
 });
+
+// ------------------------------------------------------------
+// A odd de antes do boost
+//
+// Vem sempre do ecrã: a casa nunca a manda. Por isso o formulário manda nela
+// por inteiro, incluindo quando a apaga.
+// ------------------------------------------------------------
+
+describe("mergeSelection e a odd original", () => {
+  test("escreve o preço de antes do boost", () => {
+    const perna = mergeSelection(linha({ originalOdd: "2.32" }), "x", 2.98, 2.37, 2.32);
+    expect(perna.originalOdd).toBe(2.32);
+    // E não toca na odd que a casa paga.
+    expect(perna.odd).toBe(2.98);
+  });
+
+  test("apagar o campo apaga a odd original gravada", () => {
+    const comBoost: Selection = { ...importada, originalOdd: 2.32 };
+    const perna = mergeSelection(
+      { ...linha({ originalOdd: "" }), original: comBoost },
+      "x",
+      2.98,
+      1.33,
+      null,
+    );
+    expect(perna.originalOdd).toBeUndefined();
+  });
+
+  test("uma odd original impossível não é gravada", () => {
+    expect(mergeSelection(linha(), "x", 2.98, 1.33, 1).originalOdd).toBeUndefined();
+  });
+
+  test("a odd original sobrevive a uma gravação que não lhe toca", () => {
+    // O formulário carrega-a na linha e devolve-a; é o mesmo caminho do
+    // `closingOdd` e é o que impede uma edição de nome apagar o boost.
+    const comBoost: Selection = { ...importada, originalOdd: 2.32 };
+    const perna = mergeSelection(
+      { ...linha({ originalOdd: "2.32", choice: "Outro" }), original: comBoost },
+      "x",
+      1.43,
+      1.33,
+      2.32,
+    );
+    expect(perna.originalOdd).toBe(2.32);
+    expect(perna.choice).toBe("Outro");
+  });
+});

@@ -36,12 +36,17 @@
 //    misturaria dinheiro promocional com dinheiro real. Uma aposta SEM RISCO é
 //    dinheiro real e conta para tudo.
 //
-//  * As apostas PROMOCIONAIS (boosts, odds turbo, missões) ficam fora das
-//    médias por inteiro - não só do dinheiro, como as freebets. Uma odd
-//    turbinada está acima do mercado por construção: bater a linha de fecho
-//    com ela diz que a casa ofereceu valor, não que a escolha foi boa. São
-//    contadas e mostradas à parte, porque saber quanto valeram as promoções é
-//    útil - só não é a mesma pergunta.
+//  * As apostas PROMOCIONAIS (boosts, odds turbo, missões) medem-se pelo
+//    preço de ANTES do boost, quando ele se conhece (Selection.originalOdd).
+//    Uma odd turbinada está acima do mercado por construção: compará-la com a
+//    linha de fecho mede a generosidade da casa, não a qualidade da escolha -
+//    uma 2.32 turbinada para 2.98 contra um fecho de 2.37 dava +25.7% de CLV
+//    a uma escolha que na verdade ficou 2.1% ABAIXO do mercado. Com o preço
+//    original a pergunta volta a fazer sentido, e a aposta conta para as
+//    médias como qualquer outra: foi um preço que o mercado deu.
+//    Sem ele não há nada de comparável - essas ficam fora das médias por
+//    inteiro, contadas e mostradas à parte, porque saber quanto valeram as
+//    promoções é útil, só não é a mesma pergunta.
 //
 //  * A odd de fecho é usada CRUA, com a margem da casa lá dentro. O CLV
 //    rigoroso compara com a linha sem margem (no-vig), o que exigiria as odds
@@ -149,6 +154,59 @@ function validOdd(value: unknown): number | null {
 }
 
 /**
+ * O preço de antes do boost, ao nível do boletim: o produto de
+ * `originalOdd ?? odd` das pernas que contam, tal como a `odd` do boletim é o
+ * produto das odds das pernas.
+ *
+ * null quando NENHUMA perna traz preço original - o caso normal, em que não
+ * houve boost e a odd apanhada já é o preço que o mercado deu. Também null
+ * quando alguma perna traz uma odd impossível: meio preço original não dá meio
+ * boletim, e é preferível não medir a medir mal.
+ *
+ * Uma perna ANULADA fica de fora, pela mesma razão por que já está fora da odd
+ * que a casa pagou e da linha de fecho.
+ */
+export function originalOddOf(bet: Bet): number | null {
+  const legs = (bet.selections || []).filter(
+    (selection) => selection?.result !== "ANULADA",
+  );
+  if (!legs.some((selection) => validOdd(selection?.originalOdd) !== null)) {
+    return null;
+  }
+
+  let product = 1;
+  for (const leg of legs) {
+    const odd = validOdd(leg?.originalOdd) ?? validOdd(leg?.odd);
+    if (odd === null) return null;
+    product *= odd;
+  }
+  return round2(product);
+}
+
+/** Alguma perna que conta traz o preço de antes do boost? */
+function isBoostPriced(bet: Bet): boolean {
+  return (bet.selections || []).some(
+    (selection) =>
+      selection?.result !== "ANULADA" &&
+      validOdd(selection?.originalOdd) !== null,
+  );
+}
+
+/**
+ * A odd contra a qual o CLV desta aposta se mede: a de antes do boost quando
+ * se conhece, a apanhada quando não. É o único sítio onde esta escolha é
+ * feita - o `bet.odd` continua a ser o preço turbinado em todo o resto da app,
+ * porque é esse que a casa paga e é sobre ele que o retorno é calculado.
+ */
+function oddForClv(bet: Bet): number | null {
+  const original = originalOddOf(bet);
+  if (original !== null) return original;
+  // Boost registado mas boletim por medir (perna com odd impossível): aqui não
+  // se cai para a odd turbinada, que daria justamente o número errado.
+  return isBoostPriced(bet) ? null : validOdd(bet.odd);
+}
+
+/**
  * A odd de fecho do boletim: o produto das odds de fecho das pernas, tal como
  * a `odd` é o produto das odds apanhadas.
  *
@@ -182,8 +240,9 @@ export function kickoffOf(bet: Bet): string | undefined {
  *
  * É só a rede de segurança. O sinal bom é o `isBoosted` da perna, que vem do
  * `is_boosted_odd` da própria Betclic e apanha boosts que o rótulo do mercado
- * não denuncia. A expressão fica para as apostas escritas à mão e para os CSV,
- * que não trazem a marca.
+ * não denuncia; e melhor ainda é o `originalOdd`, escrito à mão, que além de
+ * dizer QUE houve boost diz de quanto foi. A expressão fica para as apostas
+ * escritas à mão e para os CSV, que não trazem a marca.
  *
  * Não inclui "Dicas da Casa": é uma escolha sugerida pela casa a preço normal,
  * não um preço turbinado - o CLV dessas diz alguma coisa.
@@ -199,6 +258,7 @@ export function isPromoBet(bet: Bet): boolean {
   return (bet.selections || []).some(
     (selection) =>
       selection?.isBoosted === true ||
+      validOdd(selection?.originalOdd) !== null ||
       PROMO_MARKET_RE.test(`${selection?.market ?? ""} ${selection?.betType ?? ""}`),
   );
 }
@@ -218,7 +278,7 @@ export function isClvEligible(bet: Bet): boolean {
 export function betClv(bet: Bet): ClvBetResult | null {
   if (!isClvEligible(bet)) return null;
 
-  const odd = validOdd(bet.odd);
+  const odd = oddForClv(bet);
   const close = validOdd(bet.closingOdd);
   if (odd === null || close === null) return null;
 
@@ -246,7 +306,7 @@ export function betClv(bet: Bet): ClvBetResult | null {
 export function betClvNoVig(bet: Bet): ClvBetResult | null {
   if (!isClvEligible(bet)) return null;
 
-  const odd = validOdd(bet.odd);
+  const odd = oddForClv(bet);
   const close = validOdd(bet.closingOddNoVig);
   if (odd === null || close === null) return null;
 
@@ -316,9 +376,11 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
 
     trackedBets++;
 
-    // Promocional: conta-se à parte e não entra em mais nada. A odd está acima
-    // do mercado por construção, por isso poluía a média e o gráfico.
-    if (isPromoBet(bet)) {
+    // Promocional SEM preço de antes do boost: conta-se à parte e não entra em
+    // mais nada. A odd está acima do mercado por construção, por isso poluía a
+    // média e o gráfico. Com o preço original conhecido, o `betClv` já mediu
+    // sobre ele - é um número comparável e a aposta segue para as médias.
+    if (isPromoBet(bet) && originalOddOf(bet) === null) {
       promoBets++;
       promoSumClvPct += clv.clvPct;
       promoMoneyClv += clv.moneyClv;

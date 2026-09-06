@@ -60,6 +60,9 @@ function normalizeSelections(raw: any, rowId: string): Selection[] {
     // das promoções ficava só pelo palpite do texto do mercado; o sourceRef é
     // o que deixa voltar a pedir o preço à casa.
     isBoosted: s?.isBoosted === true ? true : undefined,
+    // A odd de antes do boost. Como a de fecho, pode legitimamente não existir
+    // (o normal é não haver boost), por isso não passa pelo safeNum.
+    originalOdd: s?.originalOdd == null ? undefined : safeNum(s.originalOdd),
     sourceRef:
       s?.sourceRef && typeof s.sourceRef === "object" ? s.sourceRef : undefined,
     sport: s?.sport,
