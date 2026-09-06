@@ -17,6 +17,7 @@ import clvRoutes from "./routes/clvRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import billingRoutes, { stripeWebhook } from "./routes/billingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import botRoutes from "./routes/botRoutes.js";
 import pool from "./db/pool.js";
 import {
   authenticateToken,
@@ -173,6 +174,7 @@ app.use("/api/clv", clvRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/bot", botRoutes);
 
 let aiClient: GoogleGenAI | null = null;
 function getAiClient(): GoogleGenAI {

@@ -21,6 +21,7 @@ const MobileSettings = lazy(() => import("./screens/MobileSettings"));
 const MobileSocial = lazy(() => import("./screens/MobileSocial"));
 const MobileInsights = lazy(() => import("./screens/MobileInsights"));
 const MobileAdmin = lazy(() => import("./screens/MobileAdmin"));
+const MobileBot = lazy(() => import("./screens/MobileBot"));
 
 // Casca mobile real. Dentro do ToastProvider para os toasts (e o aviso de
 // duplo-back) funcionarem em toda a árvore.
@@ -218,6 +219,7 @@ function MobileShell(props: ShellProps) {
                     isDark={isDark}
                   />
                 )}
+                {activeTab === "BOT" && <MobileBot />}
                 {activeTab === "SETTINGS" && (
                   <MobileSettings
                     preferences={preferences}

@@ -1,0 +1,34 @@
+# betclic-bot.service - unidade systemd para correr o bot EM CASA (Raspberry Pi,
+# NAS, PC sempre ligado). Instala com:
+#   sudo cp betclic-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now betclic-bot
+# Ver logs:  journalctl -u betclic-bot -f
+#
+# NAO correr na nuvem: o objetivo e sair da tua ligacao/IP, em Portugal.
+
+[Unit]
+Description=BetTrackr - importador local da Betclic por passkey
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Ajusta o utilizador e o caminho a tua maquina.
+User=pi
+WorkingDirectory=/home/pi/bettrackr/bot
+# Os segredos vivem NESTE ficheiro (modo 0600), nunca no repositorio:
+#   BETCLIC_BOT_KEY=<32 bytes hex - passphrase do cofre>
+#   BETTRACKR_BASE=https://betrackr.vercel.app
+#   BETTRACKR_TOKEN=<JWT do BetTrackr da conta>
+#   BETCLIC_CONTEXT_TOKEN=<token begmedia recente, so para o arranque>
+EnvironmentFile=/home/pi/bettrackr/bot/bot.env
+ExecStart=/usr/bin/npx tsx src/index.ts
+Restart=on-failure
+RestartSec=30
+# Endurecimento basico:
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

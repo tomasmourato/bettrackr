@@ -16,6 +16,7 @@ const Settings = lazy(() => import("./components/Settings"));
 const Social = lazy(() => import("./components/Social"));
 const AIInsights = lazy(() => import("./components/AIInsights"));
 const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
+const BotPanel = lazy(() => import("./components/BotPanel"));
 
 // Shell desktop: navegação fixa à esquerda (sidebar) + topbar + tab bar de
 // recurso em ecrãs estreitos. Toda a lógica vive no App.tsx; aqui só a
@@ -273,6 +274,7 @@ export default function DesktopApp({
                     isDark={isDark}
                   />
                 )}
+                {activeTab === "BOT" && <BotPanel />}
                 {activeTab === "SETTINGS" && (
                   <Settings
                     preferences={preferences}

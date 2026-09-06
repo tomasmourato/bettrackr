@@ -1,0 +1,14 @@
+{
+  "name": "bettrackr-bot",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Importador local da Betclic por passkey (uso privado de admin).",
+  "scripts": {
+    "marco0": "tsx marco0.ts",
+    "test": "bun test test",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/index.ts",
+    "once": "tsx src/index.ts --once"
+  }
+}

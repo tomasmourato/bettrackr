@@ -25,3 +25,9 @@ tmp-*
 # Artefactos de planeamento dos assistentes (ficam so na maquina)
 .superpowers/
 docs/superpowers/
+
+# Bot local da Betclic: chave de teste do Marco 0 e o cofre real da passkey
+bot/marco0-key.json
+bot/passkey.enc
+bot/session.enc
+bot/node_modules/

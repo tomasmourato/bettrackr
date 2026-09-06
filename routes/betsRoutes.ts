@@ -448,6 +448,7 @@ router.post("/bulk", async (req: AuthenticatedRequest, res) => {
         if (accountError) throw { statusCode: 400, message: accountError };
 
         const inserted: any[] = [];
+        let skipped = 0;
         for (const values of parsedAll) {
             const result = await client.query(
                 `INSERT INTO bets
@@ -456,14 +457,24 @@ router.post("/bulk", async (req: AuthenticatedRequest, res) => {
             selections, comment, tags, metadata, freebet_type, is_risk_free,
             account_id, closing_odd)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+         ON CONFLICT (user_id, (metadata->>'importKey'))
+           WHERE metadata->>'importKey' IS NOT NULL
+           DO NOTHING
          RETURNING ${BET_COLUMNS}`,
                 [req.user!.id, ...values],
             );
-            inserted.push(result.rows[0]);
+            // Com ON CONFLICT DO NOTHING, uma aposta já importada (mesmo
+            // importKey) não devolve linha: conta como ignorada, não como erro.
+            // O lote é só para apostas NOVAS; as alterações passam pelo PUT, que
+            // preserva a odd de fecho. Assim um re-envio é um no-op, e a
+            // deduplicação deixa de depender só da comparação em memória do
+            // cliente. Ver db/migrations/020_dedup_import_key.sql.
+            if (result.rows[0]) inserted.push(result.rows[0]);
+            else skipped += 1;
         }
 
         await client.query("COMMIT");
-        res.status(201).json({ success: true, bets: inserted });
+        res.status(201).json({ success: true, bets: inserted, skipped });
     } catch (error: any) {
         await client.query("ROLLBACK");
         if (error && error.statusCode === 400) {

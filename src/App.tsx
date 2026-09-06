@@ -472,7 +472,9 @@ export default function App({ initialData }: AppProps) {
   // não se decide nada: expulsar um administrador do painel só porque a
   // resposta demorou seria pior do que esperar um instante.
   const effectiveTab: AppTab =
-    activeTab === "ADMIN" && subscription && !canSeeAdmin(subscription.role) ? "DASHBOARD" : activeTab;
+    (activeTab === "ADMIN" || activeTab === "BOT") && subscription && !canSeeAdmin(subscription.role)
+      ? "DASHBOARD"
+      : activeTab;
 
   const shellProps: ShellProps = {
     activeTab: effectiveTab,

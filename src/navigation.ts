@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Users,
   Lightbulb,
+  Bot,
 } from "lucide-react";
 
 import type { Bet, Preferences, BookieAccount, AuditLog, BankrollMovement } from "./types";
@@ -30,7 +31,8 @@ export type AppTab =
   | "INSIGHTS"
   | "SOCIAL"
   | "SETTINGS"
-  | "ADMIN";
+  | "ADMIN"
+  | "BOT";
 
 export const TAB_PATHS: Record<AppTab, string> = {
   DASHBOARD: "/dashboard",
@@ -40,6 +42,7 @@ export const TAB_PATHS: Record<AppTab, string> = {
   SOCIAL: "/social",
   SETTINGS: "/settings",
   ADMIN: "/admin",
+  BOT: "/bot",
 };
 
 // Separadores que exigem subscrição. O bloqueio a sério é do servidor (402);
@@ -82,6 +85,15 @@ const ADMIN_NAV_ITEM: NavItem = {
   footerKey: "footer.admin",
 };
 
+// O separador do bot da Betclic - privado, no mesmo grupo de acesso do painel
+// de gestao (admin/fundador). Ver bot/ e routes/botRoutes.ts.
+const BOT_NAV_ITEM: NavItem = {
+  tab: "BOT",
+  icon: Bot,
+  navKey: "nav.bot",
+  footerKey: "footer.bot",
+};
+
 export type UserRole = "user" | "admin" | "founder";
 
 /**
@@ -98,7 +110,7 @@ export function canSeeAdmin(role: UserRole | undefined): boolean {
 
 /** Separadores a mostrar a este utilizador. */
 export function navItemsFor(role: UserRole | undefined): NavItem[] {
-  return canSeeAdmin(role) ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+  return canSeeAdmin(role) ? [...NAV_ITEMS, ADMIN_NAV_ITEM, BOT_NAV_ITEM] : NAV_ITEMS;
 }
 
 export type StoredUser = ReturnType<typeof getStoredUser>;
