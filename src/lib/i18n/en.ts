@@ -1019,6 +1019,7 @@ export const EN: Record<TKey, Entry> = {
   "billing.state.trial": "Free trial",
   "billing.state.admin": "Admin access",
   "billing.state.founder": "Founder access",
+  "billing.state.botuser": "Bot user access",
   "billing.state.pastDue": "Payment overdue",
   "billing.state.none": "No subscription",
   "billing.sourceManual": "Granted by the team",
@@ -1129,6 +1130,7 @@ export const EN: Record<TKey, Entry> = {
   "admin.access.admin": "Admin",
   "admin.access.subscription": "Subscription",
   "admin.access.trial": "Trial",
+  "admin.access.role": "Bot user",
   "admin.access.none": "No access",
   "admin.role.founder": "Founder",
   // A member's profile seen from the panel (founder only).

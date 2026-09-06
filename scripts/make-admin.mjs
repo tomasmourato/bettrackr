@@ -12,14 +12,19 @@
 //   node --env-file=.env scripts/make-admin.mjs <email>
 //   node --env-file=.env scripts/make-admin.mjs <email> --founder
 //   node --env-file=.env scripts/make-admin.mjs <email> --remove
+//   node --env-file=.env scripts/make-admin.mjs <email> --botuser
+//
+// --botuser da o cargo 'botuser': acesso ao bot da Betclic + CLV automatico, sem
+// nenhum controlo na app (nao ve o painel de gestao). Ver a migracao 023.
 import pg from "pg";
 
 const email = process.argv[2];
 const remove = process.argv.includes("--remove");
 const founder = process.argv.includes("--founder");
+const botuser = process.argv.includes("--botuser");
 
-if (!email || (remove && founder)) {
-  console.error("Uso: node --env-file=.env scripts/make-admin.mjs <email> [--founder | --remove]");
+if (!email || [remove, founder, botuser].filter(Boolean).length > 1) {
+  console.error("Uso: node --env-file=.env scripts/make-admin.mjs <email> [--founder | --botuser | --remove]");
   process.exit(1);
 }
 
@@ -35,7 +40,7 @@ const pool = new pg.Pool({
   ssl: isLocalDb ? undefined : { rejectUnauthorized: false },
 });
 
-const role = remove ? "user" : founder ? "founder" : "admin";
+const role = remove ? "user" : founder ? "founder" : botuser ? "botuser" : "admin";
 const result = await pool.query(
   "UPDATE users SET role = $1 WHERE LOWER(email) = LOWER($2) RETURNING username, email, role",
   [role, email],

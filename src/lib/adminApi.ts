@@ -20,13 +20,13 @@ export interface AdminUser {
   id: string;
   username: string | null;
   email: string;
-  role: "user" | "admin" | "founder";
+  role: "user" | "admin" | "founder" | "botuser";
   language: string | null;
   createdAt: string;
   betsCount: number;
   hasStripeCustomer: boolean;
   entitled: boolean;
-  accessSource: "admin" | "subscription" | "trial" | "none";
+  accessSource: "admin" | "subscription" | "trial" | "role" | "none";
   trialEndsAt: string | null;
   trialActive: boolean;
   subscription: SubscriptionSnapshot | null;

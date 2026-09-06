@@ -59,6 +59,20 @@ export function describeSubscription(
     };
   }
 
+  // 'botuser': acesso pago concedido pelo cargo (amigo com o bot). Como o staff,
+  // nao precisa de subscrever nem de gerir nada.
+  if (status.source === "role") {
+    return {
+      stateKey: "billing.state.botuser",
+      tone: "ok",
+      detail: null,
+      warning: null,
+      price,
+      canSubscribe: false,
+      canManage: Boolean(subscription),
+    };
+  }
+
   if (status.source === "subscription" && subscription) {
     const manual = subscription.source === "manual";
     // Cancelada mas ainda a correr: o acesso vai até ao fim do período pago.

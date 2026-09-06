@@ -7,7 +7,7 @@
 
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "./authMiddleware.js";
-import { AccessState, isStaff, loadAccess, PLAN, SUBSCRIPTION_REQUIRED } from "../lib/entitlements.js";
+import { AccessState, hasBotAccess, isStaff, loadAccess, PLAN, SUBSCRIPTION_REQUIRED } from "../lib/entitlements.js";
 
 export interface AccessRequest extends AuthenticatedRequest {
   access?: AccessState;
@@ -140,6 +140,36 @@ export async function requireAdmin(
     next();
   } catch (error) {
     console.error("Erro ao validar o administrador:", error);
+    res.status(500).json({ error: "Erro ao validar as permissões." });
+  }
+}
+
+/**
+ * Só deixa passar quem pode usar o bot da Betclic: staff (admin/founder) ou
+ * 'botuser'. Devolve 403 como o requireAdmin - o painel do bot nem sequer é
+ * mostrado a quem não tem o papel. Cada um só mexe no seu próprio estado (a
+ * identidade vem do JWT), por isso um botuser aqui é seguro.
+ */
+export async function requireBotAccess(
+  req: AccessRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: "Token de autenticação em falta." });
+    return;
+  }
+
+  try {
+    const access = await loadAccess(req.user.id);
+    if (!access || !hasBotAccess(access.role)) {
+      res.status(403).json({ error: "Acesso reservado aos utilizadores do bot." });
+      return;
+    }
+    req.access = access;
+    next();
+  } catch (error) {
+    console.error("Erro ao validar o acesso ao bot:", error);
     res.status(500).json({ error: "Erro ao validar as permissões." });
   }
 }

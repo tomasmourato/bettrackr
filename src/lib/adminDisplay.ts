@@ -10,6 +10,7 @@ export const ACCESS_KEY: Record<AdminUser["accessSource"], TKey> = {
   admin: "admin.access.admin",
   subscription: "admin.access.subscription",
   trial: "admin.access.trial",
+  role: "admin.access.role",
   none: "admin.access.none",
 };
 

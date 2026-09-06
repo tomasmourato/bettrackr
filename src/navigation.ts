@@ -94,7 +94,7 @@ const BOT_NAV_ITEM: NavItem = {
   footerKey: "footer.bot",
 };
 
-export type UserRole = "user" | "admin" | "founder";
+export type UserRole = "user" | "admin" | "founder" | "botuser";
 
 /**
  * Quem vê o painel de gestão. Vive aqui sozinha porque a pergunta é feita em
@@ -108,9 +108,21 @@ export function canSeeAdmin(role: UserRole | undefined): boolean {
   return role === "admin" || role === "founder";
 }
 
+/**
+ * Quem vê o separador do bot: staff OU 'botuser' (amigos que usam o bot sem
+ * gerir nada). Separado do canSeeAdmin de propósito - o botuser vê o bot mas
+ * nunca o painel de gestão. O servidor confirma com requireBotAccess.
+ */
+export function canSeeBot(role: UserRole | undefined): boolean {
+  return canSeeAdmin(role) || role === "botuser";
+}
+
 /** Separadores a mostrar a este utilizador. */
 export function navItemsFor(role: UserRole | undefined): NavItem[] {
-  return canSeeAdmin(role) ? [...NAV_ITEMS, ADMIN_NAV_ITEM, BOT_NAV_ITEM] : NAV_ITEMS;
+  const items = [...NAV_ITEMS];
+  if (canSeeAdmin(role)) items.push(ADMIN_NAV_ITEM);
+  if (canSeeBot(role)) items.push(BOT_NAV_ITEM);
+  return items;
 }
 
 export type StoredUser = ReturnType<typeof getStoredUser>;

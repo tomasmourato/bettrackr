@@ -1028,6 +1028,7 @@ export const PT = {
   "billing.state.trial": "Período experimental",
   "billing.state.admin": "Acesso de administrador",
   "billing.state.founder": "Acesso de fundador",
+  "billing.state.botuser": "Acesso de utilizador do bot",
   "billing.state.pastDue": "Pagamento em atraso",
   "billing.state.none": "Sem subscrição",
   "billing.sourceManual": "Oferecida pela equipa",
@@ -1138,6 +1139,7 @@ export const PT = {
   "admin.access.admin": "Administrador",
   "admin.access.subscription": "Subscrição",
   "admin.access.trial": "Experiência",
+  "admin.access.role": "Utilizador do bot",
   "admin.access.none": "Sem acesso",
   "admin.role.founder": "Fundador",
   // Perfil de um membro visto do painel (só o fundador).

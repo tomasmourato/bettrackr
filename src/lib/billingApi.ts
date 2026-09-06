@@ -8,7 +8,7 @@
 import { apiUrl, isNativeApp } from "./apiBase";
 import { authFetch, getToken, parseJsonResponse } from "./authApi";
 
-export type AccessSource = "admin" | "subscription" | "trial" | "none";
+export type AccessSource = "admin" | "subscription" | "trial" | "role" | "none";
 
 export interface SubscriptionSnapshot {
   status: string;
@@ -25,7 +25,7 @@ export interface SubscriptionSnapshot {
 export interface BillingStatus {
   entitled: boolean;
   source: AccessSource;
-  role: "user" | "admin" | "founder";
+  role: "user" | "admin" | "founder" | "botuser";
   trialEndsAt: string | null;
   trialActive: boolean;
   subscription: SubscriptionSnapshot | null;

@@ -1,6 +1,8 @@
 // routes/botRoutes.ts
 // Estado e ativação do bot local da Betclic (bot/). Todas as rotas reservadas a
-// administradores (a feature é privada; ver db/migrations/021_bot_runs.sql):
+// quem tem acesso ao bot - staff (admin/founder) ou 'botuser' (amigos que usam o
+// bot sem gerir nada; ver requireBotAccess e a migração 023). A feature é
+// privada (ver db/migrations/021_bot_runs.sql):
 //
 //   POST   /api/bot/heartbeat       -> o bot reporta uma passagem
 //   GET    /api/bot/status          -> o painel lê as passagens + estado de ativação
@@ -16,14 +18,14 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
-import { requireAdmin } from "../middleware/accessMiddleware.js";
+import { requireBotAccess } from "../middleware/accessMiddleware.js";
 import { activationConfigured, encryptToken, decryptToken } from "../lib/botCrypto.js";
 import { signToken } from "./authRoutes.js";
 
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireAdmin);
+router.use(requireBotAccess);
 
 const RUN_COLUMNS = `
   id, started_at, duration_ms, ok, read_count, imported, error, created_at

@@ -50,7 +50,7 @@ interface AdminDashboardProps {
   /** Relê a subscrição do próprio utilizador depois de uma alteração. */
   onAccessChanged: () => void;
   /** Papel de quem está a ver - o perfil de membro é só para o fundador. */
-  viewerRole: "user" | "admin" | "founder" | undefined;
+  viewerRole: "user" | "admin" | "founder" | "botuser" | undefined;
   currency: string;
   isDark: boolean;
 }
