@@ -78,7 +78,7 @@ async function cmdEnrol(token: string): Promise<void> {
 
   console.log("2/3  a gerar par P-256 e a registar a chave publica...");
   const cred = generateCredential();
-  const result = await submitRegistration(token, cred, options, "BetTrackr Marco0 (apagar)");
+  const result = await submitRegistration(token, cred, options, "BetTrackr Bot");
 
   if (!result.ok) {
     console.error(`     FALHOU (${result.status}): ${result.body.slice(0, 400)}`);

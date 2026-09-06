@@ -107,6 +107,23 @@ export async function heartbeat(cfg: BettrackrConfig, payload: HeartbeatPayload)
   }
 }
 
+// Pede ao BetTrackr um token do BetTrackr fresco (GET /api/bot/token), para o
+// bot se auto-renovar e nao depender de um BETTRACKR_TOKEN atualizado a mao. O
+// pedido usa o token atual (que tem de estar valido). Devolve null se falhar -
+// o chamador fica com o token que ja tinha.
+export async function fetchFreshToken(cfg: BettrackrConfig): Promise<string | null> {
+  try {
+    const res = await fetch(`${cfg.base}/api/bot/token`, {
+      headers: { Authorization: `Bearer ${cfg.token}` },
+    });
+    if (!res.ok) return null;
+    const data: any = await res.json().catch(() => ({}));
+    return typeof data.token === "string" && data.token ? data.token : null;
+  } catch {
+    return null;
+  }
+}
+
 // Vai buscar ao BetTrackr o token de contexto que o admin ativou na app (painel
 // /bot -> GET /api/bot/context-token). E o que dispensa o BETCLIC_CONTEXT_TOKEN
 // a mao: no arranque frio, o bot puxa daqui em vez de exigir a env. Devolve null

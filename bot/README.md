@@ -204,7 +204,7 @@ unidade systemd em [betclic-bot.service](betclic-bot.service) (intervalo default
 | --- | --- |
 | `BETCLIC_BOT_KEY` | passphrase do cofre (decifra a chave da passkey). Obrigatoria. |
 | `BETCLIC_CONTEXT_TOKEN` | token begmedia para o PRIMEIRO arranque. **Opcional** se ativares o bot pelo painel /bot da app (recomendado - ver abaixo); depois a sessao guardada rearranca sozinha. |
-| `BETTRACKR_BASE` / `BETTRACKR_TOKEN` | destino no BetTrackr. Sem eles => dry-run. Tambem sao o que deixa o bot puxar a ativacao da app. |
+| `BETTRACKR_BASE` / `BETTRACKR_TOKEN` | destino no BetTrackr. Sem eles => dry-run. Tambem deixam o bot puxar a ativacao da app. O `BETTRACKR_TOKEN` so serve de ARRANQUE: o bot auto-renova-o a cada passagem (GET /api/bot/token) e guarda-o na sessao cifrada, por isso nao ha refresh a mao de 7 em 7 dias enquanto o bot correr dentro da validade. |
 | `BOT_INTERVAL_SEC` | intervalo entre passagens (default 1800 = 30 min). |
 | `BOT_VAULT` / `BOT_KEYFILE` | caminhos do cofre / da chave em claro (defaults sensatos). |
 | `BOT_SESSION` | caminho do ficheiro de sessao cifrada (default bot/session.enc). |

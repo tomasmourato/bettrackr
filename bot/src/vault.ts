@@ -117,6 +117,11 @@ export interface SessionState {
   accessToken: string;
   refreshToken: string | null;
   savedAt: string; // ISO
+  // Token do BetTrackr rotacionado (auto-renovado a cada passagem). Guardado
+  // aqui para o bot nao depender de um BETTRACKR_TOKEN atualizado a mao: enquanto
+  // correr dentro da validade (7 dias), tem sempre um fresco. Opcional para nao
+  // partir sessoes antigas gravadas sem ele.
+  bettrackrToken?: string | null;
 }
 
 export function saveSession(path: string, state: SessionState): void {

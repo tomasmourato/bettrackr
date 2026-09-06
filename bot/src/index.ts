@@ -17,7 +17,7 @@ import { SoftCredential, fromB64any } from "./softAuthenticator.js";
 import { loadVault, vaultToCredential, saveSession, loadSession } from "./vault.js";
 import { syncOnce } from "./sync.js";
 import { isUsable } from "./jwt.js";
-import { BettrackrConfig, heartbeat, fetchContextToken } from "./bettrackr.js";
+import { BettrackrConfig, heartbeat, fetchContextToken, fetchFreshToken } from "./bettrackr.js";
 
 interface Config {
   vaultPath: string;
@@ -91,6 +91,13 @@ async function main() {
       } else if (saved) {
         console.log("[bot] sessao guardada expirou; a tentar a ativacao da app.");
       }
+      // Token do BetTrackr rotacionado: se guardado e ainda valido, usa-o em vez
+      // do BETTRACKR_TOKEN do ambiente (que so serve de arranque). Assim o env
+      // pode envelhecer sem parar o bot, desde que ele corra dentro dos 7 dias.
+      if (saved?.bettrackrToken && cfg.bettrackr && isUsable(saved.bettrackrToken, 300)) {
+        cfg.bettrackr.token = saved.bettrackrToken;
+        console.log("[bot] token do BetTrackr reutilizado da sessao (auto-renovado).");
+      }
     } catch {
       // sessao ilegivel - segue para os outros arranques
     }
@@ -143,6 +150,13 @@ async function main() {
       // O access_token novo passa a ser o contexto do proximo ciclo.
       contextToken = r.accessToken;
       backoffSec = 60; // reset apos sucesso
+      // Auto-renova o token do BetTrackr: pede um fresco (o atual ainda e valido)
+      // e passa a usa-lo. Assim o BETTRACKR_TOKEN do bot.env so serve de arranque
+      // e nunca "expira" enquanto o bot correr dentro dos 7 dias. Best-effort.
+      if (cfg.bettrackr) {
+        const fresh = await fetchFreshToken(cfg.bettrackr);
+        if (fresh) cfg.bettrackr.token = fresh;
+      }
       // Persiste a sessao (cifrada) para o bot rearrancar sozinho apos um
       // reinicio. Best-effort: se falhar, nao faz a passagem falhar.
       if (hasPassphrase()) {
@@ -151,6 +165,7 @@ async function main() {
             accessToken: r.accessToken,
             refreshToken: r.refreshToken,
             savedAt: new Date().toISOString(),
+            bettrackrToken: cfg.bettrackr?.token ?? null,
           });
         } catch {
           // ignora - a persistencia e conveniencia, nao critica

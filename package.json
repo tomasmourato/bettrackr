@@ -16,7 +16,8 @@
     "test:unit": "bun test test",
     "android:sync": "vite build && cap sync android",
     "android:open": "cap open android",
-    "build:agent": "esbuild agent/clv-agent.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/clv-agent.mjs"
+    "build:agent": "esbuild agent/clv-agent.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/clv-agent.mjs",
+    "build:bot": "esbuild bot/src/index.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/bot.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

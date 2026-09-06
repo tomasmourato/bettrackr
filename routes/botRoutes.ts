@@ -18,6 +18,7 @@ import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
 import { requireAdmin } from "../middleware/accessMiddleware.js";
 import { activationConfigured, encryptToken, decryptToken } from "../lib/botCrypto.js";
+import { signToken } from "./authRoutes.js";
 
 const router = Router();
 
@@ -232,6 +233,18 @@ router.delete("/context-token", async (req: AuthenticatedRequest, res) => {
     console.error("Erro ao apagar o token de ativação do bot:", err);
     res.status(500).json({ error: "Erro ao desativar." });
   }
+});
+
+// ------------------------------------------------------------
+// GET /token - emite um token do BetTrackr fresco para o bot se auto-renovar.
+// O bot chama isto a cada passagem e guarda o novo (cifrado) para a proxima:
+// como corre de 30 em 30 min e o token dura 7 dias, nunca "expira" enquanto o
+// bot estiver a andar. O BETTRACKR_TOKEN do bot.env passa a ser so o arranque.
+// Autenticado como qualquer rota do bot (admin), com a identidade do JWT.
+// ------------------------------------------------------------
+router.get("/token", (req: AuthenticatedRequest, res) => {
+  const token = signToken({ id: req.user!.id, username: req.user!.username }, "bot");
+  res.json({ token });
 });
 
 export default router;

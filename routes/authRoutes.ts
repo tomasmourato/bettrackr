@@ -70,7 +70,7 @@ function cleanClient(raw: unknown): string | undefined {
   return typeof raw === "string" && (KNOWN_CLIENTS as readonly string[]).includes(raw) ? raw : undefined;
 }
 
-function signToken(user: { id: string; username: string }, client?: string): string {
+export function signToken(user: { id: string; username: string }, client?: string): string {
   return jwt.sign(
     { id: user.id, username: user.username, ...(client ? { client } : {}) },
     getJwtSecret(),
