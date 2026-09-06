@@ -1,7 +1,7 @@
 // src/lib/bookmakers.ts
 // Registo de casas de apostas com os seus defaults de freebet.
 //
-// IMPORTANTE (ver PLAN.md §F3): os tipos de freebet por casa são DEFAULTS,
+// IMPORTANTE (ver docs/PLAN.md §F3): os tipos de freebet por casa são DEFAULTS,
 // não verdades absolutas - vieram de fontes de afiliados pouco fiáveis e
 // misturadas PT/BR. SNR (Stake Not Returned) é o padrão da indústria e o
 // fallback seguro; a Betclic, a Betano e a Solverde são SR por decisão/dados

@@ -5,19 +5,32 @@ import {
     AuthenticatedRequest,
     authenticateToken,
 } from "../middleware/authMiddleware.js";
-import { requireSubscriptionForExtension } from "../middleware/accessMiddleware.js";
+import {
+    attachAccess,
+    requireSubscription,
+    requireSubscriptionForExtension,
+    type AccessRequest,
+} from "../middleware/accessMiddleware.js";
+import { semClv } from "../lib/clvVisibility.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
 
 // Mantém esta regra dentro do bundle backend. A rota é compilada pela Vercel
 // separadamente do frontend; não deve depender de módulos da camada `src` nem
 // de uma resolução de imports TypeScript adicional para arrancar.
 function combineClosingOdds(
-    selections: Array<{ closingOdd?: unknown }> | undefined,
+    selections: Array<{ closingOdd?: unknown; result?: unknown }> | undefined,
 ): number | null {
     if (!Array.isArray(selections) || selections.length === 0) return null;
 
+    // Uma perna anulada sai do produto, tal como ja saiu da odd da aposta: a
+    // casa devolve-lhe o valor 1 quando o jogo nao se realiza. Manter-la aqui
+    // punha o preco de uma perna a ser dividido pela linha de duas. A razao
+    // longa esta em lib/clvClosingOdds.ts, que tem a copia irma desta regra.
+    const contam = selections.filter((selection) => selection?.result !== "ANULADA");
+    if (contam.length === 0) return null;
+
     let product = 1;
-    for (const selection of selections) {
+    for (const selection of contam) {
         const odd = Number(selection?.closingOdd);
         if (!Number.isFinite(odd) || odd <= 1) return null;
         product *= odd;
@@ -125,6 +138,11 @@ router.use(authenticateToken);
 // A extensão é funcionalidade paga; o registo manual de apostas não. Só os
 // pedidos feitos com um token da extensão passam pelo portão da subscrição.
 router.use(requireSubscriptionForExtension);
+
+// A odd de fecho e o CLV sao pagos, mas registar e ler apostas nao. Por isso o
+// acesso e CARREGADO aqui sem recusar nada: quem decide o que fazer com ele sao
+// os handlers, que cortam o CLV do payload de quem nao tem subscricao.
+router.use(attachAccess);
 
 // Colunas devolvidas ao frontend - lista única partilhada com o SSR (server.ts).
 const BET_COLUMNS = BET_SELECT_COLUMNS;
@@ -342,7 +360,7 @@ function dbErrorMessage(error: any): string | null {
 // ============================================================
 // GET /api/bets  -> lista só as bets do utilizador autenticado
 // ============================================================
-router.get("/", async (req: AuthenticatedRequest, res) => {
+router.get("/", async (req: AccessRequest, res) => {
     try {
         const result = await pool.query(
             `SELECT ${BET_COLUMNS}
@@ -351,7 +369,10 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
        ORDER BY date_time DESC NULLS LAST, created_at DESC`,
             [req.user!.id],
         );
-        res.json({ bets: result.rows });
+        // Sem subscricao, a odd de fecho nem sai daqui. Esconder a coluna no
+        // ecra deixava o valor a vista de quem abrisse a consola do browser.
+        const entitled = req.access?.entitled === true;
+        res.json({ bets: entitled ? result.rows : result.rows.map(semClv) });
     } catch (error) {
         console.error("Erro ao listar bets:", error);
         res.status(500).json({ error: "Erro ao obter as bets." });
@@ -497,14 +518,22 @@ router.post("/bulk", async (req: AuthenticatedRequest, res) => {
 // PUT /api/bets/:id  -> substitui os campos editáveis de uma bet
 // (o frontend envia sempre a aposta completa)
 // ============================================================
-router.put("/:id", async (req: AuthenticatedRequest, res) => {
+router.put("/:id", async (req: AccessRequest, res) => {
     const { id } = req.params;
 
-    // Só se abre transação quando há odds de fecho a salvar do payload. O
-    // bloqueio da linha é preciso pela mesma razão do PATCH /:id/closing-odd:
-    // a captura automática pode estar a escrever a odd de fecho no preciso
-    // momento em que a importação reescreve a aposta.
-    const client = ownsClosingOdds(req.body) ? null : await pool.connect();
+    // Sem subscrição, o corpo NUNCA manda nas odds de fecho - mesmo que as
+    // traga. Não é só o ecrã que as esconde: a esta conta o servidor também não
+    // as devolve, por isso um PUT vindo dela traria o que ela viu, ou seja
+    // nada, e gravá-lo apagava odds de fecho que estavam lá. Cair no ramo de
+    // preservação é o que faz com que uma subscrição em pausa não custe
+    // histórico a ninguém.
+    const mandaNasOdds = ownsClosingOdds(req.body) && req.access?.entitled === true;
+
+    // Só se abre transação quando há odds de fecho a preservar. O bloqueio da
+    // linha é preciso pela mesma razão do PATCH /:id/closing-odd: a captura
+    // automática pode estar a escrever a odd de fecho no preciso momento em que
+    // a importação reescreve a aposta.
+    const client = mandaNasOdds ? null : await pool.connect();
     let committed = false;
 
     try {
@@ -636,7 +665,7 @@ router.patch("/:id/ignore", async (req: AuthenticatedRequest, res) => {
 // inteira de volta - revalidando estado, seleções e metadata só para escrever
 // um número. `closingOdd: null` limpa o valor (volta a "ainda não se sabe").
 // ============================================================
-router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
+router.patch("/:id/closing-odd", requireSubscription, async (req: AuthenticatedRequest, res) => {
     const raw = req.body?.closingOdd;
     let closingOdd: number | null = null;
     if (raw !== undefined && raw !== null && raw !== "") {
@@ -654,7 +683,10 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
     // também o preenchimento de uma múltipla. As pernas mandam sobre o valor
     // ao nível da aposta, que fica para as simples e para o histórico.
     const rawLegs = req.body?.legs;
+    // Por perna: a crua, e opcionalmente a justa (sem a margem da casa) com a
+    // margem que a produziu. A justa nunca substitui a crua - andam a par.
     const legs = new Map<number, number>();
+    const legsNoVig = new Map<number, { odd: number; margin: number }>();
     if (rawLegs !== undefined && rawLegs !== null) {
         if (!Array.isArray(rawLegs)) {
             res.status(400).json({ error: "legs tem de ser um array." });
@@ -676,6 +708,15 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
                 return;
             }
             legs.set(index, n);
+
+            const justa = Number(leg?.closingOddNoVig);
+            const margem = Number(leg?.closingOddMargin);
+            // A justa tem de ser MAIOR do que a crua: tirar a margem so pode
+            // subir a odd. Se vier ao contrario, e sinal de que quem a mandou
+            // se enganou, e uma justa errada e pior do que justa nenhuma.
+            if (Number.isFinite(justa) && justa > n && Number.isFinite(margem)) {
+                legsNoVig.set(index, { odd: justa, margin: margem });
+            }
         }
     }
 
@@ -705,7 +746,7 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
         if (client) {
             await client.query("BEGIN");
             const current = await client.query(
-                "SELECT selections FROM bets WHERE id = $1 AND user_id = $2 FOR UPDATE",
+                "SELECT selections, metadata FROM bets WHERE id = $1 AND user_id = $2 FOR UPDATE",
                 [req.params.id, req.user!.id],
             );
             if (current.rows.length === 0) {
@@ -719,9 +760,39 @@ router.patch("/:id/closing-odd", async (req: AuthenticatedRequest, res) => {
                 : typeof raw === "string"
                   ? JSON.parse(raw || "[]")
                   : [];
+
+            // A extensao nao passa por cima do que o servidor apanhou.
+            //
+            // As duas capturas nao valem o mesmo: o servidor le entre os 30 e
+            // os 5 minutos do apito e tira a margem da casa; a extensao le a
+            // zero minutos, dentro da janela em que as odds da Betclic desabam,
+            // e sem de-vig. Como a extensao nao se atualiza sozinha, e aqui que
+            // se arbitra - senao a leitura pior chegava depois e ganhava.
+            const jaDoServidor =
+                current.rows[0].metadata?.closingOddSource === "server";
+            const daExtensao = req.body?.source === "betclic";
+            if (jaDoServidor && daExtensao) {
+                await client.query("ROLLBACK");
+                res.json({ success: true, ignorado: "ja ha leitura do servidor" });
+                return;
+            }
+
             for (const [index, value] of legs) {
                 if (!selections[index]) continue;
-                selections[index] = { ...selections[index], closingOdd: value };
+                const justa = legsNoVig.get(index);
+                selections[index] = {
+                    ...selections[index],
+                    closingOdd: value,
+                    ...(justa
+                        ? { closingOddNoVig: justa.odd, closingOddMargin: justa.margin }
+                        : {}),
+                };
+                // Sem justa nova, a antiga nao pode ficar ao lado de uma crua
+                // nova - seria uma margem a dizer respeito a outro preco.
+                if (!justa) {
+                    delete selections[index].closingOddNoVig;
+                    delete selections[index].closingOddMargin;
+                }
             }
             selectionsJson = JSON.stringify(selections);
             // A combinada sai sempre do conjunto COMPLETO das pernas, já com

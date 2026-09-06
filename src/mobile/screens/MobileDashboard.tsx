@@ -37,6 +37,7 @@ import {
 import { Bet, BetStatus, BookieAccount, BankrollMovement } from "../../types";
 import { calculateBankroll } from "../../lib/bankroll";
 import { calculateClv } from "../../lib/clv";
+import { ClvLockPanel } from "../../components/ClvLock";
 import ClosingOddsSheet from "../components/ClosingOddsSheet";
 import type { ClosingOddInput } from "../../lib/betsApi";
 import type { DashboardBetsFilters } from "../../components/Dashboard";
@@ -55,6 +56,12 @@ interface MobileDashboardProps {
   // Gravar a odd de fecho a partir da caixa de entrada do CLV. Ausente na
   // vista de um amigo, que e so de leitura.
   onSetClosingOdd?: (id: string, input: ClosingOddInput) => Promise<void>;
+  // O CLV e funcionalidade paga: a false, os KPIs e a seccao dao lugar ao
+  // cartao que explica a metrica. Omitido = ligado, para a vista de um amigo
+  // nao ter de saber disto.
+  clvEnabled?: boolean;
+  /** Leva a subscricao, a partir do cadeado. */
+  onSubscribe?: () => void;
 }
 
 type Timeframe = "ALL" | "7_DAYS" | "30_DAYS" | "90_DAYS" | "THIS_MONTH" | "THIS_YEAR" | "CUSTOM";
@@ -104,6 +111,8 @@ export default function MobileDashboard({
   onOpenBets,
   bankrollMovements,
   onSetClosingOdd,
+  clvEnabled = true,
+  onSubscribe,
 }: MobileDashboardProps) {
   const { t, formatMoney, formatSignedMoney, formatDate } = useI18n();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -456,7 +465,7 @@ export default function MobileDashboard({
         )}
         {/* CLV: dois cartoes, pelo mesmo motivo da banca - a grelha e de duas
             colunas e um cartao sozinho ficava coxo. */}
-        {clv.hasData && (
+        {clvEnabled && clv.hasData && (
           <>
             <KpiCard
               label={t("clv.avg")}
@@ -540,7 +549,13 @@ export default function MobileDashboard({
 
       {/* CLV: a odd apanhada contra a linha de fecho. Ao contrario do resto do
           painel, inclui as apostas por liquidar - e essa a graca da metrica. */}
-      {(clv.hasData || (clv.pendingFill > 0 && onSetClosingOdd)) && (
+      {!clvEnabled && (
+        <>
+          <SectionHeader>{t("clv.titleLong")}</SectionHeader>
+          <ClvLockPanel onSubscribe={onSubscribe} />
+        </>
+      )}
+      {clvEnabled && (clv.hasData || (clv.pendingFill > 0 && onSetClosingOdd)) && (
         <>
           <SectionHeader>{t("clv.titleLong")}</SectionHeader>
           <MobileCard>

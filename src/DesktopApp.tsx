@@ -80,6 +80,17 @@ export default function DesktopApp({
     subscription && !subscription.entitled && PAID_TABS.has(activeTab),
   );
 
+  // O CLV é pago, mas não é um separador - vive dentro do Painel e dos
+  // Boletins, que são grátis. Por isso não entra no PAID_TABS: em vez de
+  // fechar o ecrã, fecha-se a métrica lá dentro.
+  //
+  // Enquanto `subscription` for null ainda não se sabe nada, e assume-se que
+  // sim: piscar um cadeado e tirá-lo a seguir é pior do que mostrar a coluna
+  // um instante - o servidor não devolve valor nenhum entretanto, por isso
+  // não há nada a escapar-se.
+  const clvEnabled = subscription ? subscription.entitled : true;
+  const goToSubscription = () => navigateToTab("SETTINGS");
+
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 antialiased selection:bg-emerald-500/90 selection:text-zinc-950" id="main-container">
 
@@ -227,7 +238,9 @@ export default function DesktopApp({
                     accounts={accounts}
                     initialSearch={locationSearch}
                     bankrollMovements={bankrollMovements}
-                    onSetClosingOdd={onSetClosingOdd}
+                    onSetClosingOdd={clvEnabled ? onSetClosingOdd : undefined}
+                    clvEnabled={clvEnabled}
+                    onSubscribe={goToSubscription}
                   />
                 )}
                 {activeTab === "BETS" && (
@@ -241,6 +254,8 @@ export default function DesktopApp({
                     onIgnoreBet={onIgnoreBet}
                     onDeleteBet={onDeleteBet}
                     accounts={accounts}
+                    clvEnabled={clvEnabled}
+                    onSubscribe={goToSubscription}
                   />
                 )}
                 {blockedByPaywall && subscription && (

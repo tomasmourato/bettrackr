@@ -15,6 +15,7 @@ const INCLUDED = [
   "billing.includes.screenshot",
   "billing.includes.insights",
   "billing.includes.extension",
+  "billing.includes.clv",
 ] as const;
 
 interface PaywallNoticeProps {

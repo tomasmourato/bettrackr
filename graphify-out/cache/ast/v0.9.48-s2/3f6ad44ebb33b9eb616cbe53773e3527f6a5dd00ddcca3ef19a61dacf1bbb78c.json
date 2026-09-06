@@ -1,1 +1,0 @@
-{"nodes": [{"id": "$graphify-root$_db_migrations_010_ignore_bets_sql", "label": "010_ignore_bets.sql", "file_type": "code", "source_file": "db/migrations/010_ignore_bets.sql", "source_location": null}, {"id": "bets", "label": "bets", "file_type": "code", "source_file": "", "source_location": "", "origin_file": "$graphify-root$/db/migrations/010_ignore_bets.sql"}], "edges": []}

@@ -1,11 +1,17 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
+import { attachAccess, type AccessRequest } from "../middleware/accessMiddleware.js";
+import { semClv } from "../lib/clvVisibility.js";
 
 const router = Router();
 
 // Todas as rotas sociais exigem autenticação.
 router.use(authenticateToken);
+// O CLV e pago. As apostas de um amigo passam por aqui com a odd de fecho la
+// dentro, por isso o acesso de QUEM ESTA A VER tem de ser conhecido - senao
+// bastava abrir o perfil de um amigo para contornar o bloqueio.
+router.use(attachAccess);
 
 // ============================================================
 // Colunas de bets devolvidas ao ver o perfil de um amigo. Espelham as de
@@ -292,7 +298,13 @@ router.get("/friends/:userId/bets", async (req: AuthenticatedRequest, res) => {
       [req.params.userId]
     );
 
-    res.json({ friend: friend.rows[0], bets: bets.rows });
+    // Manda o acesso de quem VE, e nao o do dono das apostas: o CLV e uma
+    // funcionalidade de quem a consome.
+    const entitled = (req as AccessRequest).access?.entitled === true;
+    res.json({
+      friend: friend.rows[0],
+      bets: entitled ? bets.rows : bets.rows.map(semClv),
+    });
   } catch (error) {
     console.error("Erro ao obter apostas do amigo:", error);
     res.status(500).json({ error: "Erro ao obter as apostas do amigo." });

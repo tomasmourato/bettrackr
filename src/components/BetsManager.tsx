@@ -20,7 +20,7 @@ import {
   ArrowDown,
   CheckSquare
 } from "lucide-react";
-import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType, SelectionResult } from "../types";
+import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType } from "../types";
 import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, parseDecimal, safeNum, selectBetsForFinancialSummary } from "../utils";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { hasCashoutSignal } from "../lib/betStatus";
@@ -28,6 +28,12 @@ import FilterDropdown from "./FilterDropdown";
 import FilteredBetsSummary from "./FilteredBetsSummary";
 import FiltersBar from "./FiltersBar";
 import { betClv, combineClosingOdds, needsClosingOdd } from "../lib/clv";
+import { ClvLockInline } from "./ClvLock";
+import {
+  combineFormOdds,
+  mergeSelection,
+  type FormSelectionRow,
+} from "../lib/betFormSelections";
 import TimeframeFilter, {
   EMPTY_TIMEFRAME_FILTER,
   resolveTimeframeRange,
@@ -57,6 +63,12 @@ interface BetsManagerProps {
   onIgnoreBet: (id: string, ignored: boolean, comment?: string | null) => void | Promise<void>;
   onDeleteBet: (id: string) => void | Promise<void>;
   initialSearch?: string;
+  // O CLV é funcionalidade paga. A false, a coluna dá lugar a um cadeado e o
+  // filtro por CLV desaparece - filtrar por um valor que não vem do servidor
+  // só daria listas vazias sem explicação. Omitido = ligado.
+  clvEnabled?: boolean;
+  // Leva à subscrição, a partir do cadeado.
+  onSubscribe?: () => void;
 }
 
 type SortField = "date" | "stake" | "odd" | "profit" | "clv";
@@ -95,7 +107,9 @@ export default function BetsManager({
   onIgnoreBet,
   onDeleteBet,
   initialSearch,
-  accounts = []
+  accounts = [],
+  clvEnabled = true,
+  onSubscribe
 }: BetsManagerProps) {
   const { t, locale, formatMoney, formatSignedMoney } = useI18n();
   const initialFilters = useMemo(
@@ -208,18 +222,12 @@ export default function BetsManager({
   const [formDateTime, setFormDateTime] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [formSettledReturn, setFormSettledReturn] = useState("");
-  const [formSelections, setFormSelections] = useState<Array<{
-    event: string;
-    market: string;
-    choice: string;
-    odd: string;
-    /** Odd de fecho desta perna; vazia enquanto não se souber. */
-    closingOdd: string;
-    // Hora do apito. Não editável - vem da extensão - mas anda por aqui para
-    // uma edição à mão não a deitar fora sem querer.
-    startsAt?: string;
-    result?: SelectionResult;
-  }>>([{ event: "", market: "", choice: "", odd: "1.80", closingOdd: "" }]);
+  // A forma da linha e a regra que a funde com a perna gravada vivem em
+  // src/lib/betFormSelections.ts, partilhadas com o formulário do mobile: as
+  // duas cópias já tinham divergido (esta preservava o `result`, a outra não).
+  const [formSelections, setFormSelections] = useState<FormSelectionRow[]>([
+    { event: "", market: "", choice: "", odd: "1.80", closingOdd: "" },
+  ]);
 
   useEffect(() => {
     if (!detailBet) return;
@@ -236,18 +244,10 @@ export default function BetsManager({
   }, [detailBet]);
 
   // Combined Odd Calculator based on selections
-  const calculatedOdd = useMemo(() => {
-    let multiplier = 1;
-    let validCount = 0;
-    formSelections.forEach(s => {
-      const parsed = parseDecimal(s.odd);
-      if (parsed !== null && parsed > 0) {
-        multiplier *= parsed;
-        validCount++;
-      }
-    });
-    return validCount > 0 ? Number(multiplier.toFixed(2)) : 1.00;
-  }, [formSelections]);
+  const calculatedOdd = useMemo(
+    () => combineFormOdds(formSelections, parseDecimal),
+    [formSelections],
+  );
 
   // Real-time calculations for potential return in the form
   // Odd de fecho combinada: null enquanto faltar a de uma perna que seja.
@@ -255,7 +255,13 @@ export default function BetsManager({
   const calculatedClosingOdd = useMemo(
     () =>
       combineClosingOdds(
-        formSelections.map((s) => ({ closingOdd: parseDecimal(s.closingOdd) ?? undefined })),
+        // O `result` vai junto: uma perna anulada não entra na linha de fecho,
+        // tal como não entra na odd. Sem isto a pré-visualização discordava do
+        // que o servidor iria gravar.
+        formSelections.map((s) => ({
+          closingOdd: parseDecimal(s.closingOdd) ?? undefined,
+          result: s.result,
+        })),
       ),
     [formSelections]
   );
@@ -739,6 +745,8 @@ export default function BetsManager({
       closingOdd: s.closingOdd ? String(s.closingOdd) : "",
       startsAt: s.startsAt,
       result: s.result,
+      // A perna inteira, para o que o formulário não edita sobreviver.
+      original: s,
     })));
     setIsModalOpen(true);
   };
@@ -810,16 +818,14 @@ export default function BetsManager({
       if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
         closingOddInvalid = true;
       }
-      selections.push({
-        id: `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
-        event: s.event.trim(),
-        market: s.market.trim(),
-        choice: s.choice.trim(),
-        odd: oddVal ?? 0,
-        ...(closingVal !== null && closingVal > 1 ? { closingOdd: closingVal } : {}),
-        ...(s.startsAt ? { startsAt: s.startsAt } : {}),
-        ...(s.result ? { result: s.result } : {}),
-      });
+      selections.push(
+        mergeSelection(
+          s,
+          `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
+          oddVal ?? 0,
+          closingVal,
+        ),
+      );
     });
 
     if (!isValid) {
@@ -1100,17 +1106,19 @@ export default function BetsManager({
             ariaLabel={t("filters.moneyAria")}
           />
 
-          <FilterDropdown
-            className="flex-1 min-w-40"
-            value={clvFilter}
-            options={[
-              { value: "ALL", label: t("clv.filter.all") },
-              { value: "TRACKED", label: t("clv.filter.tracked") },
-              { value: "MISSING", label: t("clv.filter.missing") }
-            ]}
-            onChange={setClvFilter}
-            ariaLabel={t("clv.filterAria")}
-          />
+          {clvEnabled && (
+            <FilterDropdown
+              className="flex-1 min-w-40"
+              value={clvFilter}
+              options={[
+                { value: "ALL", label: t("clv.filter.all") },
+                { value: "TRACKED", label: t("clv.filter.tracked") },
+                { value: "MISSING", label: t("clv.filter.missing") }
+              ]}
+              onChange={setClvFilter}
+              ariaLabel={t("clv.filterAria")}
+            />
+          )}
 
           <TimeframeFilter
             className="flex-1 min-w-40"
@@ -1496,6 +1504,15 @@ title={t("bets.ignoredTitle")}
                   {/* CLV: "-" quando ainda não há odd de fecho. A coluna existe
                       sempre para o cabeçalho poder ordenar por ela. */}
                   <div className="hidden sm:flex flex-col min-w-[48px]">
+                    {/* Sem subscrição não há valor nenhum para mostrar nem para
+                        ordenar: o servidor não devolve a odd de fecho a estas
+                        contas. Fica o cadeado, que diz onde a ir buscar. */}
+                    {!clvEnabled ? (
+                      <span className="self-end">
+                        <ClvLockInline onSubscribe={onSubscribe} />
+                      </span>
+                    ) : (
+                      <>
                     {sortButton("bets.sort.clv", "clv", "self-end")}
                     {(() => {
                       const clv = betClv(bet);
@@ -1513,6 +1530,8 @@ title={t("bets.ignoredTitle")}
                         </span>
                       );
                     })()}
+                      </>
+                    )}
                   </div>
                   <div className="flex flex-col min-w-[75px]">
                     {sortButton(isSettled ? "bets.sort.profit" : "bets.sort.potential", "profit", "self-end")}

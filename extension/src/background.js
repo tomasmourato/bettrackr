@@ -11,6 +11,8 @@ import { runAfterBettrackrVerification } from "./bettrackr-identity.js";
 import {
   SNAPSHOT_LEAD_MINUTES,
   acceptSnapshot,
+  collectMarkets,
+  devig,
   betclicMatchPath,
   collectSelectionOdds,
   legKeyOf,
@@ -21,11 +23,15 @@ import {
 } from "./closing-odds.js";
 
 const PAGE_SIZE = 20;
-const DEFAULT_BETTRACKR_BASE = "https://betrackr.vercel.app";
+const DEFAULT_BETTRACKR_BASE = "https://bettrackr.dev";
 const BETTRACKR_APP_URLS = [
+  "https://bettrackr.dev/*",
+  "https://www.bettrackr.dev/*",
+  // Dominios *.vercel.app anteriores ao dominio proprio. Ficam aqui ate
+  // deixarem de servir a app: enquanto so redirecionarem, o separador acaba
+  // no dominio novo (que ja esta na lista), mas uma extensao antiga que ainda
+  // nao tenha sido recarregada continua a precisar deles para a ponte.
   "https://betrackr.vercel.app/*",
-  // Dominio anterior ao rename do projeto. Fica aqui ate deixar de servir a
-  // app, senao as extensoes ja instaladas perdem a ponte com o site.
   "https://gestordebets.vercel.app/*",
   "http://localhost/*",
   "http://127.0.0.1/*",
@@ -419,7 +425,11 @@ async function readMatchOdds(matchId, event) {
   });
   if (!res.ok) return null;
   const state = parseNgState(await res.text());
-  return state ? collectSelectionOdds(state) : null;
+  if (!state) return null;
+  // Alem dos precos vem o MERCADO completo de cada seleccao, que e o que
+  // permite tirar a margem da casa. Sem isto a extensao guardava a odd crua e o
+  // CLV saia inflacionado - a margem de um 1X2 portugues anda pelos 9%.
+  return { odds: collectSelectionOdds(state), markets: collectMarkets(state) };
 }
 
 async function readCurrentOdds(legs) {
@@ -447,9 +457,15 @@ async function readCurrentOdds(legs) {
     }
     if (!precos) continue;
     for (const leg of grupo) {
-      const odd = precos.get(String(leg.selectionId));
+      const odd = precos.odds.get(String(leg.selectionId));
       if (typeof odd === "number" && odd > 1) {
-        out.set(legKeyOf(leg.importKey, leg.index), odd);
+        // A justa so existe quando o mercado completo esta na pagina e passa o
+        // crivo. Quando nao passa, fica so a crua - nunca se inventa.
+        const justa = devig(odd, precos.markets.get(String(leg.selectionId)));
+        out.set(legKeyOf(leg.importKey, leg.index), {
+          odd,
+          ...(justa ? { noVig: justa.odd, margin: justa.marginPct } : {}),
+        });
       }
     }
   }
@@ -472,10 +488,10 @@ async function runClosingOddsPass(cfg, bets) {
     const precos = await readCurrentOdds(legs);
     const at = new Date().toISOString();
     for (const leg of legs) {
-      const odd = precos.get(legKeyOf(leg.importKey, leg.index));
-      if (odd === undefined) continue;
+      const lido = precos.get(legKeyOf(leg.importKey, leg.index));
+      if (lido === undefined) continue;
       const key = legKeyOf(leg.importKey, leg.index);
-      const candidate = { odd, at };
+      const candidate = { odd: lido.odd, at, ...(lido.noVig ? { noVig: lido.noVig, margin: lido.margin } : {}) };
       if (!acceptSnapshot(snapshots[key], candidate, leg.startsAt)) continue;
       snapshots[key] = candidate;
       guardadas++;

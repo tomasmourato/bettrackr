@@ -18,7 +18,7 @@
 // se um bundle novo nunca o chamar, o plugin reverte sozinho para o anterior.
 // Na web isto é um no-op - a Vercel já atualiza a web a cada deploy.
 
-import { apiUrl, isNativeApp } from "./apiBase";
+import { UPDATE_BASES, isNativeApp } from "./apiBase";
 import { STORAGE_KEYS } from "./storageKeys";
 
 // Instante do build deste bundle, injetado pelo vite (ver vite.config.ts).
@@ -39,6 +39,37 @@ export async function getBundleVersion(): Promise<string | null> {
   }
 }
 
+interface VersaoRemota {
+  /** Garantida pela procura: uma resposta sem versão não conta como resposta. */
+  version: string;
+  buildTime?: number;
+}
+
+/**
+ * A primeira base que souber responder, e o que ela disse.
+ *
+ * Percorre `UPDATE_BASES` por ordem e devolve a primeira que sirva um
+ * `/app-version.json` legível. Um domínio que tenha morrido, que responda um
+ * redirecionamento sem CORS ou que devolva lixo é simplesmente saltado - é
+ * precisamente para isso que a lista existe.
+ */
+async function procurarAtualizacao(): Promise<{ base: string; remote: VersaoRemota } | null> {
+  for (const base of UPDATE_BASES) {
+    try {
+      const res = await fetch(`${base}/app-version.json`, { cache: "no-store" });
+      if (!res.ok) continue;
+      const bruto = (await res.json()) as Partial<VersaoRemota>;
+      if (bruto?.version) {
+        return { base, remote: { version: bruto.version, buildTime: bruto.buildTime } };
+      }
+    } catch {
+      // Domínio em baixo, DNS morto, CORS a rebentar no redirecionamento:
+      // segue para o próximo em vez de desistir da atualização toda.
+    }
+  }
+  return null;
+}
+
 export async function initLiveUpdate(): Promise<void> {
   if (!isNativeApp()) return;
 
@@ -49,10 +80,9 @@ export async function initLiveUpdate(): Promise<void> {
     // Confirma que este bundle arrancou bem (senão o plugin faz rollback).
     await CapacitorUpdater.notifyAppReady();
 
-    const res = await fetch(apiUrl("/app-version.json"), { cache: "no-store" });
-    if (!res.ok) return;
-    const remote = (await res.json()) as { version?: string; buildTime?: number };
-    if (!remote?.version) return;
+    const encontrado = await procurarAtualizacao();
+    if (!encontrado) return;
+    const { base, remote } = encontrado;
 
     const current = await CapacitorUpdater.current();
     const currentVersion = current?.bundle?.version || "builtin";
@@ -70,8 +100,10 @@ export async function initLiveUpdate(): Promise<void> {
 
     if (localStorage.getItem(STAGED_KEY) === remote.version) return; // já agendado
 
+    // O zip vem do MESMO domínio que respondeu à verificação: se o principal
+    // estiver morto, não adianta ir buscar o pacote lá.
     const bundle = await CapacitorUpdater.download({
-      url: apiUrl("/app-bundle.zip"),
+      url: `${base}/app-bundle.zip`,
       version: remote.version,
     });
     // Aplica no próximo arranque; o atual continua intacto.

@@ -18,13 +18,38 @@ do browser guarda apenas o token JWT, o utilizador em cache e as preferências
 (`g_prefs`, que inclui o tema claro/escuro).
 
 ```
-src/components/   componentes de UI
-src/hooks/        estado da aplicação (apostas, preferências, tema, auditoria)
-src/lib/          camada de API (authApi, betsApi, socialApi) e mapeamento BD <-> frontend
-routes/           rotas Express (/api/auth, /api/bets, /api/social)
-middleware/       verificação do JWT
-db/               pool de conexões, schema e migrações
+FRONTEND
+  src/components/   componentes de UI (desktop)
+  src/mobile/       ecrãs da app Android (Capacitor)
+  src/hooks/        estado da aplicação (apostas, preferências, tema, auditoria)
+  src/lib/          camada de API (authApi, betsApi, socialApi) e mapeamento BD <-> frontend
+
+SERVIDOR
+  server.ts         monta as rotas; é o entry point que o vercel.json aponta
+  routes/           rotas Express (/api/auth, /api/bets, /api/clv, /api/insights, ...)
+  middleware/       verificação do JWT
+  db/               pool de conexões, schema e migrações (aplicadas à MÃO, ver abaixo)
+  lib/              lógica pura partilhada pelo servidor (CLV, de-vig, leitura da Betclic)
+
+FORA DO SERVIDOR
+  extension/        extensão de Chrome (MV3), empacotada à parte por scripts/zip-extension.mjs
+  agent/            agente da odd de fecho, que corre numa ligação residencial
+  android/          projeto Capacitor
+  scripts/          build, migrações e verificações
+
+TESTES  (bun test test)
+  test/app/         a app - contas de dinheiro, CLV, importação, i18n
+  test/server/      as rotas e o lib/ - janela de captura, de-vig, ementa das dicas
+  test/extension/   só o que corre dentro do Chrome (mappers, importadores)
 ```
+
+Os testes vivem todos em `test/`, **fora** de `extension/`: o
+`scripts/zip-extension.mjs` empacota a pasta `extension/` inteira, por isso um
+teste guardado lá dentro ia parar ao zip que o utilizador instala no Chrome.
+
+O `tsc --noEmit` cobre o servidor, o `lib/`, o `agent/` e os testes. O agente é
+empacotado com esbuild, que não verifica tipos - se ficar de fora do
+`tsconfig.json`, vai para produção sem ninguém lhe olhar.
 
 ## Configuração
 

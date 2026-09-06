@@ -13,21 +13,18 @@ import { useMemo, useState } from "react";
 import { Bet, BookieAccount, Selection, BetStatus, BetType, FreebetType } from "../types";
 import { calculateBetReturnAndProfit, AVAILABLE_BOOKMAKERS, parseDecimal, safeNum } from "../utils";
 import { combineClosingOdds } from "../lib/clv";
+import {
+  combineFormOdds,
+  mergeSelection,
+  type FormSelectionRow,
+} from "../lib/betFormSelections";
 import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { hasCashoutSignal } from "../lib/betStatus";
 import { useI18n } from "../lib/i18n";
 
-export interface FormSelection {
-  event: string;
-  market: string;
-  choice: string;
-  odd: string;
-  /** Odd de fecho desta perna; vazia enquanto não se souber. */
-  closingOdd: string;
-  // Hora do apito. Não é editável no formulário - vem da extensão - mas anda
-  // por aqui para uma edição à mão não a deitar fora sem querer.
-  startsAt?: string;
-}
+// A linha do formulário vive em src/lib/betFormSelections.ts, ao lado da regra
+// que a funde com a perna gravada. O desktop usa a mesma.
+export type FormSelection = FormSelectionRow;
 
 const nowLocal = () => new Date().toISOString().replace("T", " ").slice(0, 16);
 
@@ -58,24 +55,21 @@ export function useBetForm(accounts: BookieAccount[]) {
   const calculatedClosingOdd = useMemo(
     () =>
       combineClosingOdds(
-        selections.map((s) => ({ closingOdd: parseDecimal(s.closingOdd) ?? undefined })),
+        // O `result` vai junto: uma perna anulada não entra na linha de fecho,
+        // tal como não entra na odd.
+        selections.map((s) => ({
+          closingOdd: parseDecimal(s.closingOdd) ?? undefined,
+          result: s.result,
+        })),
       ),
     [selections],
   );
 
-  // Odd combinada (produto das odds válidas).
-  const calculatedOdd = useMemo(() => {
-    let multiplier = 1;
-    let validCount = 0;
-    selections.forEach((s) => {
-      const parsed = parseDecimal(s.odd);
-      if (parsed !== null && parsed > 0) {
-        multiplier *= parsed;
-        validCount++;
-      }
-    });
-    return validCount > 0 ? Number(multiplier.toFixed(2)) : 1.0;
-  }, [selections]);
+  // Odd combinada (produto das odds das pernas que contam).
+  const calculatedOdd = useMemo(
+    () => combineFormOdds(selections, parseDecimal),
+    [selections],
+  );
 
   // Pré-visualização em tempo real do retorno/lucro (inclui cashout, tipo de
   // freebet e o retorno liquidado manual de meio-ganha/meio-perdida).
@@ -166,6 +160,9 @@ export function useBetForm(accounts: BookieAccount[]) {
         odd: s.odd.toString(),
         closingOdd: s.closingOdd ? String(s.closingOdd) : "",
         startsAt: s.startsAt,
+        result: s.result,
+        // A perna inteira, para o que o formulário não edita sobreviver.
+        original: s,
       })),
     );
   };
@@ -228,15 +225,14 @@ export function useBetForm(accounts: BookieAccount[]) {
       if (s.closingOdd.trim() !== "" && (closingVal === null || closingVal <= 1)) {
         closingOddInvalid = true;
       }
-      built.push({
-        id: `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
-        event: s.event.trim(),
-        market: s.market.trim(),
-        choice: s.choice.trim(),
-        odd: oddVal ?? 0,
-        ...(closingVal !== null && closingVal > 1 ? { closingOdd: closingVal } : {}),
-        ...(s.startsAt ? { startsAt: s.startsAt } : {}),
-      });
+      built.push(
+        mergeSelection(
+          s,
+          `sel-${editingBet?.id || "new"}-${idx}-${Date.now()}`,
+          oddVal ?? 0,
+          closingVal,
+        ),
+      );
     });
 
     if (!isValid) {

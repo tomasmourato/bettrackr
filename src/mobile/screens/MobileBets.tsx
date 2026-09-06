@@ -28,6 +28,7 @@ import { AVAILABLE_BOOKMAKERS, safeNum, calculateBetReturnAndProfit, selectBetsF
 import FilteredBetsSummary from "../../components/FilteredBetsSummary";
 import { useBetForm } from "../../hooks/useBetForm";
 import { betClv, needsClosingOdd } from "../../lib/clv";
+import { ClvLockInline, ClvLockPanel } from "../../components/ClvLock";
 import { useI18n, type TFn, type TKey } from "../../lib/i18n";
 import { selectionHaptic } from "../../lib/haptics";
 import { createLongPressController } from "../../lib/longPress";
@@ -61,6 +62,12 @@ interface MobileBetsProps {
   /** Ignorar exclui a aposta das estatísticas; repor traz-la de volta. */
   onIgnoreBet: (id: string, ignored: boolean, comment?: string | null) => void | Promise<void>;
   onDeleteBet: (id: string) => void | Promise<void>;
+  // O CLV é funcionalidade paga. A false, o chip do cartão dá lugar a um
+  // cadeado e some o filtro e a ordenação por CLV - o servidor não devolve a
+  // odd de fecho a estas contas, por isso ordenar por ela daria sempre o mesmo.
+  clvEnabled?: boolean;
+  /** Leva à subscrição, a partir do cadeado. */
+  onSubscribe?: () => void;
 }
 
 type SortField = "date" | "stake" | "odd" | "profit" | "clv";
@@ -176,6 +183,8 @@ export default function MobileBets({
   onUpdateBet,
   onIgnoreBet,
   onDeleteBet,
+  clvEnabled = true,
+  onSubscribe,
 }: MobileBetsProps) {
   const { t, locale, formatMoney, formatSignedMoney } = useI18n();
   const toast = useToast();
@@ -833,6 +842,30 @@ aria-label={t("bets.selectAria")}
                   <div className="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
                     <span>{t("bets.field.stake")} {money(safeNum(bet.stake))}</span>
                     <span>{t("bets.field.odd")} {safeNum(bet.odd).toFixed(2)}</span>
+                    {/* CLV no cartão, e não só na folha de detalhe.
+                        No desktop é uma coluna da lista, sempre à vista; aqui
+                        estava escondido atrás de um toque, e um número que
+                        obriga a procurá-lo é um número que ninguém lê. Leva cor
+                        e fundo próprio porque é um sinal, não metadados: o
+                        resto desta linha é cinzento de propósito. */}
+                    {!clvEnabled && <ClvLockInline onSubscribe={onSubscribe} />}
+                    {clvEnabled && (() => {
+                      const clv = betClv(bet);
+                      if (!clv) return null;
+                      const acima = clv.clvPct >= 0;
+                      return (
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-bold tabular-nums ${
+                            acima
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {t("clv.title")} {acima ? "+" : ""}
+                          {clv.clvPct.toFixed(1)}%
+                        </span>
+                      );
+                    })()}
                     <span className="ml-auto">{bet.dateTime?.slice(11, 16) || ""}</span>
                   </div>
                 </div>
@@ -955,7 +988,8 @@ label={t("bets.bulk.deleteAria")}
             </MobileCard>
 
             {/* Odd de fecho e CLV: só aparece quando há uma linha registada */}
-            {(() => {
+            {!clvEnabled && <ClvLockPanel onSubscribe={onSubscribe} />}
+            {clvEnabled && (() => {
               const clv = betClv(detailBet);
               if (!clv) return null;
               return (
@@ -1297,7 +1331,9 @@ title={t("bets.filtersSheet.title")}
           )}
           <ChipGroup label={t("filters.type")} options={withLabels(TYPE_OPTIONS, t)} value={typeFilter} onChange={setTypeFilter} />
           <ChipGroup label={t("filters.money")} options={withLabels(MONEY_OPTIONS, t)} value={moneyFilter} onChange={setMoneyFilter} />
-          <ChipGroup label={t("clv.title")} options={withLabels(CLV_OPTIONS, t)} value={clvFilter} onChange={setClvFilter} />
+          {clvEnabled && (
+            <ChipGroup label={t("clv.title")} options={withLabels(CLV_OPTIONS, t)} value={clvFilter} onChange={setClvFilter} />
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
@@ -1324,7 +1360,10 @@ title={t("bets.filtersSheet.title")}
 
           <ChipGroup
             label={t("bets.sortBy")}
-            options={withLabels(SORT_OPTIONS, t)}
+            options={withLabels(
+              clvEnabled ? SORT_OPTIONS : SORT_OPTIONS.filter((o) => o.value !== "clv"),
+              t,
+            )}
             value={sortField}
             onChange={(v) => setSortField(v as SortField)}
           />

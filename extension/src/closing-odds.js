@@ -1,6 +1,6 @@
 // extension/src/closing-odds.js
 // Decide QUANDO ler a odd de fecho e O QUE gravar. Módulo puro - sem chrome.*
-// e sem rede - para ser testado como os mappers já são (extension/test).
+// e sem rede - para ser testado como os mappers já são (test/extension).
 //
 // O problema que resolve: a odd de fecho é a última antes de o jogo começar, e
 // ninguém a vai escrever à mão para centenas de apostas. A extensão já tem
@@ -22,8 +22,16 @@
 //    utilizador tem direito a saber qual das duas está a ver - sobretudo
 //    porque o Chrome pode estar fechado à hora do jogo.
 
-/** Quantos minutos antes do apito queremos acordar. */
-export const SNAPSHOT_LEAD_MINUTES = 2;
+// A MESMA janela do servidor (lib/clvCapture.ts): abre a 30 minutos do apito e
+// FECHA a 5. Antes isto acordava aos 2 minutos e aceitava leituras de ate 48h
+// antes - o que dava duas capturas incompativeis a lutar pela mesma perna, com
+// a pior a ganhar. Na Betclic as odds descem muito nos ultimos minutos, e uma
+// linha apanhada ai inflaciona o CLV de toda a gente.
+export const CAPTURE_WINDOW_MIN = 30;
+export const CAPTURE_CUTOFF_MIN = 5;
+
+// Mantido so por compatibilidade com quem ainda o importe.
+export const SNAPSHOT_LEAD_MINUTES = CAPTURE_CUTOFF_MIN;
 
 /** Até onde olhamos para a frente. Mais do que isto é ruído. */
 export const SNAPSHOT_WINDOW_HOURS = 48;
@@ -50,7 +58,7 @@ export function toEpoch(value) {
  * começar e dentro da janela. Uma perna que já tenha odd de fecho está feita.
  */
 export function pendingLegsFrom(bets, now = Date.now()) {
-  const horizon = now + SNAPSHOT_WINDOW_HOURS * 60 * 60 * 1000;
+  const horizon = now + CAPTURE_WINDOW_MIN * 60 * 1000;
   const legs = [];
 
   for (const bet of bets || []) {
@@ -64,7 +72,10 @@ export function pendingLegsFrom(bets, now = Date.now()) {
       if (selection.closingOdd) return; // já está
       const startsAt = toEpoch(selection.startsAt);
       if (startsAt === null) return; // sem apito não se sabe quando ler
-      if (startsAt <= now || startsAt > horizon) return;
+      // Fora da janela nao ha nada a fazer: antes dos 30 e cedo, depois dos
+      // 5 o preco ja esta a desabar e nao serve de linha de fecho.
+      if (startsAt - now <= CAPTURE_CUTOFF_MIN * 60 * 1000) return;
+      if (startsAt > horizon) return;
 
       legs.push({
         importKey,
@@ -104,12 +115,18 @@ export function betclicMatchPath(matchId, event) {
  * puxa o alarme para o passado - vale a pena ler já, por isso devolve `now`.
  */
 export function nextWakeUp(legs, now = Date.now()) {
-  const lead = SNAPSHOT_LEAD_MINUTES * 60 * 1000;
+  const abre = CAPTURE_WINDOW_MIN * 60 * 1000;
+  const fecha = CAPTURE_CUTOFF_MIN * 60 * 1000;
   let earliest = null;
 
   for (const leg of legs || []) {
-    if (leg.startsAt <= now) continue;
-    const at = Math.max(leg.startsAt - lead, now);
+    const faltam = leg.startsAt - now;
+    if (faltam <= fecha) continue; // janela ja fechada para esta perna
+
+    // Antes de a janela abrir, acordar quando abrir. Ja dentro dela, voltar
+    // daqui a cinco minutos - cada leitura substitui a anterior, por isso a
+    // ultima antes do corte e a que fica.
+    const at = faltam > abre ? leg.startsAt - abre : now + 5 * 60 * 1000;
     if (earliest === null || at < earliest) earliest = at;
   }
 
@@ -136,7 +153,12 @@ export function acceptSnapshot(existing, candidate, startsAt) {
 
   if (kickoff === null || at === null) return false;
   if (!Number.isFinite(odd) || odd <= 1) return false;
-  if (at >= kickoff) return false;
+
+  // A leitura tem de cair DENTRO da janela. Uma de quatro horas antes nao e
+  // linha de fecho, e uma do ultimo minuto e o preco ja a desabar.
+  const faltam = kickoff - at;
+  if (faltam <= CAPTURE_CUTOFF_MIN * 60 * 1000) return false;
+  if (faltam > CAPTURE_WINDOW_MIN * 60 * 1000) return false;
 
   const previous = toEpoch(existing?.at);
   if (previous !== null && previous >= at) return false;
@@ -177,7 +199,15 @@ export function readyToWrite(bet, snapshots, now = Date.now()) {
       capturedAt = snapshot.at;
     }
 
-    legs.push({ index, closingOdd: odd });
+    legs.push({
+      index,
+      closingOdd: odd,
+      // A justa vai a par da crua, quando o mercado completo deu para confiar.
+      // O servidor RE-VALIDA na mesma; isto so evita uma segunda ida a Betclic.
+      ...(Number(snapshot.noVig) > 1
+        ? { closingOddNoVig: Number(snapshot.noVig), closingOddMargin: Number(snapshot.margin) }
+        : {}),
+    });
   }
 
   return {
@@ -205,8 +235,10 @@ export function collectSelectionOdds(state) {
 
   const visita = (node, depth) => {
     // O estado é grande e fundo; o limite evita um ciclo patológico se a
-    // Betclic mudar a forma sem avisar.
-    if (!node || typeof node !== "object" || depth > 14) return;
+    // Betclic mudar a forma sem avisar. A 14 ficavam 12 preços de fora -
+    // os que vivem no fundo do `selectionMatrix` - e uma perna apostada
+    // num deles não tinha odd de fecho nenhuma.
+    if (!node || typeof node !== "object" || depth > 18) return;
     if (Array.isArray(node)) {
       for (const item of node) visita(item, depth + 1);
       return;
@@ -223,6 +255,130 @@ export function collectSelectionOdds(state) {
 }
 
 /** Extrai o bloco ng-state do HTML da página do jogo. null se não estiver lá. */
+/**
+ * A banda em que a soma das probabilidades de um mercado completo pode cair.
+ *
+ * Abaixo do mínimo faltam seleções à página. Acima do máximo não é um mercado
+ * coerente - é uma lista de nomes que por acaso tem odds.
+ */
+const OVERROUND_MIN = 1.005;
+const OVERROUND_MAX = 1.25;
+
+/** O menor número de seleções que ainda faz um mercado. */
+const MIN_SELECTIONS = 2;
+
+/**
+ * Os mercados de confiança da página, indexados por id de seleção.
+ *
+ * O agrupamento é pelo `betslipMarketId` - o id de mercado da PRÓPRIA casa,
+ * que vem em todas as seleções (medido: 413 preços numa página de futebol,
+ * zero sem ele). Um grupo assim é um mercado por definição, e não uma
+ * suposição nossa a partir da forma da página.
+ *
+ * Antes o crivo era estar num array `mainSelections`. Era estrutural e seguro,
+ * mas apanhava só o mercado principal: na mesma página, 3 preços em 401. Tudo
+ * o que as pessoas apostam a sério - Acima/Abaixo, Ambas Marcam, handicaps,
+ * partes - vive em `selectionMatrix`, que nunca era olhado. Resultado: quase
+ * nenhuma perna ficava com a margem removida e o CLV mostrado continuava a
+ * ser a odd crua, inflacionada pela margem.
+ *
+ * O agrupamento pelo id da casa também é MAIS seguro do que ler cartões soltos.
+ * A Betclic parte um mercado de marcadores em dois cartões, um por equipa; cada
+ * metade tem uma soma sem sentido e uma delas chegou a cair na banda plausível
+ * por acaso (6.5%, com 21 seleções). Juntas pelo id do mercado dão 588% e são
+ * recusadas, que é o que deviam ser.
+ *
+ * O crivo da soma é o mesmo `marketFrom` que o servidor aplica ao que o agente
+ * lhe manda: uma decisão, um sítio.
+ */
+export function collectMarkets(state) {
+    // betslipMarketId -> as seleções que a casa lhe atribui.
+    const grupos = new Map();
+    const vistos = new Set();
+
+    const visita = (node, depth) => {
+        // Fundo o bastante para chegar ao `selectionMatrix`, que vive quatro
+        // níveis abaixo dos mercados simples. A 14 ficavam 12 preços de fora e,
+        // pior, um mercado podia vir cortado a meio - e meio mercado dá uma
+        // margem errada, que é pior do que margem nenhuma.
+        if (!node || typeof node !== "object" || depth > 18) return;
+        if (Array.isArray(node)) {
+            for (const item of node) visita(item, depth + 1);
+            return;
+        }
+
+        const odd = Number(node.odds);
+        if (node.id != null && node.betslipMarketId != null && Number.isFinite(odd) && odd > 1) {
+            const id = String(node.id);
+            // A mesma seleção aparece em mais do que um sítio da página; conta uma vez.
+            if (!vistos.has(id)) {
+                vistos.add(id);
+                const chave = String(node.betslipMarketId);
+                const grupo = grupos.get(chave);
+                if (grupo) {
+                    grupo.ids.push(id);
+                    grupo.odds.push(odd);
+                } else {
+                    grupos.set(chave, { ids: [id], odds: [odd] });
+                }
+            }
+        }
+
+        for (const key of Object.keys(node)) visita(node[key], depth + 1);
+    };
+
+    visita(state, 0);
+
+    const out = new Map();
+    for (const { ids, odds } of grupos.values()) {
+        const market = marketFrom(ids, odds);
+        if (!market) continue;
+        for (const id of ids) out.set(id, market);
+    }
+    return out;
+}
+
+/**
+ * Reconstroi um mercado a partir de ids e odds soltos, aplicando o MESMO crivo
+ * do collectMarkets. Existe para o servidor nunca ter de acreditar na margem
+ * que o agente residencial lhe manda: o agente traz os precos, o servidor
+ * decide se aquilo e um mercado completo. Devolve null quando nao e de confiar.
+ */
+export function marketFrom(ids, odds) {
+    if (!Array.isArray(ids) || !Array.isArray(odds)) return null;
+    if (ids.length !== odds.length || odds.length < MIN_SELECTIONS) return null;
+    const limpas = [];
+    for (const o of odds) {
+        const n = Number(o);
+        if (!Number.isFinite(n) || n <= 1) return null;
+        limpas.push(n);
+    }
+    const overround = limpas.reduce((soma, o) => soma + 1 / o, 0);
+    if (overround < OVERROUND_MIN || overround > OVERROUND_MAX) return null;
+    return { odds: limpas, overround };
+}
+
+/**
+ * A odd justa, sem a margem: `odd x soma_das_probabilidades`.
+ *
+ * De-vig multiplicativo, que reparte a margem proporcionalmente à
+ * probabilidade. É transparente e não precisa de iterações; para mercados de
+ * duas vias é praticamente ótimo. Em três vias corrige o favorito a mais (as
+ * casas carregam mais margem nos azarões), e aí o método de Shin ou o da
+ * potência seriam melhores - fica como afinação para quando houver margens
+ * gravadas que cheguem para comparar.
+ */
+export function devig(odd, market) {
+    if (!market) return null;
+    if (!Number.isFinite(odd) || odd <= 1) return null;
+    const justa = odd * market.overround;
+    if (!Number.isFinite(justa) || justa <= 1) return null;
+    return {
+        odd: Number(justa.toFixed(3)),
+        marginPct: Number(((market.overround - 1) * 100).toFixed(2)),
+    };
+}
+
 export function parseNgState(html) {
   if (typeof html !== "string") return null;
   const match = html.match(

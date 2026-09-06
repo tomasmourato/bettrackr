@@ -45,6 +45,8 @@ interface Pick {
   market: string;
   selection: string;
   approxOdd: number | null;
+  /** Margem da casa naquele mercado. So existe quando a odd e real. */
+  marginPct?: number | null;
   confidence: number;
   rationale: string;
 }
@@ -341,8 +343,18 @@ export default function AIInsights({ onSessionExpired, bankrollBalance, currency
                             </p>
                           </div>
                           {pick.approxOdd !== null && (
-                            <span className="shrink-0 text-xs font-bold font-mono bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 px-2 py-1 rounded-sm">
-                              @{pick.approxOdd.toFixed(2)}
+                            <span className="shrink-0 flex flex-col items-end gap-0.5">
+                              <span className="text-xs font-bold font-mono bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 px-2 py-1 rounded-sm">
+                                @{pick.approxOdd.toFixed(2)}
+                              </span>
+                              {typeof pick.marginPct === "number" && (
+                                <span
+                                  className={`text-[10px] font-mono ${pick.marginPct <= 8 ? "text-emerald-600 dark:text-emerald-400" : pick.marginPct >= 15 ? "text-rose-600 dark:text-rose-400" : "text-zinc-500 dark:text-zinc-400"}`}
+                                  title={t("insights.marginHelp")}
+                                >
+                                  {t("insights.margin", { pct: pick.marginPct.toFixed(1) })}
+                                </span>
+                              )}
                             </span>
                           )}
                         </div>

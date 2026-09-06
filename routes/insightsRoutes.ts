@@ -86,9 +86,204 @@ interface Pick {
   kickoffLisbon: string;
   market: string;
   selection: string;
+  // O preco a que se pode MESMO apostar. Vem da tabela daily_odds quando ha
+  // captura do dia; so cai no que o modelo diz quando nao ha. Ver resolvePicks.
   approxOdd: number | null;
+  /** O mesmo preco sem a margem da casa. null quando nao houve captura. */
+  /** Id da seleccao na Betclic, quando a escolha veio da ementa de odds reais. */
+  selectionId?: string;
+  noVigOdd?: number | null;
+  /** Margem do mercado, em percentagem. E a vantagem verificavel desta lista. */
+  marginPct?: number | null;
   confidence: number;
   rationale: string;
+}
+
+// ============================================================
+// Odds reais em vez de odds plausiveis
+//
+// Ate aqui o modelo devolvia `approxOdd` - "aproximada", e o nome nao mentia.
+// O prompt chegava a pedir-lhe uma "variedade" de odds, o que e pedir numeros
+// plausiveis: uma dica com um preco que nao existe em lado nenhum nao serve
+// para nada, porque o utilizador vai a casa e o preco e outro.
+//
+// Agora, quando ha captura do dia, o modelo recebe a lista de jogos e precos
+// REAIS e devolve o ID da seleccao que escolheu. O numero e preenchido AQUI,
+// a partir da base de dados. E o mesmo principio que o analisador de apostas
+// ja segue: o modelo julga, o codigo calcula. Assim ele nao pode inventar um
+// preco nem por acidente.
+//
+// Sem captura (agente parado, migracao 020 por aplicar) volta tudo ao que era.
+// ============================================================
+
+// A ementa vai ORDENADA pela margem e CORTADA, em vez de se pedir ao modelo
+// que prefira os mercados baratos.
+//
+// Pedir nao funcionou: com a instrucao la, escolheu quatro em seis nos mercados
+// de 17-20% tendo La Liga a 6% disponivel. Leu a margem e nao a usou. Cortar a
+// lista nao e uma sugestao que se possa ignorar - o caro deixa de existir.
+//
+// Um numero fixo seria fragil: hoje ha 33 jogos, numa terca ha uma fracao
+// disso, e um limite de 12% podia deixar a lista vazia sem ninguem perceber
+// porque. Levar os N mais baratos auto-ajusta-se - num dia fraco da os que
+// houver, ainda assim os melhores.
+const MENU_MAX_MERCADOS = 20;
+// Teto por jogo. Sem ele os 20 mercados mais baratos do dia saíam quase todos
+// do mesmo jogo: a captura passou de 1 para ~23 mercados por jogo e as cinco
+// linhas de Acima/Abaixo do mesmo jogo têm margens quase iguais, por isso
+// arrumavam-se todas seguidas no topo. As dicas do dia deixariam de ser do dia
+// e passavam a ser de três jogos.
+const MENU_MAX_POR_JOGO = 3;
+/** Teto de sanidade: acima disto ja nao e preco, e uma esmola a casa. */
+const MENU_MARGEM_MAX = 20;
+
+// Piso de odd, aplicado A EMENTA e nao pedido ao modelo.
+//
+// Pedido, foi ignorado: com "nunca abaixo de 1.20" escrito em maiusculas no
+// prompt, devolveu uma pick a 1.01. E a segunda regra verificavel que ignora no
+// mesmo dia - a primeira foi preferir margens baixas. A licao repete-se: o que
+// e verificavel enforca-se aqui, onde ele nao lhe pode fugir.
+//
+// Porque 1.20: abaixo disso arrisca-se muito para ganhar quase nada, e uma
+// derrota rara apaga dezenas de vitorias. Nao e uma dica, e ler a classificacao.
+const MENU_ODD_MIN = 1.2;
+
+// E o teto, pela mesma razao. Sem ele saiu uma pick a 80.00 - num dia em que a
+// mesma lista dava Brighton a 3.78 com motivo. Acima de 6 ja nao e uma leitura
+// do jogo, e um bilhete de loteria, e numa lista de dicas diarias isso e ruido
+// com ar de analise. Numero discutivel; a regra, essa, nao pode ficar ao
+// criterio do modelo - ja se viu que nao pega.
+const MENU_ODD_MAX = 6;
+
+interface OpcaoDoDia {
+    selectionId: string;
+    /** Id do mercado na casa. Distingue linhas que partilham o mesmo nome. */
+    marketId: string;
+    selection: string;
+    odd: number;
+    noVig: number;
+    marginPct: number;
+    market: string;
+    match: string;
+    competition: string | null;
+    kickoffLisbon: string;
+}
+
+export interface MercadoDoDia {
+    margem: number;
+    opcoes: OpcaoDoDia[];
+}
+
+/**
+ * Os mercados que entram na ementa: os mais baratos primeiro, com teto por jogo.
+ *
+ * Exportada para ser testável. O corte era um `slice` pelos 20 mais baratos e
+ * isso chegava enquanto a captura dava 1 mercado por jogo. Agora dá ~23, e as
+ * cinco linhas de Acima/Abaixo do mesmo jogo têm margens quase iguais - sem
+ * teto, os 20 lugares da ementa iam quase todos para dois ou três jogos e as
+ * "dicas do dia" deixavam de cobrir o dia.
+ */
+export function escolherMercados(mercados: MercadoDoDia[]): MercadoDoDia[] {
+    const ordenados = [...mercados].sort((a, b) => a.margem - b.margem);
+    const porJogo = new Map<string, number>();
+    const escolhidos: MercadoDoDia[] = [];
+
+    for (const m of ordenados) {
+        if (escolhidos.length >= MENU_MAX_MERCADOS) break;
+        const jogo = m.opcoes[0]?.match ?? "";
+        const quantos = porJogo.get(jogo) ?? 0;
+        if (quantos >= MENU_MAX_POR_JOGO) continue;
+        porJogo.set(jogo, quantos + 1);
+        escolhidos.push(m);
+    }
+    return escolhidos;
+}
+
+/** As seleccoes capturadas para hoje, por id. Vazio quando nao houve captura. */
+async function loadDailyOdds(date: string): Promise<Map<string, OpcaoDoDia>> {
+    const out = new Map<string, OpcaoDoDia>();
+    let rows: any[];
+    try {
+        const r = await pool.query(
+            `SELECT event, competition, kickoff_utc, markets
+               FROM daily_odds WHERE odds_date = $1
+              ORDER BY kickoff_utc NULLS LAST LIMIT 60`,
+            [date],
+        );
+        rows = r.rows;
+    } catch (error: any) {
+        // 42P01 = a tabela nao existe: a migracao 020 e aplicada a mao. Nesse
+        // caso as dicas continuam a funcionar como antes, sem odds reais.
+        if (error?.code !== "42P01") console.error("[insights] daily_odds:", error);
+        return out;
+    }
+
+    // Achatar em mercados, para se poder ordenar por margem antes de cortar.
+    const mercados: MercadoDoDia[] = [];
+    for (const row of rows) {
+        const hora = row.kickoff_utc
+            ? new Date(row.kickoff_utc).toLocaleTimeString("pt-PT", {
+                  timeZone: "Europe/Lisbon",
+                  hour: "2-digit",
+                  minute: "2-digit",
+              })
+            : "";
+        for (const m of Array.isArray(row.markets) ? row.markets : []) {
+            const margem = Number(m.marginPct);
+            if (!Number.isFinite(margem) || margem > MENU_MARGEM_MAX) continue;
+            const opcoes: OpcaoDoDia[] = [];
+            for (const sel of Array.isArray(m?.selections) ? m.selections : []) {
+                if (!sel?.id) continue;
+                const odd = Number(sel.odd);
+                if (!(odd >= MENU_ODD_MIN && odd <= MENU_ODD_MAX)) continue;
+                opcoes.push({
+                    selectionId: String(sel.id),
+                    marketId: String(m.id ?? ""),
+                    selection: String(sel.name ?? ""),
+                    odd: Number(sel.odd),
+                    noVig: Number(sel.noVig),
+                    marginPct: margem,
+                    market: String(m.name ?? ""),
+                    match: String(row.event ?? ""),
+                    competition: row.competition,
+                    kickoffLisbon: hora,
+                });
+            }
+            // Um mercado que fique com uma seleccao so nao oferece escolha:
+            // e o favorito sozinho, que e precisamente o que se quer evitar.
+            if (opcoes.length >= 2) mercados.push({ margem, opcoes });
+        }
+    }
+
+    // O Map preserva a ordem de insercao, e o escolherMercados devolve-os do
+    // mais barato para o mais caro - por isso a ementa sai ja ordenada.
+    for (const m of escolherMercados(mercados)) {
+        for (const o of m.opcoes) out.set(o.selectionId, o);
+    }
+    return out;
+}
+
+/** A ementa que vai no prompt: jogos, mercados e precos reais. */
+function menuDoDia(opcoes: Map<string, OpcaoDoDia>): string {
+    const porJogo = new Map<string, OpcaoDoDia[]>();
+    for (const o of opcoes.values()) {
+        // O id do mercado entra na chave porque varias linhas partilham o
+        // mesmo nome - "Total de golos - acima/abaixo" e cinco mercados, um por
+        // linha, cada um com a sua margem. Agrupa-las dava um cabecalho com a
+        // margem de uma delas colada as odds de todas.
+        const chave = `${o.kickoffLisbon}|${o.match}|${o.competition ?? ""}|${o.market}|${o.marketId}`;
+        const g = porJogo.get(chave);
+        if (g) g.push(o);
+        else porJogo.set(chave, [o]);
+    }
+
+    const linhas: string[] = [];
+    for (const [chave, sels] of porJogo) {
+        const [hora, jogo, comp, mercado] = chave.split("|");
+        linhas.push(`${hora} ${jogo}${comp ? ` (${comp})` : ""} - ${mercado} [margem ${sels[0].marginPct}%]`);
+        for (const s of sels) linhas.push(`    ${s.selectionId}  ${s.selection} @ ${s.odd}`);
+    }
+    return linhas.join("\n");
 }
 
 // Normaliza/valida o JSON devolvido pelo modelo. Campos em falta não rebentam
@@ -103,20 +298,27 @@ function sanitizeContent(raw: any): { summary: string; picks: Pick[] } {
       kickoffLisbon: clip(p?.kickoffLisbon, 20),
       market: clip(p?.market, 80),
       selection: clip(p?.selection, 120),
+      // O id da seleccao escolhida quando ha ementa de odds reais. Tem de
+      // sobreviver a esta normalizacao, senao o resolvePicks nao teria por onde
+      // ir buscar o preco verdadeiro.
+      selectionId: clip(p?.selectionId, 40) || undefined,
       approxOdd: Number.isFinite(Number(p?.approxOdd)) && Number(p?.approxOdd) > 1
         ? Number(Number(p.approxOdd).toFixed(2))
         : null,
       confidence: Math.min(5, Math.max(1, Math.round(Number(p?.confidence) || 3))),
       rationale: clip(p?.rationale, 400),
     }))
-    .filter((p: Pick) => p.match && p.selection && p.sport)
+    // Com ementa, o jogo e a seleccao sao preenchidos a partir da base de
+    // dados pelo resolvePicks - exigi-los aqui deitava fora picks validas em
+    // que o modelo se limitou a devolver o id, que e o que lhe pedimos.
+    .filter((p: Pick) => (p.selectionId ? Boolean(p.sport) : p.match && p.selection && p.sport))
     .slice(0, MAX_PICKS);
 
   if (picks.length === 0) throw new Error("O modelo não devolveu picks válidos.");
   return { summary: clip(raw?.summary, 600), picks };
 }
 
-function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang) {
+function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang, menu: string) {
   // Nas repetições reforçamos a instrução de formato: a falha mais comum é o
   // modelo devolver só a prosa da pesquisa, sem o JSON.
   const insist = insistOnJson
@@ -126,13 +328,33 @@ function buildPrompt(dateLisbon: string, insistOnJson: boolean, lang: Lang) {
   return `
 Hoje é ${dateLisbon}. És um analista de apostas desportivas experiente e prudente, ${LANG_INSTRUCTION[lang]}.
 
-USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds - inclui apenas eventos que confirmaste na pesquisa.
+${menu
+    ? `ESCOLHE APENAS da lista abaixo. São jogos e ODDS REAIS da Betclic, capturados hoje de madrugada. Cada linha de seleção começa pelo ID que tens de devolver em "selectionId".
 
-Escolhe 6 a 10 picks para hoje que cumpram tudo isto:
-- Pelo menos 3 desportos diferentes (ex.: futebol, basquetebol, ténis; outros são bem-vindos).
-- Odds variadas: alguns favoritos seguros (odd ~1.30-1.60), alguns equilibrados (~1.80-2.50) e no máximo 1 aposta de valor com odd 3.00+.
-- Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).
+A lista já vem ORDENADA do mercado mais barato para o mais caro - a margem de cada um está indicada. Os mercados caros foram removidos antes de chegarem aqui, por isso não precisas de te preocupar com isso: qualquer um serve em termos de preço, e os primeiros servem melhor.
+
+NÃO inventes jogos, equipas, mercados nem odds, e NÃO uses seleções que não estejam nesta lista - qualquer pick com um ID que não conste aqui é descartada pelo sistema. NÃO escrevas odds: o preço é preenchido a partir do ID.
+
+USA A PESQUISA GOOGLE apenas para o CONTEXTO de cada jogo: forma recente, lesões, castigos, onze provável, motivação e calendário.
+
+${menu}`
+    : `USA A PESQUISA GOOGLE para descobrires jogos REAIS que se realizam HOJE (${dateLisbon}) e as odds aproximadas atuais nas casas europeias. NÃO inventes jogos, equipas nem odds - inclui apenas eventos que confirmaste na pesquisa.`}
+
+Escolhe entre 3 e 8 picks para hoje. Se hoje não houver 3 que prestem, devolve MENOS - uma lista curta e boa vale mais do que uma lista cheia por obrigação.
+
+Como escolher:
+- Pelo MÉRITO de cada aposta, uma a uma. Não há quota de desportos nem de odds: não escolhas nada para "variar", nem para incluir um azarão, nem para cobrir um desporto que hoje não tem nada de jeito.${menu ? `
+- Entre duas escolhas de mérito parecido, prefere a que aparece MAIS ACIMA na lista: está lá porque a casa cobra menos nesse mercado.` : `
+- Mercados concretos (resultado final, over/under golos ou pontos, ambas marcam, handicap, vencedor do encontro...).`}
 - Justificação curta (1-2 frases) baseada em forma recente, confrontos, lesões ou contexto - factual, sem promessas.
+
+O PREÇO JÁ SABE QUEM É MAIS FORTE. "Esta equipa é melhor" NÃO é razão para uma pick - isso já está no preço, e é precisamente por isso que a odd é baixa. Só escolhe quando tiveres uma razão que o preço ainda NÃO reflete: uma ausência anunciada há pouco, rotação provável por causa do calendário, um regresso importante, motivação assimétrica, um contexto que a linha ainda não absorveu.
+
+NÃO CONFUNDAS PROVÁVEL COM BOM. São coisas diferentes. Uma odd de 1.05 é quase certa e é uma má aposta: arrisca-se muito para ganhar quase nada, e uma única derrota rara apaga dezenas de vitórias. Abaixo de 1.40 só deve entrar alguma coisa se a tua razão for mesmo excecional - e nunca abaixo de 1.20.
+
+TESTE FINAL, aplica-o a cada pick antes de a incluíres: se a justificação se resumir a "é o favorito" ou "é a equipa mais forte", APAGA a pick. Isso não é uma dica, é ler a tabela classificativa. Preferir devolver 3 picks com razão a 8 sem ela.
+
+"confidence" é de 1 a 5 e tem de significar isto: 1 = palpite fraco; 2 = ligeira preferência; 3 = fundamentada mas equilibrada; 4 = forte, vários sinais independentes a apontar no mesmo sentido; 5 = muito forte, e deve ser raro. Não uses 5 mais do que uma vez.
 
 Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
 {
@@ -145,7 +367,7 @@ Responde APENAS com JSON válido, sem texto fora do JSON, neste formato:
       "kickoffLisbon": "HH:MM",
       "market": "mercado",
       "selection": "a escolha concreta",
-      "approxOdd": 1.85,
+      ${menu ? `"selectionId": "o ID exato da linha escolhida na lista acima",` : `"approxOdd": 1.85,`}
       "confidence": 3,
       "rationale": "justificação curta"
     }
@@ -174,6 +396,52 @@ async function callModel(prompt: string): Promise<string> {
 }
 
 /**
+ * Troca os IDs escolhidos pelo modelo pelos precos REAIS da base de dados.
+ *
+ * O modelo nunca escreve um preco: escolhe uma seleccao e o numero vem daqui.
+ * Uma pick com um ID que nao esteja na ementa e DESCARTADA - e a unica forma
+ * de garantir que nada inventado chega ao utilizador. E a mesma disciplina do
+ * analisador de apostas, onde o modelo estima a probabilidade e o codigo faz
+ * as contas.
+ */
+function resolvePicks(
+  conteudo: { summary: string; picks: Pick[] },
+  opcoes: Map<string, OpcaoDoDia>,
+) {
+  const picks: Pick[] = [];
+  let descartadas = 0;
+
+  for (const pick of conteudo.picks) {
+    const id = String((pick as any).selectionId ?? "").trim();
+    const real = opcoes.get(id);
+    if (!real) {
+      descartadas++;
+      continue;
+    }
+    picks.push({
+      ...pick,
+      // Tudo o que e facto vem da captura; do modelo fica so o julgamento.
+      competition: real.competition ?? pick.competition,
+      match: real.match,
+      kickoffLisbon: real.kickoffLisbon || pick.kickoffLisbon,
+      market: real.market,
+      selection: real.selection,
+      approxOdd: real.odd,
+      noVigOdd: real.noVig,
+      marginPct: real.marginPct,
+    });
+  }
+
+  if (descartadas > 0) {
+    console.warn(`[insights] ${descartadas} pick(s) descartada(s) por ID desconhecido.`);
+  }
+  if (picks.length === 0) {
+    throw new Error("Nenhuma pick com seleção real - o modelo ignorou a lista.");
+  }
+  return { summary: conteudo.summary, picks };
+}
+
+/**
  * Gera as dicas com repetições. Cobre as duas falhas reais e observadas:
  * o 503 "high demand" da API, e a resposta sem JSON (o grounding impede
  * responseSchema, por isso o formato nunca é garantido no pedido).
@@ -182,13 +450,23 @@ async function generateInsights(dateLisbon: string, lang: Lang) {
   const started = Date.now();
   let lastError: unknown = new Error("Falha desconhecida ao gerar insights.");
 
+  // As odds reais do dia, quando o agente as capturou. Sem elas o prompt volta
+  // ao que era e o modelo procura os jogos sozinho.
+  const opcoes = await loadDailyOdds(dateLisbon);
+  const menu = opcoes.size > 0 ? menuDoDia(opcoes) : "";
+  console.info(
+    `[insights] ${dateLisbon}: ${opcoes.size} selecao(oes) real(is) disponivel(eis)` +
+      (opcoes.size === 0 ? " - o modelo vai procurar os jogos sozinho" : ""),
+  );
+
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     // Nunca começar uma tentativa que arrisque estourar o limite da função.
     if (attempt > 1 && Date.now() - started > TIME_BUDGET_MS) break;
 
     try {
-      const text = await callModel(buildPrompt(dateLisbon, attempt > 1, lang));
-      return sanitizeContent(extractJson(text));
+      const text = await callModel(buildPrompt(dateLisbon, attempt > 1, lang, menu));
+      const conteudo = sanitizeContent(extractJson(text));
+      return opcoes.size > 0 ? resolvePicks(conteudo, opcoes) : conteudo;
     } catch (err) {
       lastError = err;
       console.warn(
