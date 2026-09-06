@@ -17,7 +17,7 @@ import { SoftCredential, fromB64any } from "./softAuthenticator.js";
 import { loadVault, vaultToCredential, saveSession, loadSession } from "./vault.js";
 import { syncOnce } from "./sync.js";
 import { isUsable } from "./jwt.js";
-import { BettrackrConfig, heartbeat } from "./bettrackr.js";
+import { BettrackrConfig, heartbeat, fetchContextToken } from "./bettrackr.js";
 
 interface Config {
   vaultPath: string;
@@ -89,10 +89,21 @@ async function main() {
         contextToken = saved.accessToken;
         console.log(`[bot] sessao anterior reutilizada (guardada em ${saved.savedAt}).`);
       } else if (saved) {
-        console.log("[bot] sessao guardada expirou; precisa de BETCLIC_CONTEXT_TOKEN para rearrancar.");
+        console.log("[bot] sessao guardada expirou; a tentar a ativacao da app.");
       }
     } catch {
-      // sessao ilegivel - segue para o bootstrap manual
+      // sessao ilegivel - segue para os outros arranques
+    }
+  }
+
+  // Arranque frio sem token valido: em vez de exigir o BETCLIC_CONTEXT_TOKEN a
+  // mao, puxa o que o admin ativou no painel /bot da app. So funciona com um
+  // destino real (o token do BetTrackr autentica o pedido).
+  if ((!contextToken || !isUsable(contextToken)) && cfg.bettrackr) {
+    const pulled = await fetchContextToken(cfg.bettrackr);
+    if (pulled && isUsable(pulled)) {
+      contextToken = pulled;
+      console.log("[bot] token de contexto obtido da ativacao na app (painel /bot).");
     }
   }
 
@@ -102,10 +113,19 @@ async function main() {
   let backoffSec = 60;
 
   for (;;) {
+    // Ultima tentativa antes de desistir: o admin pode ter (re)ativado o bot na
+    // app enquanto ele estava sem token (ex.: parado > 2h). Puxa a ativacao.
+    if ((!contextToken || !isUsable(contextToken)) && cfg.bettrackr) {
+      const pulled = await fetchContextToken(cfg.bettrackr);
+      if (pulled && isUsable(pulled)) {
+        contextToken = pulled;
+        console.log(`[bot] ${stamp()} token de contexto renovado pela ativacao na app.`);
+      }
+    }
     if (!contextToken || !isUsable(contextToken)) {
       console.error(
-        `[bot] ${stamp()} sem token de contexto valido. Fornece BETCLIC_CONTEXT_TOKEN ` +
-          `(um token begmedia recente). A parar - o arranque precisa de bootstrap.`,
+        `[bot] ${stamp()} sem token de contexto valido. Ativa o bot no painel /bot da app ` +
+          `(ou fornece BETCLIC_CONTEXT_TOKEN). A parar - o arranque precisa de bootstrap.`,
       );
       process.exit(cfg.once ? 1 : 2);
     }

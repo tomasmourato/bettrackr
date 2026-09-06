@@ -6,5 +6,5 @@
 import BotPanel from "../../components/BotPanel";
 
 export default function MobileBot() {
-  return <BotPanel />;
+  return <BotPanel mode="mobile" />;
 }

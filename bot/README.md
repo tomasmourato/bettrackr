@@ -203,24 +203,40 @@ unidade systemd em [betclic-bot.service](betclic-bot.service) (intervalo default
 | Var | Para que serve |
 | --- | --- |
 | `BETCLIC_BOT_KEY` | passphrase do cofre (decifra a chave da passkey). Obrigatoria. |
-| `BETCLIC_CONTEXT_TOKEN` | token begmedia para o PRIMEIRO arranque; depois a sessao guardada rearranca sozinha. |
-| `BETTRACKR_BASE` / `BETTRACKR_TOKEN` | destino no BetTrackr. Sem eles => dry-run. |
-| `BOT_INTERVAL_SEC` | intervalo entre passagens (default 3600). |
+| `BETCLIC_CONTEXT_TOKEN` | token begmedia para o PRIMEIRO arranque. **Opcional** se ativares o bot pelo painel /bot da app (recomendado - ver abaixo); depois a sessao guardada rearranca sozinha. |
+| `BETTRACKR_BASE` / `BETTRACKR_TOKEN` | destino no BetTrackr. Sem eles => dry-run. Tambem sao o que deixa o bot puxar a ativacao da app. |
+| `BOT_INTERVAL_SEC` | intervalo entre passagens (default 1800 = 30 min). |
 | `BOT_VAULT` / `BOT_KEYFILE` | caminhos do cofre / da chave em claro (defaults sensatos). |
 | `BOT_SESSION` | caminho do ficheiro de sessao cifrada (default bot/session.enc). |
 
+### Ativacao pela app (dispensa o `BETCLIC_CONTEXT_TOKEN` a mao)
+
+Cada admin ativa o bot da **sua** conta no painel **/bot** da app - e la, nao
+neste ficheiro, que o token de contexto e entregue:
+
+- **Desktop / webapp:** a extensao BetTrackr capta o token da Betclic sozinha.
+  Botao «Capturar token da extensao» -> a app envia-o cifrado para o servidor.
+- **Mobile:** cola-se o token no campo do painel.
+
+O bot (este processo) puxa esse token no arranque frio via
+`GET /api/bot/context-token`, autenticado com o `BETTRACKR_TOKEN`. Ou seja: basta
+`BETTRACKR_BASE` + `BETTRACKR_TOKEN` definidos e a ativacao feita no painel; o
+`BETCLIC_CONTEXT_TOKEN` passa a ser so um atalho alternativo. O token vai cifrado
+(AES-256-GCM) na tabela `bot_context_tokens`; a chave da passkey continua a nunca
+sair desta maquina.
+
 ### Arranque e reinicio
 
-O bot precisa de UM token de contexto begmedia para o **primeiro** arranque
-(`BETCLIC_CONTEXT_TOKEN`). A partir dai encadeia sozinho: cada login por passkey
-da um access_token (~2h) que serve de contexto ao seguinte.
+O bot precisa de UM token de contexto begmedia para o **primeiro** arranque. Ha
+tres formas de lho dar, por ordem de preferencia: (1) ativa-lo no painel /bot da
+app - o bot puxa-o sozinho; (2) a sessao cifrada de uma passagem anterior; (3) o
+`BETCLIC_CONTEXT_TOKEN` a mao. A partir dai encadeia sozinho: cada login por
+passkey da um access_token (~2h) que serve de contexto ao seguinte.
 
 Apos cada passagem com sucesso o bot **guarda a sessao cifrada** (`session.enc`,
 com a `BETCLIC_BOT_KEY`). Num reinicio - deploy, crash, reboot - le essa sessao e,
 se o access ainda for valido (< 2h), rearranca **sem** precisar de um token novo.
-So se o bot ficar mais de ~2h desligado e a sessao expirar e que volta a pedir um
-`BETCLIC_CONTEXT_TOKEN` a mao. Num Pi 24/7 isso quase nunca acontece.
 
-(Fechar tambem esse caso - > 2h offline - precisaria do endpoint de `refresh_token`
-da Betclic, que so dispara num timer de ~2h e por isso e dificil de capturar. Como
-a persistencia ja cobre todos os reinicios normais, fica como opcional.)
+Se o bot ficar mais de ~2h desligado, a sessao expira - e ai a ativacao pela app
+fecha o caso: reativa no painel /bot e a passagem seguinte puxa o token novo, sem
+tocar neste ficheiro. (Era o unico cabo solto do desenho anterior.)

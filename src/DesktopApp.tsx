@@ -289,7 +289,7 @@ export default function DesktopApp({
                     isDark={isDark}
                   />
                 )}
-                {activeTab === "BOT" && <BotPanel />}
+                {activeTab === "BOT" && <BotPanel mode="desktop" />}
                 {activeTab === "SETTINGS" && (
                   <Settings
                     preferences={preferences}

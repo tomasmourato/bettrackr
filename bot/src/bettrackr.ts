@@ -85,3 +85,20 @@ export async function heartbeat(cfg: BettrackrConfig, payload: HeartbeatPayload)
     // silencioso de proposito
   }
 }
+
+// Vai buscar ao BetTrackr o token de contexto que o admin ativou na app (painel
+// /bot -> GET /api/bot/context-token). E o que dispensa o BETCLIC_CONTEXT_TOKEN
+// a mao: no arranque frio, o bot puxa daqui em vez de exigir a env. Devolve null
+// se nao houver (404), se expirou (410) ou se a rede falhar - o arranque decide.
+export async function fetchContextToken(cfg: BettrackrConfig): Promise<string | null> {
+  try {
+    const res = await fetch(`${cfg.base}/api/bot/context-token`, {
+      headers: { Authorization: `Bearer ${cfg.token}` },
+    });
+    if (!res.ok) return null;
+    const data: any = await res.json().catch(() => ({}));
+    return typeof data.token === "string" && data.token ? data.token : null;
+  } catch {
+    return null;
+  }
+}

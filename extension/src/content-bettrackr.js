@@ -76,6 +76,21 @@
       return;
     }
 
+    // Ativação do bot (painel /bot, desktop): a app pede o token da Betclic que
+    // o inject.js já captou em betclic.pt e guardou em chrome.storage.local. Só
+    // respondemos nesta origem (o content script só corre nas nossas), e a app
+    // envia-o de imediato ao próprio servidor. Não fazemos fetch nem lemos nada
+    // novo - devolvemos o que já lá está (ou null se ainda não houve captura).
+    if (data.type === "GET_BETCLIC_TOKEN") {
+      try {
+        const s = await chrome.storage.local.get(["betclicToken", "betclicCapturedAt"]);
+        toPage({ type: "BETCLIC_TOKEN", token: s.betclicToken || null, capturedAt: s.betclicCapturedAt || null });
+      } catch (_) {
+        toPage({ type: "BETCLIC_TOKEN", token: null, capturedAt: null });
+      }
+      return;
+    }
+
     if (data.type === "IMPORT") {
       const session = await syncSession().catch(() => null);
       if (!session?.token) {

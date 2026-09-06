@@ -12,6 +12,37 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const APP = "bettrackr-app";
 const EXT = "bettrackr-ext";
 
+// Pede à extensão o token da Betclic que ela já captou (inject.js -> storage) e
+// resolve com ele. Usado pela ativação do bot no desktop (BotPanel). Promessa
+// própria (listener temporário + timeout) porque é um pedido pontual, fora do
+// ciclo de vida do hook. Resolve null se a extensão não responder ou não tiver
+// token captado ainda.
+export function requestBetclicToken(timeoutMs = 4000): Promise<{ token: string; capturedAt: number | null } | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    function finish(value: { token: string; capturedAt: number | null } | null) {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("message", onMessage);
+      window.clearTimeout(timer);
+      resolve(value);
+    }
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window || event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.source !== EXT || data.type !== "BETCLIC_TOKEN") return;
+      finish(
+        typeof data.token === "string" && data.token
+          ? { token: data.token, capturedAt: typeof data.capturedAt === "number" ? data.capturedAt : null }
+          : null,
+      );
+    }
+    window.addEventListener("message", onMessage);
+    window.postMessage({ source: APP, type: "GET_BETCLIC_TOKEN" }, window.location.origin);
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
+  });
+}
+
 export interface BookmakerImportResult {
   ok: boolean;
   imported?: number;
