@@ -225,6 +225,15 @@ O bot (este processo) puxa esse token no arranque frio via
 (AES-256-GCM) na tabela `bot_context_tokens`; a chave da passkey continua a nunca
 sair desta maquina.
 
+**A passkey e criada AUTOMATICAMENTE.** Nao e preciso `marco0 enrol` nem
+`vault-import` a mao: se nao houver `passkey.enc`, o bot cria a passkey na 1a
+passagem com o token da ativacao e guarda o cofre. E se a passkey for apagada na
+Betclic (o login passa a falhar), basta reativar no painel /bot que o bot a
+recria sozinho na passagem seguinte - o setup e a recuperacao de um admin fazem-se
+todos pela app. A chave privada nasce e vive no dispositivo; nunca passa pelo
+servidor. (O `marco0 enrol` continua a existir para quem quiser provisionar a
+passkey a mao antes de por o bot a correr.)
+
 ### Arranque e reinicio
 
 O bot precisa de UM token de contexto begmedia para o **primeiro** arranque. Ha

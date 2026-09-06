@@ -124,6 +124,20 @@ export async function fetchFreshToken(cfg: BettrackrConfig): Promise<string | nu
   }
 }
 
+// Apaga a ativacao guardada no BetTrackr (DELETE /api/bot/context-token). Usado
+// depois de um re-enrolment automatico para consumir o token e nao repetir o
+// registo em ciclo. Best-effort - se falhar, nao e critico.
+export async function deleteContextToken(cfg: BettrackrConfig): Promise<void> {
+  try {
+    await fetch(`${cfg.base}/api/bot/context-token`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${cfg.token}` },
+    });
+  } catch {
+    // silencioso de proposito
+  }
+}
+
 // Vai buscar ao BetTrackr o token de contexto que o admin ativou na app (painel
 // /bot -> GET /api/bot/context-token). E o que dispensa o BETCLIC_CONTEXT_TOKEN
 // a mao: no arranque frio, o bot puxa daqui em vez de exigir a env. Devolve null
