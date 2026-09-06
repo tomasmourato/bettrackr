@@ -901,7 +901,7 @@ export const PT = {
   "clv.promo": "Promoções",
   "clv.promoValue": "{n} · {pct}",
   "clv.promoHelp":
-    "Boosts, odds turbo e missões sem odd original registada ficam de fora das médias: a odd turbinada está acima do mercado por construção, por isso bater a linha com ela não diz nada sobre a escolha. Escreve a odd de antes do boost na aposta e ela volta a contar, medida por esse preço.",
+    "Boosts, odds turbo e missões ficam de fora das médias: uma aposta turbinada é boa aposta por causa do boost, por isso o CLV dela não diz se estás num bom caminho. Esta linha mede a outra pergunta - quanto valeram as promoções, ao preço que a casa deu. O CLV da escolha, medido pela odd de antes do boost, está no detalhe de cada aposta.",
   "clv.byBookmaker": "CLV por casa",
   "clv.help":
     "A odd de fecho é usada tal como a registas, com a margem da casa incluída - por isso estes números pecam por defeito. O que interessa é a tendência e a comparação entre casas.",
@@ -922,7 +922,7 @@ export const PT = {
   "clv.originalOddHint":
     "Só para odds turbinadas: a odd que a casa dava antes do boost. É contra ela que o CLV é medido - a turbinada está acima do mercado por construção. Vazio quando não houve boost.",
   "clv.boostedNote":
-    "Medido sobre a odd original @{original}, turbinada para @{boosted}.",
+    "Medido sobre a odd original @{original}, turbinada para @{boosted}. Como é uma promoção, fica fora das médias.",
 
   // Caixa de entrada: preencher as odds em falta
   "clv.fill.title": "Preencher odds de fecho",

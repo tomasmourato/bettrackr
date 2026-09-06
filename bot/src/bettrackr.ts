@@ -33,6 +33,18 @@ function extractImportKey(bet: any): string | null {
 export interface KnownBet {
   id: string;
   status: string;
+  // Alguma perna ja traz a odd de antes do boost? Serve para o bot dar UMA
+  // passagem de recuperacao sobre as apostas turbinadas que foram importadas
+  // antes de o mapper saber ler o `initial_odds` da Betclic. Sem isto ficavam
+  // para sempre com o CLV medido pela odd turbinada, e a turbinada esta acima
+  // do mercado por construcao.
+  temOddOriginal: boolean;
+}
+
+/** Alguma perna desta aposta (do BetTrackr ou mapeada) tem odd original? */
+export function temOddOriginal(bet: any): boolean {
+  const pernas = Array.isArray(bet?.selections) ? bet.selections : [];
+  return pernas.some((perna: any) => Number(perna?.originalOdd) > 1);
 }
 
 export async function knownBets(cfg: BettrackrConfig): Promise<Map<string, KnownBet>> {
@@ -45,7 +57,13 @@ export async function knownBets(cfg: BettrackrConfig): Promise<Map<string, Known
   const map = new Map<string, KnownBet>();
   for (const bet of data.bets || []) {
     const k = extractImportKey(bet);
-    if (k) map.set(k, { id: String(bet.id), status: String(bet.status) });
+    if (k) {
+      map.set(k, {
+        id: String(bet.id),
+        status: String(bet.status),
+        temOddOriginal: temOddOriginal(bet),
+      });
+    }
   }
   return map;
 }

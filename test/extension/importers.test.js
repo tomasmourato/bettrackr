@@ -107,6 +107,102 @@ describe("Betclic mapper", () => {
       netProfit: 2.5,
     });
   });
+
+  // O token de desafio ("missao") e o unico boost que a Betclic NAO marca:
+  // chega com is_boosted_odd a false e um mercado de nome normal. Sem apanhar
+  // o `initial_odds`, uma 2.32 turbinada para 2.98 entrava nas medias do CLV
+  // com +25.7%. O payload real esta em bet_reference 6a9c12fe5daddc0c93091ea1.
+  test("apanha a odd de antes do boost de um token de desafio", () => {
+    const mapped = mapBetclicBet({
+      bet_reference: "token-boost",
+      bet_type: "simple",
+      result: "Lose",
+      odds: 2.98,
+      stake: 10,
+      is_freebet: false,
+      initial_odds: 2.32,
+      options: [{ type: "TOKEN_BOOST", percent: 50, token_boost_percent: 0.5 }],
+      bet_selections: [{
+        id: 1211496521568259,
+        odds: 2.98,
+        initial_odds: 2.32,
+        is_boosted_odd: false,
+        selection_label: "Atletico de Madrid",
+        market_label: "Equipa tem 2 golos de vantagem ou vence (tempo reg.)",
+        match_label: "Athletic Bilbao - Atletico de Madrid",
+        result: "Lose",
+      }],
+    });
+
+    // A odd que a casa paga nao se mexe; o preco original vai ao lado.
+    expect(mapped.odd).toBe(2.98);
+    expect(mapped.selections[0].odd).toBe(2.98);
+    expect(mapped.selections[0].originalOdd).toBe(2.32);
+    // 1 + (2.32 - 1) * 1.5 = 2.98: o token turbina o lucro, nao a odd.
+    expect(1 + (2.32 - 1) * 1.5).toBeCloseTo(2.98, 2);
+  });
+
+  test("numa multipla turbinada a original de cada perna e a propria odd", () => {
+    // O boost vive no total (bet.odds), as pernas ficam com o preco verdadeiro
+    // e sem `initial_odds`. O produto das originais da o total de antes do
+    // boost, que e o que o CLV mede.
+    const mapped = mapBetclicBet({
+      bet_reference: "token-boost-multipla",
+      bet_type: "multiple",
+      result: "Win",
+      odds: 4.7,
+      stake: 10,
+      is_freebet: false,
+      options: [{ type: "TOKEN_BOOST", percent: 30, token_boost_percent: 0.3 }],
+      bet_selections: [
+        { id: 1, odds: 2, selection_label: "A", market_label: "Vencedor", match_label: "A - B", result: "Win" },
+        { id: 2, odds: 1.9, selection_label: "C", market_label: "Vencedor", match_label: "C - D", result: "Win" },
+      ],
+    });
+
+    expect(mapped.selections.map((s) => s.originalOdd)).toEqual([2, 1.9]);
+  });
+
+  test("sem token de desafio nao se inventa odd original", () => {
+    // O superboost ("Boost (10 max.)") nao tem preco original nenhum: e um
+    // mercado proprio, ja com o preco turbinado. O payload nem traz
+    // initial_odds nem options.
+    const mapped = mapBetclicBet({
+      bet_reference: "superboost",
+      bet_type: "simple",
+      result: "Win",
+      odds: 2.1,
+      stake: 10,
+      is_freebet: false,
+      bet_selections: [{
+        id: 1216427453325312,
+        odds: 2.1,
+        is_boosted_odd: false,
+        selection_label: "As duas equipas marcam",
+        market_label: "Boost (10 max.)",
+        match_label: "Arsenal - Chelsea",
+        result: "Win",
+      }],
+    });
+
+    expect(mapped.selections[0].originalOdd).toBeUndefined();
+  });
+
+  test("initial_odds sem token de desafio e ignorado", () => {
+    // Sem a marca do token, uma initial_odds diferente e so deriva de preco
+    // entre por no boletim e confirmar - nao e um boost.
+    const mapped = mapBetclicBet({
+      bet_reference: "deriva",
+      bet_type: "simple",
+      result: "Win",
+      odds: 2.1,
+      stake: 10,
+      is_freebet: false,
+      bet_selections: [{ id: 3, odds: 2.1, initial_odds: 2.05, selection_label: "A", market_label: "Vencedor", match_label: "A - B", result: "Win" }],
+    });
+
+    expect(mapped.selections[0].originalOdd).toBeUndefined();
+  });
 });
 
 describe("Betclic pagination", () => {

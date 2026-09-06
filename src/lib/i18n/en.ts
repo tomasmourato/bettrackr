@@ -895,7 +895,7 @@ export const EN: Record<TKey, Entry> = {
   "clv.promo": "Promos",
   "clv.promoValue": "{n} · {pct}",
   "clv.promoHelp":
-    "Boosts, enhanced odds and missions with no original odd recorded are kept out of the averages: the boosted price is above the market by construction, so beating the close with one says nothing about the pick. Record the pre-boost odd on the bet and it counts again, measured at that price.",
+    "Boosts, enhanced odds and missions are kept out of the averages: a boosted bet is a good bet because of the boost, so its CLV says nothing about whether you are on a good path. This line measures the other question - what the promos were worth, at the price the bookmaker gave. The CLV of the pick itself, measured against the pre-boost odd, is on each bet's details.",
   "clv.byBookmaker": "CLV by bookmaker",
   "clv.help":
     "The closing odd is used exactly as you record it, bookmaker margin included - so these numbers understate your edge. What matters is the trend and the comparison between bookmakers.",
@@ -916,7 +916,7 @@ export const EN: Record<TKey, Entry> = {
   "clv.originalOddHint":
     "Only for boosted odds: the odd the bookmaker offered before the boost. That is what the CLV is measured against - a boosted price is above the market by construction. Leave blank when there was no boost.",
   "clv.boostedNote":
-    "Measured against the original odd @{original}, boosted to @{boosted}.",
+    "Measured against the original odd @{original}, boosted to @{boosted}. Being a promo, it stays out of the averages.",
 
   // Inbox: fill in the missing odds
   "clv.fill.title": "Fill in closing odds",

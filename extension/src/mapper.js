@@ -167,6 +167,12 @@ export function betclicRef(bet) {
   return bet && bet.bet_reference ? String(bet.bet_reference) : null;
 }
 
+/** A odd de antes do boost de uma perna: a `initial_odds`, ou a própria odd. */
+function oddOriginalDaPerna(s) {
+  const inicial = Number(s.initial_odds);
+  return Number.isFinite(inicial) && inicial > 1 ? inicial : Number(s.odds) || 0;
+}
+
 /** Uma aposta do Betclic -> objeto Bet pronto para POST /api/bets/bulk. */
 export function mapBet(bet) {
   const isCashout = isCashoutResult(bet.result);
@@ -189,6 +195,18 @@ export function mapBet(bet) {
     settledCashoutReturn,
     freebetType
   );
+
+  // A Betclic turbina odds de duas maneiras e so uma delas se ve na perna. O
+  // `is_boosted_odd` marca as odds turbinadas do costume; os tokens de desafio
+  // (as "missoes") chegam com is_boosted_odd a FALSE e so se denunciam aqui,
+  // em options[].type === "TOKEN_BOOST". Foi assim que uma 2.32 turbinada para
+  // 2.98 passou por aposta normal e entrou nas medias do CLV com +25.7%.
+  //
+  // Nessas, a odd de ANTES do boost vem em `initial_odds`. A conta bate: o
+  // token turbina o LUCRO, nao a odd - 1 + (2.32 - 1) * 1.5 = 2.98.
+  const temTokenBoost =
+    Array.isArray(bet.options) &&
+    bet.options.some((option) => option && option.type === "TOKEN_BOOST");
 
   const selections = (bet.bet_selections || []).map((s, i) => {
     const result = betclicSelectionResult(s);
@@ -218,6 +236,16 @@ export function mapBet(bet) {
       // A própria Betclic marca as odds turbinadas - muito mais fiável do que
       // adivinhar pelo texto do mercado.
       ...(s.is_boosted_odd === true ? { isBoosted: true } : {}),
+      // A odd de antes do boost, quando a aposta levou um token.
+      //
+      // Numa SIMPLES a perna traz a odd turbinada e o `initial_odds` traz a
+      // original. Numa MÚLTIPLA o boost vive no total e as pernas ficam com o
+      // preço verdadeiro - por isso a original de cada perna é a própria odd, e
+      // o produto delas dá o total de antes do boost (que é como o CLV a lê,
+      // ver originalOddOf em src/lib/clv.ts). Os dois casos saem desta linha.
+      ...(temTokenBoost && oddOriginalDaPerna(s) > 1
+        ? { originalOdd: oddOriginalDaPerna(s) }
+        : {}),
       ...(Object.keys(sourceRef).length > 0 ? { sourceRef } : {}),
       sport: s.sport_label || undefined,
       betType: s.market_label || undefined,

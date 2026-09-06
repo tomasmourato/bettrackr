@@ -1,7 +1,7 @@
 // sync.ts - uma passagem do bot: login por passkey -> ler apostas da Betclic
 // (liquidadas E pendentes) -> reconciliar com o BetTrackr -> inserir as novas e
-// ATUALIZAR as que mudaram de estado (pendente -> liquidada). Como uma extensao
-// sem browser.
+// ATUALIZAR as que mudaram de estado (pendente -> liquidada) ou que ganharam a
+// odd de antes do boost. Como uma extensao sem browser.
 //
 // So le da Betclic. So escreve no BetTrackr (a conta do proprio dono). Nunca
 // aposta, nunca toca na carteira. Nunca envia closingOdd, por isso o CLV fica
@@ -11,7 +11,28 @@ import { SoftCredential } from "./softAuthenticator.js";
 import { requestLoginOptions, submitLogin } from "./betclicAuth.js";
 import { fetchBetclicBets } from "./betclicBets.js";
 import { mapBets } from "./mapper.js";
-import { knownBets, pushBets, updateBet, BettrackrConfig, KnownBet } from "./bettrackr.js";
+import {
+  knownBets,
+  pushBets,
+  updateBet,
+  temOddOriginal,
+  BettrackrConfig,
+  KnownBet,
+} from "./bettrackr.js";
+
+/**
+ * Esta aposta mapeada precisa de ir para o BetTrackr?
+ *
+ * Duas razoes: mudou de estado (o caso normal - pendente -> liquidada), ou traz
+ * a odd de antes do boost que a gravada ainda nao tem. A segunda e a passagem
+ * de recuperacao das turbinadas antigas, e esgota-se sozinha: assim que a
+ * aposta e reescrita com a odd original deixa de reaparecer aqui.
+ */
+export function precisaDeAtualizar(atual: KnownBet | undefined, mapeada: any): boolean {
+  if (!atual) return true; // nova
+  if (atual.status !== mapeada?.status) return true;
+  return !atual.temOddOriginal && temOddOriginal(mapeada);
+}
 
 export interface SyncDeps {
   cred: SoftCredential;
@@ -59,9 +80,7 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncResult> {
   const isNewOrChanged = (mapped: any): boolean => {
     const key = mapped?.metadata?.importKey;
     if (!key) return false;
-    const cur = known.get(String(key));
-    if (!cur) return true;
-    return cur.status !== mapped.status;
+    return precisaDeAtualizar(known.get(String(key)), mapped);
   };
 
   // 3. Ler da Betclic. LIQUIDADAS com paragem por pagina: para na primeira
@@ -93,7 +112,7 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncResult> {
     seen.add(String(key));
     const cur = known.get(String(key));
     if (!cur) inserts.push(b);
-    else if (cur.status !== b.status) updates.push({ id: cur.id, bet: b });
+    else if (precisaDeAtualizar(cur, b)) updates.push({ id: cur.id, bet: b });
   }
   log(`${inserts.length} nova(s), ${updates.length} a atualizar`);
 

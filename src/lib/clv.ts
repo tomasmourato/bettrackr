@@ -36,17 +36,23 @@
 //    misturaria dinheiro promocional com dinheiro real. Uma aposta SEM RISCO é
 //    dinheiro real e conta para tudo.
 //
-//  * As apostas PROMOCIONAIS (boosts, odds turbo, missões) medem-se pelo
-//    preço de ANTES do boost, quando ele se conhece (Selection.originalOdd).
-//    Uma odd turbinada está acima do mercado por construção: compará-la com a
-//    linha de fecho mede a generosidade da casa, não a qualidade da escolha -
-//    uma 2.32 turbinada para 2.98 contra um fecho de 2.37 dava +25.7% de CLV
-//    a uma escolha que na verdade ficou 2.1% ABAIXO do mercado. Com o preço
-//    original a pergunta volta a fazer sentido, e a aposta conta para as
-//    médias como qualquer outra: foi um preço que o mercado deu.
-//    Sem ele não há nada de comparável - essas ficam fora das médias por
-//    inteiro, contadas e mostradas à parte, porque saber quanto valeram as
-//    promoções é útil, só não é a mesma pergunta.
+//  * As apostas PROMOCIONAIS (boosts, odds turbo, missões) ficam fora das
+//    médias por inteiro - não só do dinheiro, como as freebets. E ficam
+//    mesmo quando se conhece o preço de antes do boost: uma aposta turbinada
+//    é boa aposta por causa do boost, por isso um CLV negativo nela não diz
+//    que o caminho está errado - que é a única coisa que as médias do CLV
+//    servem para dizer.
+//
+//    Isso não quer dizer que o número não interesse. Quando se conhece a odd
+//    de ANTES do boost (Selection.originalOdd), o CLV da aposta é medido por
+//    ela: 2.32 turbinada para 2.98 contra um fecho de 2.37 são -2.1% (a
+//    escolha ficou abaixo do mercado) e não os +25.7% que a odd turbinada
+//    dava. Vê-se no detalhe da aposta, como informação.
+//
+//    A linha "Promoções" do painel é a outra pergunta - quanto valeram as
+//    promoções - e essa mede-se pelo preço que a casa REALMENTE deu, a odd
+//    turbinada. São dois números diferentes porque são duas perguntas
+//    diferentes; ver betClvAtTakenPrice.
 //
 //  * A odd de fecho é usada CRUA, com a margem da casa lá dentro. O CLV
 //    rigoroso compara com a linha sem margem (no-vig), o que exigiria as odds
@@ -272,14 +278,10 @@ export function isClvEligible(bet: Bet): boolean {
 }
 
 /**
- * O CLV de uma aposta, ou null quando não há nada a medir - aposta não
- * elegível, sem odd de fecho registada, ou com odds que não fazem sentido.
+ * A conta, uma vez só: uma odd apanhada contra uma linha de fecho.
+ * null quando falta uma das duas ou quando não é uma odd a sério.
  */
-export function betClv(bet: Bet): ClvBetResult | null {
-  if (!isClvEligible(bet)) return null;
-
-  const odd = oddForClv(bet);
-  const close = validOdd(bet.closingOdd);
+function clvEntre(bet: Bet, odd: number | null, close: number | null): ClvBetResult | null {
   if (odd === null || close === null) return null;
 
   const ratio = odd / close - 1;
@@ -291,6 +293,31 @@ export function betClv(bet: Bet): ClvBetResult | null {
     moneyClv: bet.isFreebet ? 0 : round2(safeNum(bet.stake) * ratio),
     beatClose: odd > close,
   };
+}
+
+/**
+ * O CLV de uma aposta, ou null quando não há nada a medir - aposta não
+ * elegível, sem odd de fecho registada, ou com odds que não fazem sentido.
+ *
+ * Numa aposta turbinada com preço original conhecido é esse o preço medido:
+ * é a pergunta "a escolha era boa?", não "a casa foi generosa?".
+ */
+export function betClv(bet: Bet): ClvBetResult | null {
+  if (!isClvEligible(bet)) return null;
+  return clvEntre(bet, oddForClv(bet), validOdd(bet.closingOdd));
+}
+
+/**
+ * O CLV pelo preço que a casa REALMENTE deu - a odd turbinada, mesmo quando se
+ * conhece a de antes do boost.
+ *
+ * É a medida de quanto valeu a promoção, e é essa que alimenta a linha
+ * "Promoções" do painel. Numa aposta sem boost dá exatamente o mesmo que o
+ * `betClv`.
+ */
+export function betClvAtTakenPrice(bet: Bet): ClvBetResult | null {
+  if (!isClvEligible(bet)) return null;
+  return clvEntre(bet, validOdd(bet.odd), validOdd(bet.closingOdd));
 }
 
 /**
@@ -376,14 +403,21 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
 
     trackedBets++;
 
-    // Promocional SEM preço de antes do boost: conta-se à parte e não entra em
-    // mais nada. A odd está acima do mercado por construção, por isso poluía a
-    // média e o gráfico. Com o preço original conhecido, o `betClv` já mediu
-    // sobre ele - é um número comparável e a aposta segue para as médias.
-    if (isPromoBet(bet) && originalOddOf(bet) === null) {
-      promoBets++;
-      promoSumClvPct += clv.clvPct;
-      promoMoneyClv += clv.moneyClv;
+    // Promocional: conta-se à parte e não entra em mais nada. Uma aposta
+    // turbinada é boa aposta POR CAUSA do boost - o CLV dela, positivo ou
+    // negativo, não diz nada sobre o caminho que as médias medem. Fica de
+    // fora mesmo quando se conhece o preço de antes do boost.
+    //
+    // E conta-se pelo preço que a casa deu, não pelo original: esta linha
+    // responde a "quanto valeram as promoções". O CLV da escolha, medido pelo
+    // preço original, está no detalhe da aposta.
+    if (isPromoBet(bet)) {
+      const aoPrecoDaCasa = betClvAtTakenPrice(bet);
+      if (aoPrecoDaCasa) {
+        promoBets++;
+        promoSumClvPct += aoPrecoDaCasa.clvPct;
+        promoMoneyClv += aoPrecoDaCasa.moneyClv;
+      }
       continue;
     }
 

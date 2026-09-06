@@ -9,6 +9,7 @@ import {
   needsClosingOdd,
   betClvNoVig,
   originalOddOf,
+  betClvAtTakenPrice,
 } from "../../src/lib/clv";
 import type { Bet, BetStatus } from "../../src/types";
 
@@ -602,7 +603,11 @@ describe("odd original (antes do boost)", () => {
     expect(isPromoBet(bet({ selections: [turbinada()] }))).toBe(false);
   });
 
-  test("com preço original a promocional volta a contar para as médias", () => {
+  test("continua fora das médias, mesmo com o preço original conhecido", () => {
+    // Uma aposta turbinada é boa aposta POR CAUSA do boost: o CLV dela, bom ou
+    // mau, não diz nada sobre o caminho que as médias medem. O preço original
+    // serve para o número ser honesto quando se olha para a aposta, não para a
+    // pôr de volta na média.
     const r = calculateClv(
       [
         bet({ odd: 2.1, closingOdd: 2, stake: 10 }), // normal: +5%
@@ -611,15 +616,36 @@ describe("odd original (antes do boost)", () => {
           closingOdd: 2.37,
           stake: 10,
           selections: [turbinada({ originalOdd: 2.32 })],
-        }), // turbinada, mas com preço comparável: -2.11%
+        }),
       ],
       NOW,
     );
-    expect(r.ratedBets).toBe(2);
-    expect(r.promoBets).toBe(0);
-    // (5 - 2.11) / 2 = 1.45 - e não os +15.37% que a odd turbinada dava.
-    expect(r.avgClvPct).toBe(1.45);
-    expect(r.beatCloseRate).toBe(50);
+    expect(r.trackedBets).toBe(2);
+    expect(r.ratedBets).toBe(1);
+    expect(r.avgClvPct).toBe(5);
+    expect(r.moneyClv).toBe(0.5);
+
+    // E a linha das promoções mede o que a PROMOÇÃO valeu, ao preço que a casa
+    // deu: +25.74%, não os -2.11% da escolha.
+    expect(r.promoBets).toBe(1);
+    expect(r.promoAvgClvPct).toBe(25.74);
+    expect(r.promoMoneyClv).toBe(2.57);
+  });
+
+  test("o detalhe da aposta mostra os dois números", () => {
+    const b = bet({
+      odd: 2.98,
+      closingOdd: 2.37,
+      stake: 10,
+      selections: [turbinada({ originalOdd: 2.32 })],
+    });
+    // A escolha, medida pelo preço de antes do boost.
+    expect(betClv(b)!.clvPct).toBe(-2.11);
+    // A promoção, medida pelo preço que a casa deu.
+    expect(betClvAtTakenPrice(b)!.clvPct).toBe(25.74);
+    // Sem boost, as duas contas são a mesma.
+    const semBoost = bet({ odd: 2.1, closingOdd: 2, stake: 10 });
+    expect(betClvAtTakenPrice(semBoost)).toEqual(betClv(semBoost)!);
   });
 
   test("a medida sem margem também usa o preço original", () => {
