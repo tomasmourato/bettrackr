@@ -26,21 +26,28 @@ function extractImportKey(bet: any): string | null {
   return null;
 }
 
-// Conjunto de importKeys ja no BetTrackr - a base da deduplicacao do lado do
-// cliente (o mesmo que a extensao faz, ate a migracao 020 por o indice unico).
-export async function knownImportKeys(cfg: BettrackrConfig): Promise<Set<string>> {
+// O que ja esta no BetTrackr, por importKey: o id (para o PUT) e o status atual
+// (para saber se a aposta mudou de estado - ex.: pendente -> liquidada). E a
+// base da reconciliacao: novo => inserir, conhecido com status diferente =>
+// atualizar. (Substitui o antigo knownImportKeys, que so trazia o conjunto.)
+export interface KnownBet {
+  id: string;
+  status: string;
+}
+
+export async function knownBets(cfg: BettrackrConfig): Promise<Map<string, KnownBet>> {
   const res = await fetch(`${cfg.base}/api/bets`, {
     headers: { Authorization: `Bearer ${cfg.token}` },
   });
   if (res.status === 401) throw new Error("Sessao BetTrackr expirada (401). Renova o token.");
   if (!res.ok) throw new Error(`BetTrackr respondeu ${res.status} ao listar apostas.`);
   const data: any = await res.json().catch(() => ({}));
-  const keys = new Set<string>();
+  const map = new Map<string, KnownBet>();
   for (const bet of data.bets || []) {
     const k = extractImportKey(bet);
-    if (k) keys.add(k);
+    if (k) map.set(k, { id: String(bet.id), status: String(bet.status) });
   }
-  return keys;
+  return map;
 }
 
 export interface PushResult {
@@ -61,6 +68,20 @@ export async function pushBets(cfg: BettrackrConfig, bets: any[]): Promise<PushR
   });
   const body = await res.text();
   return { enviadas: bets.length, status: res.status, ok: res.ok, body };
+}
+
+// Atualiza uma aposta existente (PUT /api/bets/:id) - usado quando uma aposta
+// muda de estado (pendente -> liquidada). O corpo e a aposta mapeada, que NAO
+// traz closingOdd; por isso o servidor cai no ramo de preservacao e a odd de
+// fecho do CLV fica intacta (ver ownsClosingOdds em routes/betsRoutes.ts).
+export async function updateBet(cfg: BettrackrConfig, id: string, bet: any): Promise<PushResult> {
+  const res = await fetch(`${cfg.base}/api/bets/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.token}` },
+    body: JSON.stringify(bet),
+  });
+  const body = await res.text();
+  return { enviadas: 1, status: res.status, ok: res.ok, body };
 }
 
 // Heartbeat: reporta uma passagem ao painel de admin (POST /api/bot/heartbeat).

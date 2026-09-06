@@ -157,17 +157,18 @@ async function main() {
         }
       }
       console.log(
-        `[bot] ${stamp()} passagem OK: lidas=${r.lidasBetclic} novas=${r.novas} enviadas=${r.enviadas}` +
+        `[bot] ${stamp()} passagem OK: lidas=${r.lidasBetclic} novas=${r.novas} enviadas=${r.enviadas} atualizadas=${r.atualizadas}` +
           (r.dryRun ? " (dry-run)" : ""),
       );
       // Reporta ao painel (best-effort; so quando ha destino real, nao em dry-run).
+      // "imported" no painel conta escritas: novas enviadas + atualizadas.
       if (cfg.bettrackr) {
         await heartbeat(cfg.bettrackr, {
           ok: true,
           startedAt,
           durationMs: Date.now() - t0,
           read: r.lidasBetclic,
-          imported: r.enviadas,
+          imported: r.enviadas + r.atualizadas,
         });
       }
     } catch (err: any) {

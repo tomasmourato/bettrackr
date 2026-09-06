@@ -1,21 +1,24 @@
-// sync.ts - uma passagem do bot: login por passkey -> ler apostas novas da
-// Betclic -> mapear -> enviar ao BetTrackr (ou so imprimir, em dry-run).
+// sync.ts - uma passagem do bot: login por passkey -> ler apostas da Betclic
+// (liquidadas E pendentes) -> reconciliar com o BetTrackr -> inserir as novas e
+// ATUALIZAR as que mudaram de estado (pendente -> liquidada). Como uma extensao
+// sem browser.
 //
 // So le da Betclic. So escreve no BetTrackr (a conta do proprio dono). Nunca
-// aposta, nunca toca na carteira.
+// aposta, nunca toca na carteira. Nunca envia closingOdd, por isso o CLV fica
+// intacto (o servidor preserva a odd de fecho num PUT sem closingOdd).
 
 import { SoftCredential } from "./softAuthenticator.js";
 import { requestLoginOptions, submitLogin } from "./betclicAuth.js";
 import { fetchBetclicBets } from "./betclicBets.js";
-import { mapBets, refOf } from "./mapper.js";
-import { knownImportKeys, pushBets, BettrackrConfig } from "./bettrackr.js";
+import { mapBets } from "./mapper.js";
+import { knownBets, pushBets, updateBet, BettrackrConfig, KnownBet } from "./bettrackr.js";
 
 export interface SyncDeps {
   cred: SoftCredential;
   userHandle: Buffer;
   // Token begmedia valido para servir de CONTEXTO ao login por passkey. Em
   // regime, e o access_token da passagem anterior; no arranque, um dado pelo
-  // admin. (Ver session.ts / index.ts.)
+  // admin. (Ver index.ts.)
   contextToken: string;
   // Destino no BetTrackr. Omitir => dry-run (so imprime, nao envia, nao lista).
   bettrackr?: BettrackrConfig;
@@ -28,6 +31,7 @@ export interface SyncResult {
   lidasBetclic: number;
   novas: number;
   enviadas: number;
+  atualizadas: number;
   dryRun: boolean;
 }
 
@@ -43,61 +47,94 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncResult> {
   }
   log(`login OK (status=${login.status_field})`);
 
-  // 2. Deduplicacao: o que ja esta no BetTrackr. Em dry-run nao lista.
-  let known = new Set<string>();
+  // 2. O que ja esta no BetTrackr: importKey -> { id, status }. Em dry-run nao lista.
+  let known = new Map<string, KnownBet>();
   if (deps.bettrackr) {
-    known = await knownImportKeys(deps.bettrackr);
+    known = await knownBets(deps.bettrackr);
     log(`${known.size} aposta(s) ja no BetTrackr`);
   }
 
-  // 3. Ler da Betclic com paragem antecipada: para na primeira aposta cuja
-  //    referencia ja conhecemos (topo -> baixo). Sem BetTrackr (dry-run) le so
-  //    a primeira pagina, para nao varrer o historico inteiro a toa.
+  // Uma aposta mapeada e "nova ou mudada" se nao a conhecemos, ou se a
+  // conhecemos com um status diferente (tipicamente pendente -> liquidada).
+  const isNewOrChanged = (mapped: any): boolean => {
+    const key = mapped?.metadata?.importKey;
+    if (!key) return false;
+    const cur = known.get(String(key));
+    if (!cur) return true;
+    return cur.status !== mapped.status;
+  };
+
+  // 3. Ler da Betclic. LIQUIDADAS com paragem por pagina: para na primeira
+  //    pagina que ja nao traz nada novo nem mudado (apanha apostas que
+  //    liquidaram "no meio" da lista, ao contrario da paragem na 1a conhecida).
+  //    PENDENTES: le-as todas (sao poucas) para as importar e reconciliar.
+  //    Em dry-run le so a 1a pagina de cada.
   const ended = await fetchBetclicBets(login.token, "ended", {
     maxPages: dryRun ? 1 : 250,
-    stopWhen: deps.bettrackr
-      ? (bet) => {
-          const ref = refOf(bet);
-          return ref ? known.has(`betclic:${ref}`) : false;
-        }
-      : undefined,
-    onPage: ({ lidas, parou }) => log(`  lidas ${lidas}${parou ? " (parou numa ja conhecida)" : ""}`),
+    shouldContinue: deps.bettrackr ? (page) => mapBets(page).some(isNewOrChanged) : undefined,
+    onPage: ({ lidas, parou }) => log(`  ended: lidas ${lidas}${parou ? " (parou)" : ""}`),
   });
-  log(`${ended.length} aposta(s) lidas da Betclic`);
+  const ongoing = await fetchBetclicBets(login.token, "ongoing", {
+    maxPages: dryRun ? 1 : 50,
+    shouldContinue: deps.bettrackr ? () => true : undefined,
+    onPage: ({ lidas }) => log(`  ongoing: lidas ${lidas}`),
+  });
+  const lidasBetclic = ended.length + ongoing.length;
+  log(`${lidasBetclic} aposta(s) lidas da Betclic`);
 
-  // 4. Mapear e filtrar as que ja existem (rede extra alem da paragem).
-  const mapped = mapBets(ended);
-  const novas = mapped.filter((b: any) => {
+  // 4. Reconciliar: novo => inserir; conhecido com status diferente => atualizar.
+  const mapped = mapBets([...ended, ...ongoing]);
+  const inserts: any[] = [];
+  const updates: { id: string; bet: any }[] = [];
+  const seen = new Set<string>();
+  for (const b of mapped) {
     const key = b?.metadata?.importKey;
-    return key ? !known.has(String(key)) : true;
-  });
-  log(`${novas.length} aposta(s) novas`);
+    if (!key || seen.has(String(key))) continue; // ignora sem ref e duplicados
+    seen.add(String(key));
+    const cur = known.get(String(key));
+    if (!cur) inserts.push(b);
+    else if (cur.status !== b.status) updates.push({ id: cur.id, bet: b });
+  }
+  log(`${inserts.length} nova(s), ${updates.length} a atualizar`);
 
-  // 5. Enviar (ou imprimir, em dry-run).
+  // 5. Escrever (ou imprimir, em dry-run).
   let enviadas = 0;
+  let atualizadas = 0;
   if (dryRun) {
-    for (const b of novas.slice(0, 5)) {
+    for (const b of inserts.slice(0, 5)) {
       const legs = Array.isArray(b.selections) ? b.selections.length : 0;
-      log(`  [dry] ${b.metadata?.importKey}  ${b.stake}@${b.odd}  ${b.status}  ${legs} perna(s)`);
+      log(`  [dry][nova] ${b.metadata?.importKey}  ${b.stake}@${b.odd}  ${b.status}  ${legs} perna(s)`);
     }
-    if (novas.length > 5) log(`  [dry] ... e mais ${novas.length - 5}`);
-  } else if (novas.length > 0) {
-    // Em lotes de 500, como a extensao, para nao passar o limite de 1000.
-    for (let i = 0; i < novas.length; i += 500) {
-      const lote = novas.slice(i, i + 500);
+    if (inserts.length > 5) log(`  [dry] ... e mais ${inserts.length - 5} nova(s)`);
+    for (const u of updates.slice(0, 5)) {
+      log(`  [dry][muda] ${u.bet.metadata?.importKey}  -> ${u.bet.status}`);
+    }
+    if (updates.length > 5) log(`  [dry] ... e mais ${updates.length - 5} a atualizar`);
+  } else {
+    // Inserir em lotes de 500 (limite de 1000 no bulk), como a extensao.
+    for (let i = 0; i < inserts.length; i += 500) {
+      const lote = inserts.slice(i, i + 500);
       const r = await pushBets(deps.bettrackr!, lote);
       if (!r.ok) throw new Error(`envio ao BetTrackr falhou (${r.status}): ${r.body.slice(0, 200)}`);
       enviadas += lote.length;
     }
-    log(`${enviadas} aposta(s) enviadas ao BetTrackr`);
+    // Atualizar uma a uma (PUT /:id). CLV preservado (sem closingOdd no corpo).
+    for (const u of updates) {
+      const r = await updateBet(deps.bettrackr!, u.id, u.bet);
+      if (!r.ok) throw new Error(`atualizacao de ${u.id} falhou (${r.status}): ${r.body.slice(0, 200)}`);
+      atualizadas += 1;
+    }
+    if (enviadas) log(`${enviadas} aposta(s) enviadas ao BetTrackr`);
+    if (atualizadas) log(`${atualizadas} aposta(s) atualizadas no BetTrackr`);
   }
 
   return {
     accessToken: login.token,
     refreshToken: login.refreshToken,
-    lidasBetclic: ended.length,
-    novas: novas.length,
+    lidasBetclic,
+    novas: inserts.length,
     enviadas,
+    atualizadas,
     dryRun,
   };
 }

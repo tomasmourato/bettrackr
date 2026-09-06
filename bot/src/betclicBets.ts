@@ -19,9 +19,13 @@ export interface FetchBetsOptions {
   base?: string;
   pageSize?: number;
   maxPages?: number;
-  // Chamado por aposta, do topo (mais recente) para baixo. Devolver true assim
-  // que se reconhece uma aposta ja conhecida faz a leitura parar nessa pagina.
-  stopWhen?: (bet: any) => boolean;
+  // Chamado depois de cada pagina (do topo/mais recente para baixo) com as
+  // apostas CRUAS dessa pagina. Devolver true continua a paginar, false para.
+  // Ausente => le so a primeira pagina. Isto substitui a paragem por-aposta: o
+  // dono decide ao nivel da pagina (ex.: parar quando uma pagina ja nao traz
+  // nada novo nem alterado), o que apanha apostas novas/mudadas intercaladas
+  // com conhecidas em vez de parar na primeira conhecida.
+  shouldContinue?: (pageBets: any[]) => boolean;
   onPage?: (info: { lidas: number; parou: boolean }) => void;
 }
 
@@ -71,17 +75,12 @@ export async function fetchBetclicBets(
       options.onPage?.({ lidas: out.length, parou: false });
       break;
     }
-    // Paragem antecipada: acumula ate encontrar uma aposta ja conhecida.
-    let parou = false;
-    for (const bet of bets) {
-      if (options.stopWhen?.(bet)) {
-        parou = true;
-        break;
-      }
-      out.push(bet);
-    }
-    options.onPage?.({ lidas: out.length, parou });
-    if (parou) break;
+    // Acumula a pagina INTEIRA (o dono filtra depois) e decide a paginacao ao
+    // nivel da pagina. Sem shouldContinue le so a 1a pagina (dry-run).
+    out.push(...bets);
+    const cont = options.shouldContinue ? options.shouldContinue(bets) : false;
+    options.onPage?.({ lidas: out.length, parou: !cont });
+    if (!cont) break;
 
     offset += bets.length; // a API pode devolver menos que o pedido; avanca pelo real
   }
