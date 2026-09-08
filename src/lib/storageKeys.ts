@@ -14,6 +14,9 @@ export const STORAGE_KEYS = {
   user: `${NEW_PREFIX}user`,
   importAccounts: `${NEW_PREFIX}import_accounts`,
   stagedBundle: `${NEW_PREFIX}staged_bundle`,
+  // Conveniência por-visor: quais os cartões de conta escondidos no painel /bot.
+  // Só afeta a apresentação neste dispositivo; nunca vai para o servidor.
+  botHiddenAccounts: `${NEW_PREFIX}bot_hidden_accounts`,
 } as const;
 
 /** Nome antigo correspondente a uma chave nova. */
