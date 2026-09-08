@@ -3,7 +3,7 @@
 // nesta sessão. Os logs deixaram de ser persistidos no browser.
 
 import { useState } from "react";
-import { AuditLog } from "../types";
+import { AuditDetail, AuditLog } from "../types";
 
 function makeInitialLogs(): AuditLog[] {
   return [
@@ -11,7 +11,7 @@ function makeInitialLogs(): AuditLog[] {
       id: "log-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
       timestamp: new Date().toISOString(),
       action: "SISTEMA",
-      details: "Sessão iniciada.",
+      details: { key: "audit.session.start" },
     },
   ];
 }
@@ -19,7 +19,7 @@ function makeInitialLogs(): AuditLog[] {
 export function useAuditLog() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => makeInitialLogs());
 
-  const addLog = (action: string, details: string) => {
+  const addLog = (action: string, details: AuditDetail) => {
     const newLog: AuditLog = {
       id: "log-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
       timestamp: new Date().toISOString(),

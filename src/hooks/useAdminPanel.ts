@@ -18,6 +18,8 @@ import {
   type AdminUser,
   type AdminUserFilter,
 } from "../lib/adminApi";
+import { messageOf } from "../lib/apiError";
+import { useI18n } from "../lib/i18n";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -70,6 +72,14 @@ export function useAdminPanel(onAccessChanged?: () => void) {
     onAccessChangedRef.current = onAccessChanged;
   }, [onAccessChanged]);
 
+  // Pela mesma razão: o `t` muda quando o idioma muda, e não é motivo para
+  // recarregar a lista de utilizadores.
+  const { t } = useI18n();
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
   const loadUsers = useCallback(async () => {
     const result = await fetchUsers({ search: debouncedSearch, filter, page, pageSize: PAGE_SIZE });
     if (!aliveRef.current) return;
@@ -87,7 +97,7 @@ export function useAdminPanel(onAccessChanged?: () => void) {
       setAudit(auditData.entries);
       await loadUsers();
     } catch (err) {
-      if (aliveRef.current) setError(err instanceof Error ? err.message : String(err));
+      if (aliveRef.current) setError(messageOf(err, tRef.current, "errors.admin.request"));
     } finally {
       if (aliveRef.current) setLoading(false);
     }
@@ -114,7 +124,7 @@ export function useAdminPanel(onAccessChanged?: () => void) {
         onAccessChangedRef.current?.();
         return true;
       } catch (err) {
-        if (aliveRef.current) setError(err instanceof Error ? err.message : String(err));
+        if (aliveRef.current) setError(messageOf(err, tRef.current, "errors.admin.request"));
         return false;
       } finally {
         if (aliveRef.current) setBusyUserId(null);

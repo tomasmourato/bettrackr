@@ -28,23 +28,12 @@ import type { InitialAppData } from "./initialData";
 // próprio código de UI. A lógica (estado + handlers) vive toda aqui.
 const DesktopApp = lazy(() => import("./DesktopApp"));
 const MobileApp = lazy(() => import("./mobile/MobileApp"));
-// Dev-only: galeria de primitivos mobile (?gallery=1). Removida na Fase 5.
-const Gallery = lazy(() => import("./mobile/ui/Gallery"));
 
 interface AppProps {
   initialData?: InitialAppData;
 }
 
 export default function App({ initialData }: AppProps) {
-
-  // Galeria de desenvolvimento dos primitivos, fora do gate de autenticação.
-  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("gallery") === "1") {
-    return (
-      <Suspense fallback={<div className="min-h-screen bg-zinc-100 dark:bg-zinc-950" />}>
-        <Gallery />
-      </Suspense>
-    );
-  }
 
 
   // Autenticação: gate de login/registo antes de mostrar a app
@@ -155,6 +144,7 @@ export default function App({ initialData }: AppProps) {
   } = useBets(
     authed,
     handleSessionExpired,
+    t,
     initialData?.authenticated ? initialData.bets : undefined
   );
 
@@ -164,7 +154,7 @@ export default function App({ initialData }: AppProps) {
     status: subscription,
     isLoading: subscriptionLoading,
     refresh: refreshSubscription,
-  } = useSubscription(authed, handleSessionExpired);
+  } = useSubscription(authed, handleSessionExpired, t);
 
   // Contas por casa de apostas (partilhadas por Configurações, filtros e extensão)
   const {
@@ -174,7 +164,7 @@ export default function App({ initialData }: AppProps) {
     addAccount,
     editAccount: renameAccount,
     removeAccount,
-  } = useAccounts(authed, handleSessionExpired);
+  } = useAccounts(authed, handleSessionExpired, t);
 
   // Banca (movimentos de dinheiro real; o saldo é derivado destes + apostas)
   const {
@@ -184,7 +174,7 @@ export default function App({ initialData }: AppProps) {
     addMovement,
     editMovement,
     removeMovement,
-  } = useBankroll(authed, handleSessionExpired);
+  } = useBankroll(authed, handleSessionExpired, t);
 
   // Online status
   // Saldo da banca, calculado uma vez aqui para as duas shells (e o Kelly dos
@@ -268,42 +258,46 @@ export default function App({ initialData }: AppProps) {
   const handleAddBet = async (newBet: Bet) => {
     const created = await addBet(newBet);
     if (created) {
-      addLog(
-        "ADICIONAR_APOSTA",
-        `Aposta no evento "${created.selections[0]?.event || "Múltipla"}" registada com stake de ${created.stake}${preferences.currency}.`
-      );
+      addLog("ADICIONAR_APOSTA", {
+        key: "audit.bet.add",
+        vars: {
+          event: created.selections[0]?.event || t("bet.multiple"),
+          stake: `${created.stake}${preferences.currency}`,
+        },
+      });
     }
   };
 
   const handleUpdateBet = async (updatedBet: Bet) => {
     const updated = await editBet(updatedBet);
     if (updated) {
-      addLog(
-        "ATUALIZAR_APOSTA",
-        `Aposta #${updated.id.substring(0, 8)} editada e recalculada (Lucro: ${updated.netProfit}${preferences.currency}).`
-      );
+      addLog("ATUALIZAR_APOSTA", {
+        key: "audit.bet.update",
+        vars: {
+          id: updated.id.substring(0, 8),
+          profit: `${updated.netProfit}${preferences.currency}`,
+        },
+      });
     }
   };
 
   const handleIgnoreBet = async (id: string, ignored: boolean, comment?: string | null) => {
     const updated = await ignoreBet(id, ignored, comment);
     if (updated) {
-      addLog(
-        ignored ? "IGNORAR_APOSTA" : "REPOR_APOSTA",
-        `Aposta #${updated.id.substring(0, 8)} ${ignored ? "ignorada (excluída das estatísticas)" : "reposta nas estatísticas"}.`
-      );
+      addLog(ignored ? "IGNORAR_APOSTA" : "REPOR_APOSTA", {
+        key: ignored ? "audit.bet.ignore" : "audit.bet.restore",
+        vars: { id: updated.id.substring(0, 8) },
+      });
     }
   };
 
   const handleSetClosingOdd = async (id: string, input: ClosingOddInput) => {
     const updated = await setClosingOdd(id, input);
     if (updated) {
-      addLog(
-        "ODD_DE_FECHO",
-        updated.closingOdd
-          ? `Aposta #${updated.id.substring(0, 8)}: odd de fecho ${updated.closingOdd}.`
-          : `Aposta #${updated.id.substring(0, 8)}: odd de fecho removida.`
-      );
+      addLog("ODD_DE_FECHO", {
+        key: updated.closingOdd ? "audit.bet.closingOdd" : "audit.bet.closingOddRemoved",
+        vars: { id: updated.id.substring(0, 8), odd: updated.closingOdd ?? "" },
+      });
     }
   };
 
@@ -313,20 +307,20 @@ export default function App({ initialData }: AppProps) {
 
     const ok = await removeBet(id);
     if (ok) {
-      addLog(
-        "REMOVER_APOSTA",
-        `Aposta no evento "${betToDelete.selections[0]?.event || "Múltipla"}" apagada com sucesso.`
-      );
+      addLog("REMOVER_APOSTA", {
+        key: "audit.bet.delete",
+        vars: { event: betToDelete.selections[0]?.event || t("bet.multiple") },
+      });
     }
   };
 
   const handleDuplicateBets = async (duplicatedBets: Bet[]) => {
     const created = await importBets(duplicatedBets);
     if (created) {
-      addLog(
-        "DUPLICAR_APOSTAS",
-        `${created.length} ${created.length === 1 ? "aposta duplicada" : "apostas duplicadas"} com sucesso.`
-      );
+      addLog("DUPLICAR_APOSTAS", {
+        key: "audit.bet.duplicate",
+        vars: { n: created.length },
+      });
     }
   };
 
@@ -342,7 +336,7 @@ export default function App({ initialData }: AppProps) {
     if (languageChanged) {
       void updateLanguage(updatedPrefs.language).catch(() => undefined);
     }
-    addLog("PREFERENCIAS", "Preferências gerais da aplicação atualizadas.");
+    addLog("PREFERENCIAS", { key: "audit.preferences" });
   };
 
   // Alterna entre claro/escuro a partir do tema efetivo, mesmo que a
@@ -354,14 +348,14 @@ export default function App({ initialData }: AppProps) {
   const handleClearData = async () => {
     const ok = await clearAllBets();
     if (ok) {
-      addLog("LIMPAR_DADOS", "Dados removidos da base de dados.");
+      addLog("LIMPAR_DADOS", { key: "audit.data.clear" });
     }
   };
 
   const handleResetDemoData = async () => {
     const created = await replaceAllBets(INITIAL_BETS);
     if (created) {
-      addLog("REPOR_DADOS", "Dados de demonstração originais repostos com sucesso.");
+      addLog("REPOR_DADOS", { key: "audit.data.reset" });
     }
   };
 
@@ -398,16 +392,13 @@ export default function App({ initialData }: AppProps) {
     }
 
     if (imported > 0) {
-      addLog(
-        "IMPORTACAO",
-        `${imported} ${imported === 1 ? "movimento importado" : "movimentos importados"} para a banca a partir do backup.`
-      );
+      addLog("IMPORTACAO", { key: "audit.bankroll.import", vars: { n: imported } });
     }
   };
 
   const handleImportCSV = async (importedBets: Bet[]) => {
     if (importedBets.length === 0) {
-      addLog("IMPORTACAO", "Nenhum boletim de aposta importado (lista vazia).");
+      addLog("IMPORTACAO", { key: "audit.import.empty" });
       return;
     }
 
@@ -428,13 +419,13 @@ export default function App({ initialData }: AppProps) {
     });
 
     if (uniqueNewBets.length === 0) {
-      addLog("IMPORTACAO", "Nenhum novo boletim importado (todos já existiam).");
+      addLog("IMPORTACAO", { key: "audit.import.allExisting" });
       return;
     }
 
     const created = await importBets(uniqueNewBets);
     if (created) {
-      addLog("IMPORTACAO", `Sincronizados ${created.length} novos boletins de aposta via importação de ficheiro.`);
+      addLog("IMPORTACAO", { key: "audit.import.synced", vars: { n: created.length } });
     }
   };
 

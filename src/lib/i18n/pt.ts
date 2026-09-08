@@ -182,12 +182,6 @@ export const PT = {
   "social.accepted": "Aceitaste o pedido de {username}.",
   "social.removed": "{username} removido dos amigos.",
   "social.table.event": "Evento",
-  "social.error.load": "Erro ao carregar os dados sociais.",
-  "social.error.send": "Erro ao enviar o pedido.",
-  "social.error.accept": "Erro ao aceitar o pedido.",
-  "social.error.removeRequest": "Erro ao remover o pedido.",
-  "social.error.removeFriend": "Erro ao remover a amizade.",
-  "social.error.friendBets": "Erro ao obter as apostas do amigo.",
 
   // ----------------------------------------------------------------
   // Navegação / shell
@@ -454,6 +448,7 @@ export const PT = {
   // Resumo financeiro das apostas filtradas (FilteredBetsSummary)
   // ----------------------------------------------------------------
   "summary.aria": "Resumo financeiro das apostas filtradas",
+  "summary.pending": "(+{amount} por liquidar)",
   "summary.totalStaked": "Total apostado",
   "summary.totalReturned": "Total recebido",
   "summary.netResult": "Resultado líquido",
@@ -624,6 +619,7 @@ export const PT = {
   "ext.nothingNew": "Nada novo para importar.",
   "ext.nothingNewSkipped": "Nada novo para importar ({n} já existiam).",
   "ext.importFailed": "Falha na importação.",
+  "ext.noResponse": "A extensão não respondeu. Reabre o histórico da Betclic ou da Betano.",
   "ext.beforeImport":
     "Antes de importar, abre betclic.pt e/ou a página principal de betano.pt. Mantém o separador principal do Betano aberto durante a importação.",
   "ext.reinstall": "Reinstalar ou instalar noutro dispositivo",
@@ -729,6 +725,16 @@ export const PT = {
   "import.error.notImageMobile": "Seleciona apenas ficheiros de imagem (PNG, JPG, WEBP).",
   "import.error.tooLargeCrop": "A imagem excede 3MB. Recorta o screenshot e tenta novamente.",
   "insights.legs": "Pernas da múltipla",
+  "insights.userClv.market": {
+    one: "O teu CLV neste mercado: {pct}% em 1 aposta.",
+    other: "O teu CLV neste mercado: {pct}% em {n} apostas.",
+  },
+  "insights.userClv.sport": {
+    one: "O teu CLV neste desporto: {pct}% em 1 aposta.",
+    other: "O teu CLV neste desporto: {pct}% em {n} apostas.",
+  },
+  "insights.userClv.help":
+    "O teu histórico em mercados como este - a odd que apanhaste contra a de fecho. É passado, não uma previsão sobre este jogo.",
   "insights.error.picks": "Não foi possível obter as dicas de hoje.",
   "insights.error.unexpected": "Ocorreu um erro inesperado.",
 
@@ -775,8 +781,6 @@ export const PT = {
     "Escolhe as casas que usas. Só as selecionadas aparecem (e são importadas) no site e na extensão de browser.",
   "settings.bookmakers.none":
     "Nenhuma casa selecionada, não vais conseguir importar apostas até escolheres pelo menos uma.",
-  "settings.bookmakers.loadError": "Erro ao obter as casas ativas.",
-  "settings.bookmakers.saveError": "Erro ao guardar as casas ativas.",
 
   // ----------------------------------------------------------------
   // Configurações: contas por casa de apostas
@@ -1094,7 +1098,6 @@ export const PT = {
   "bot.empty": "O bot ainda não reportou nenhuma passagem. Corre-o em casa (ver bot/README.md).",
   "bot.refresh": "Atualizar",
   "bot.loadError": "Não foi possível ler o estado do bot.",
-  "bot.act.title": "Ativação",
   "bot.act.subtitle": "Entrega ao bot um token de contexto da Betclic (válido ~2 horas). O bot renova-se sozinho a partir daí; só volta aqui se ficar parado mais de 2 horas.",
   "bot.act.active": "Ativo",
   "bot.act.expired": "Token expirado — reativa",
@@ -1110,11 +1113,12 @@ export const PT = {
   "bot.act.errGeneric": "Não foi possível ativar. Tenta outra vez.",
   "bot.act.errNoToken": "A extensão não devolveu token. Abre a Betclic e o teu histórico de apostas primeiro, depois tenta de novo.",
   "bot.act.serverOff": "A ativação não está configurada no servidor (falta a chave BOT_CTX_KEY/JWT_SECRET). Corre o bot com o BETCLIC_CONTEXT_TOKEN à mão até estar.",
+  "bot.act.noAccounts": "Ainda não tens nenhuma conta Betclic. Cria uma nas contas por casa (Definições) e volta aqui — ativas o bot uma vez por conta.",
   "bot.act.howTitle": "Como ativar",
   "bot.act.stepDesktop1": "Instala a extensão BetTrackr e inicia sessão na Betclic no mesmo browser.",
-  "bot.act.stepDesktop2": "Abre betclic.pt e entra no teu histórico de apostas (isso faz a extensão captar o token).",
-  "bot.act.stepDesktop3": "Volta aqui e carrega em «Capturar token da extensão». Repete quando o estado mostrar expirado.",
-  "bot.act.stepMobile1": "No telemóvel, entra na Betclic e abre o teu histórico de apostas.",
+  "bot.act.stepDesktop2": "Inicia sessão na Betclic com a conta deste cartão e abre o histórico de apostas dela (isso faz a extensão captar o token dessa conta).",
+  "bot.act.stepDesktop3": "Volta aqui e carrega em «Capturar token da extensão» no cartão dessa conta. Repete quando o estado mostrar expirado.",
+  "bot.act.stepMobile1": "No telemóvel, inicia sessão na Betclic com a conta deste cartão e abre o histórico de apostas dela.",
   "bot.act.stepMobile2": "Copia o token de acesso (o mesmo Bearer que a app usa) e cola-o no campo acima.",
   "bot.act.stepMobile3": "Carrega em «Ativar». O bot que corre no Termux (crontab, ver bot/README.md) puxa-o na próxima passagem.",
   "admin.title": "Gestão",
@@ -1156,7 +1160,6 @@ export const PT = {
   // Perfil de um membro visto do painel (só o fundador).
   "admin.profile.open": "Ver perfil",
   "admin.profile.subtitle": "Membro",
-  "admin.profile.error": "Não foi possível abrir o perfil deste membro.",
   "admin.action.promote": "Tornar administrador",
   "admin.action.demote": "Retirar administrador",
   "admin.action.grant": "Oferecer subscrição",
@@ -1193,6 +1196,124 @@ export const PT = {
   "admin.audit.action.subscription.revoke": "{admin} revogou a subscrição de {user}",
   "admin.audit.action.user.delete": "{admin} apagou a conta {user}",
   "admin.audit.action.unknown": "{admin}: {action} ({user})",
+
+  // ----------------------------------------------------------------
+  // Registo de alterações da sessão (ver src/lib/auditDisplay.ts)
+  //
+  // O registo guarda CHAVE + variáveis, não a frase: a lista vive em memória
+  // durante toda a sessão e tem de mudar de língua com o resto da app.
+  // ----------------------------------------------------------------
+  "audit.action.system": "Sistema",
+  "audit.action.betAdd": "Aposta adicionada",
+  "audit.action.betUpdate": "Aposta editada",
+  "audit.action.betIgnore": "Aposta ignorada",
+  "audit.action.betRestore": "Aposta reposta",
+  "audit.action.closingOdd": "Odd de fecho",
+  "audit.action.betDelete": "Aposta apagada",
+  "audit.action.betDuplicate": "Apostas duplicadas",
+  "audit.action.preferences": "Preferências",
+  "audit.action.clearData": "Dados limpos",
+  "audit.action.resetData": "Dados repostos",
+  "audit.action.import": "Importação",
+  "audit.action.unknown": "{action}",
+
+  "audit.session.start": "Sessão iniciada.",
+  "audit.bet.add": "Aposta no evento \"{event}\" registada com stake de {stake}.",
+  "audit.bet.update": "Aposta #{id} editada e recalculada (lucro: {profit}).",
+  "audit.bet.ignore": "Aposta #{id} ignorada (excluída das estatísticas).",
+  "audit.bet.restore": "Aposta #{id} reposta nas estatísticas.",
+  "audit.bet.closingOdd": "Aposta #{id}: odd de fecho {odd}.",
+  "audit.bet.closingOddRemoved": "Aposta #{id}: odd de fecho removida.",
+  "audit.bet.delete": "Aposta no evento \"{event}\" apagada com sucesso.",
+  "audit.bet.duplicate": {
+    one: "{n} aposta duplicada com sucesso.",
+    other: "{n} apostas duplicadas com sucesso.",
+  },
+  "audit.preferences": "Preferências gerais da aplicação atualizadas.",
+  "audit.data.clear": "Dados removidos da base de dados.",
+  "audit.data.reset": "Dados de demonstração originais repostos com sucesso.",
+  "audit.bankroll.import": {
+    one: "{n} movimento importado para a banca a partir do backup.",
+    other: "{n} movimentos importados para a banca a partir do backup.",
+  },
+  "audit.import.empty": "Nenhum boletim de aposta importado (lista vazia).",
+  "audit.import.allExisting": "Nenhum novo boletim importado (todos já existiam).",
+  "audit.import.synced": {
+    one: "Sincronizado {n} novo boletim de aposta via importação de ficheiro.",
+    other: "Sincronizados {n} novos boletins de aposta via importação de ficheiro.",
+  },
+
+  // ----------------------------------------------------------------
+  // Importação de ficheiros (ver src/lib/dataTransfer.ts)
+  // ----------------------------------------------------------------
+  "transfer.backupImported": "Backup importado com sucesso!",
+  "transfer.backupWithBankroll": {
+    one: "Backup importado com sucesso (apostas e 1 movimento da banca)!",
+    other: "Backup importado com sucesso (apostas e {n} movimentos da banca)!",
+  },
+  "transfer.betsImported": "Apostas importadas com sucesso!",
+  "transfer.betsImportedCount": {
+    one: "1 aposta importada com sucesso!",
+    other: "{n} apostas importadas com sucesso!",
+  },
+
+  // ----------------------------------------------------------------
+  // Erros de API (ver src/lib/apiError.ts)
+  //
+  // Uma frase por operação, partilhada pelo desktop e pelo mobile. Estas
+  // ganham sempre ao texto que o servidor devolve, que está em português
+  // fixo e por isso não serve para quem tem a app noutra língua.
+  // ----------------------------------------------------------------
+  "errors.generic": "Ocorreu um erro inesperado.",
+  "errors.session": "Sessão expirada. Inicia sessão novamente.",
+
+  "errors.auth.register": "Não foi possível criar a conta.",
+  "errors.auth.login": "Não foi possível iniciar sessão.",
+  "errors.auth.me": "Não foi possível obter os dados da conta.",
+  "errors.auth.password": "Não foi possível alterar a palavra-passe.",
+
+  "errors.bets.list": "Não foi possível obter as apostas.",
+  "errors.bets.create": "Não foi possível criar a aposta.",
+  "errors.bets.import": "Não foi possível importar as apostas.",
+  "errors.bets.update": "Não foi possível atualizar a aposta.",
+  "errors.bets.ignore": "Não foi possível ignorar a aposta.",
+  "errors.bets.closingOdd": "Não foi possível gravar a odd de fecho.",
+  "errors.bets.delete": "Não foi possível apagar a aposta.",
+  "errors.bets.deleteAll": "Não foi possível apagar as apostas.",
+
+  "errors.social.search": "Não foi possível procurar utilizadores.",
+  "errors.social.friends": "Não foi possível obter os amigos.",
+  "errors.social.requests": "Não foi possível obter os pedidos.",
+  "errors.social.send": "Não foi possível enviar o pedido.",
+  "errors.social.accept": "Não foi possível aceitar o pedido.",
+  "errors.social.removeRequest": "Não foi possível remover o pedido.",
+  "errors.social.removeFriend": "Não foi possível remover a amizade.",
+  "errors.social.friendBets": "Não foi possível obter as apostas do amigo.",
+
+  "errors.bankroll.list": "Não foi possível obter os movimentos da banca.",
+  "errors.bankroll.create": "Não foi possível registar o movimento.",
+  "errors.bankroll.update": "Não foi possível editar o movimento.",
+  "errors.bankroll.delete": "Não foi possível apagar o movimento.",
+
+  "errors.accounts.list": "Não foi possível obter as contas.",
+  "errors.accounts.create": "Não foi possível criar a conta.",
+  "errors.accounts.rename": "Não foi possível renomear a conta.",
+  "errors.accounts.delete": "Não foi possível apagar a conta.",
+
+  "errors.settings.load": "Não foi possível obter as definições.",
+  "errors.settings.save": "Não foi possível guardar as definições.",
+
+  "errors.admin.request": "Não foi possível falar com o servidor.",
+  "errors.admin.profile": "Não foi possível abrir o perfil deste membro.",
+
+  "errors.billing.status": "Não foi possível obter o estado da subscrição.",
+  "errors.billing.request": "Não foi possível falar com o serviço de pagamentos.",
+
+  "errors.transfer.readFile": "Não foi possível ler o ficheiro. Verifica se é um ficheiro válido.",
+  "errors.transfer.format": "Formato de ficheiro inválido.",
+  "errors.transfer.emptyCsv": "O ficheiro CSV está vazio.",
+  "errors.transfer.csvColumns": "Formato de CSV inválido. Faltam as colunas obrigatórias DATE, GAME, STAKE, ODDS.",
+  "errors.transfer.noRows": "Nenhuma linha de aposta válida foi encontrada.",
 } satisfies Record<string, Entry>;
 
 export type TKey = keyof typeof PT;

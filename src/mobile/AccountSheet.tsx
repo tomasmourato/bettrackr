@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { LogOut, Copy, Moon, Sun } from "lucide-react";
 import { CurrentUser, fetchCurrentUser, SessionExpiredError } from "../lib/authApi";
 import { Language } from "../types";
-import type { TFn } from "../lib/i18n";
+import { formatDate, type TFn } from "../lib/i18n";
 import { BottomSheet, ListGroup, ListItem, Pressable, useToast } from "./ui";
 
 interface AccountSheetProps {
@@ -56,9 +56,7 @@ export function AccountSheet({
   const shown = profile ?? user;
 
   const memberSince = profile?.created_at
-    ? new Intl.DateTimeFormat(language === "en" ? "en-GB" : "pt-PT", { dateStyle: "long" }).format(
-        new Date(profile.created_at),
-      )
+    ? formatDate(language, profile.created_at, { dateStyle: "long" })
     : null;
 
   const copyId = async () => {

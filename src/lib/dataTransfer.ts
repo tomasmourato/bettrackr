@@ -10,6 +10,8 @@ import { combineClosingOdds } from "./clv";
 import { defaultFreebetTypeFor } from "./bookmakers";
 import { normalizeBetStatus } from "./betStatus";
 import { isNativeApp } from "./apiBase";
+import { LocalizedError } from "./apiError";
+import type { TKey, TVars } from "./i18n";
 
 /**
  * Entrega um ficheiro de texto ao utilizador.
@@ -109,8 +111,8 @@ export function buildBetsCSV(bets: Bet[], accounts: BookieAccount[]): string {
       const textToTest = (gameVal + " " + betVal + " " + (b.notes || "")).toLowerCase();
       if (textToTest.includes("nba") || textToTest.includes("knicks") || textToTest.includes("celtics") || textToTest.includes("lakers") || textToTest.includes("spurs") || textToTest.includes("basket") || textToTest.includes("basquet")) {
         sportVal = "BASQUETEBOL";
-      } else if (textToTest.includes("alcaraz") || textToTest.includes("zverev") || textToTest.includes("sinner") || textToTest.includes("nadal") || textToTest.includes("borges") || textToTest.includes("tenis") || textToTest.includes("ténis") || textToTest.includes("set")) {
-        sportVal = "TÉNIS";
+      } else if (textToTest.includes("alcaraz") || textToTest.includes("zverev") || textToTest.includes("sinner") || textToTest.includes("nadal") || textToTest.includes("borges") || textToTest.includes("tenis") || textToTest.includes("ténis") || textToTest.includes("set")) { // i18n-ignore: procura no texto do utilizador
+        sportVal = "TÉNIS"; // i18n-ignore: valor de domínio, não é interface
       } else if (textToTest.includes("futsal") || textToTest.includes("sporting cp - cartenga")) {
         sportVal = "FUTSAL";
       } else {
@@ -120,7 +122,9 @@ export function buildBetsCSV(bets: Bet[], accounts: BookieAccount[]): string {
 
     const bookieVal = b.bookmaker || "Outro";
 
-    let betTypeVal = b.type === "MULTIPLA" ? "Múltipla" : (b.selections[0]?.betType || b.selections[0]?.market || "Simples");
+    // Token do formato CSV. Traduzi-lo partia a leitura dos ficheiros já
+    // exportados (ver o includes("múltipla") na importação).
+    let betTypeVal = b.type === "MULTIPLA" ? "Múltipla" : (b.selections[0]?.betType || b.selections[0]?.market || "Simples"); // i18n-ignore
     if (b.type === "MULTIPLA" && b.selections.length > 1) {
       betTypeVal = b.selections.map((s) => s.betType || s.market || "Simples").join(" + ");
     }
@@ -244,9 +248,21 @@ function parseCSVRow(rowText: string): string[] {
 }
 
 /**
+ * O resultado de uma importação, como CHAVE e não como frase.
+ *
+ * Este módulo não é um hook e não tem `t`; devolver a chave deixa quem chama
+ * - que já está dentro do <I18nProvider> - traduzir na língua certa. Os erros
+ * seguem o mesmo princípio, via LocalizedError e messageOf.
+ */
+export interface ImportResult {
+  key: TKey;
+  vars?: TVars;
+}
+
+/**
  * Lê um ficheiro de importação (backup JSON ou CSV), constrói as apostas e
- * entrega-as a `onImport`. Resolve com a mensagem de sucesso; rejeita com
- * Error de mensagem legível.
+ * entrega-as a `onImport`. Resolve com a chave da mensagem de sucesso;
+ * rejeita com um LocalizedError.
  *
  * `onImportBankroll` recebe os movimentos da banca quando o ficheiro é um
  * backup que os traz (versão "1.1" para cima). Um CSV nunca os tem, e um
@@ -257,7 +273,7 @@ export function importBetsFromFile(
   accounts: BookieAccount[],
   onImport: (bets: Bet[]) => void,
   onImportBankroll?: (movements: BankrollMovement[]) => void,
-): Promise<string> {
+): Promise<ImportResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -287,16 +303,16 @@ export function importBetsFromFile(
             const movements = sanitizeBankrollMovements(parsed.bankrollMovements);
             if (movements.length > 0 && onImportBankroll) {
               onImportBankroll(movements);
-              resolve(`Backup importado com sucesso (apostas e ${movements.length} movimento(s) da banca)!`);
+              resolve({ key: "transfer.backupWithBankroll", vars: { n: movements.length } });
               return;
             }
 
-            resolve("Backup importado com sucesso!");
+            resolve({ key: "transfer.backupImported" });
           } else if (Array.isArray(parsed)) {
             onImport(sanitizeAccounts(parsed));
-            resolve("Apostas importadas com sucesso!");
+            resolve({ key: "transfer.betsImported" });
           } else {
-            throw new Error("Formato inválido.");
+            throw new LocalizedError("errors.transfer.format");
           }
           return;
         }
@@ -304,7 +320,7 @@ export function importBetsFromFile(
         // CSV
         const cleanedText = text.replace(/^﻿/, "");
         const lines = cleanedText.split(/\r?\n/).filter((line) => line.trim() !== "");
-        if (lines.length === 0) throw new Error("O ficheiro CSV está vazio.");
+        if (lines.length === 0) throw new LocalizedError("errors.transfer.emptyCsv");
 
         const headerRow = parseCSVRow(lines[0]);
         const idx = (name: string) => headerRow.findIndex((h) => h.toUpperCase() === name);
@@ -334,7 +350,7 @@ export function importBetsFromFile(
         const parseBool = (v: string) => ["SIM", "YES", "TRUE", "1"].includes(String(v || "").trim().toUpperCase());
 
         if (dateIdx === -1 || gameIdx === -1 || stakeIdx === -1 || oddsIdx === -1) {
-          throw new Error("Formato de CSV inválido. Colunas obrigatórias DATE, GAME, STAKE, ODDS não encontradas.");
+          throw new LocalizedError("errors.transfer.csvColumns");
         }
 
         const parsedBets: Bet[] = [];
@@ -388,7 +404,7 @@ export function importBetsFromFile(
           } else {
             isFreebet =
               combinedNotes.toLowerCase().includes("freebet") ||
-              combinedNotes.toLowerCase().includes("grátis") ||
+              combinedNotes.toLowerCase().includes("grátis") || // i18n-ignore: procura na nota do utilizador
               combinedNotes.toLowerCase().includes("gratis");
           }
           if (isRiskFree) isFreebet = false;
@@ -409,7 +425,8 @@ export function importBetsFromFile(
           let games: string[] = [];
           if (gameVal.includes(" + ")) games = gameVal.split(" + ").map((g) => g.trim());
           else if (gameVal.includes(";")) games = gameVal.split(";").map((g) => g.trim());
-          else if (gameVal.includes(",") && betTypeVal.toLowerCase().includes("múltipla")) games = gameVal.split(",").map((g) => g.trim());
+          // O outro lado do token de CSV escrito no buildBetsCSV.
+          else if (gameVal.includes(",") && betTypeVal.toLowerCase().includes("múltipla")) games = gameVal.split(",").map((g) => g.trim()); // i18n-ignore
           else games = [gameVal];
 
           let betsArr: string[] = [];
@@ -506,11 +523,13 @@ export function importBetsFromFile(
           });
         }
 
-        if (parsedBets.length === 0) throw new Error("Nenhuma linha de aposta válida foi encontrada.");
+        if (parsedBets.length === 0) throw new LocalizedError("errors.transfer.noRows");
         onImport(parsedBets);
-        resolve(`${parsedBets.length} apostas importadas com sucesso!`);
-      } catch (err: any) {
-        reject(new Error(err?.message || "Erro ao ler ficheiro de importação. Verifica se é um ficheiro válido."));
+        resolve({ key: "transfer.betsImportedCount", vars: { n: parsedBets.length } });
+      } catch (err: unknown) {
+        // Um erro nosso já traz a chave certa; o que vier de fora (JSON.parse,
+        // FileReader) cai na frase genérica de leitura.
+        reject(err instanceof LocalizedError ? err : new LocalizedError("errors.transfer.readFile"));
       }
     };
     reader.readAsText(file);

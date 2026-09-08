@@ -2,6 +2,12 @@
 // Matemática do CLV (Closing Line Value). Módulo puro (sem React) para poder
 // ser testado como o resto das contas de dinheiro, em test/app.
 //
+// As REGRAS - que aposta conta, contra que preço se mede, e a conta em si -
+// vivem no lib/clvMath.ts, que o servidor também importa para dar contexto à
+// IA. Aqui fica o que é só do painel: os agregados, a série e o resumo. A
+// explicação do PORQUÊ de cada regra continua a ser esta, logo abaixo, porque
+// é aqui que se lê a matemática toda de uma vez.
+//
 // Tudo o que a app media até aqui - lucro, yield, ROI da banca, taxa de acerto
 // - é RESULTADO: depende da sorte e só fica legível ao fim de muitas apostas.
 // O CLV mede PROCESSO. Compara a odd a que se apostou com a odd de fecho (a
@@ -63,20 +69,35 @@
 //    zero absoluto. A UI diz isto ao utilizador (chave i18n "clv.help").
 
 import { Bet } from "../types";
-import { safeNum } from "../utils";
 import { combineClosingOdds } from "../../lib/clvClosingOdds";
+// As REGRAS - que aposta conta, contra que preço, e a conta - vivem no lib/ de
+// topo desde que o servidor também precisa delas para dar contexto à IA. Aqui
+// fica o que é só do painel: os agregados e a série.
+import {
+  betClv,
+  betClvAtTakenPrice,
+  betClvNoVig,
+  isClvEligible,
+  isPromoBet,
+  needsClosingOdd,
+  round2,
+  safeNum,
+  toTimestamp,
+  type ClvBetResult,
+} from "../../lib/clvMath";
 
 export { combineClosingOdds } from "../../lib/clvClosingOdds";
-
-/** O CLV de uma aposta, já calculado. */
-export interface ClvBetResult {
-  /** (odd / fecho - 1) * 100. Positivo = apanhou-se melhor preço que o fecho. */
-  clvPct: number;
-  /** stake * (odd / fecho - 1). Sempre 0 numa freebet (não é dinheiro real). */
-  moneyClv: number;
-  /** A odd apanhada foi estritamente melhor do que a de fecho. */
-  beatClose: boolean;
-}
+export {
+  betClv,
+  betClvAtTakenPrice,
+  betClvNoVig,
+  isClvEligible,
+  isPromoBet,
+  kickoffOf,
+  needsClosingOdd,
+  originalOddOf,
+  type ClvBetResult,
+} from "../../lib/clvMath";
 
 /** Um ponto da evolução do CLV, já com o acumulado. */
 export interface ClvPoint {
@@ -133,83 +154,9 @@ export interface ClvSummary {
   byBookmaker: ClvBookmakerRow[];
 }
 
-/**
- * "YYYY-MM-DD HH:mm" -> epoch ms. O replace do espaço por "T" é o mesmo
- * remendo que o Dashboard e a banca já usam: sem ele o Safari não parseia a
- * data. Datas inválidas caem para 0 e ficam no início, de forma determinística.
- */
-function toTimestamp(value: string | undefined): number {
-  if (!value) return 0;
-  const parsed = new Date(value.replace(" ", "T")).getTime();
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
 /** Parte da data ("YYYY-MM-DD") de um "YYYY-MM-DD HH:mm". */
 function dayOf(value: string | undefined): string {
   return value ? value.split(" ")[0] : "";
-}
-
-function round2(value: number): number {
-  return Number(value.toFixed(2));
-}
-
-/** Uma odd só serve para o CLV se for uma odd decimal a sério (> 1). */
-function validOdd(value: unknown): number | null {
-  const odd = safeNum(value);
-  return Number.isFinite(odd) && odd > 1 ? odd : null;
-}
-
-/**
- * O preço de antes do boost, ao nível do boletim: o produto de
- * `originalOdd ?? odd` das pernas que contam, tal como a `odd` do boletim é o
- * produto das odds das pernas.
- *
- * null quando NENHUMA perna traz preço original - o caso normal, em que não
- * houve boost e a odd apanhada já é o preço que o mercado deu. Também null
- * quando alguma perna traz uma odd impossível: meio preço original não dá meio
- * boletim, e é preferível não medir a medir mal.
- *
- * Uma perna ANULADA fica de fora, pela mesma razão por que já está fora da odd
- * que a casa pagou e da linha de fecho.
- */
-export function originalOddOf(bet: Bet): number | null {
-  const legs = (bet.selections || []).filter(
-    (selection) => selection?.result !== "ANULADA",
-  );
-  if (!legs.some((selection) => validOdd(selection?.originalOdd) !== null)) {
-    return null;
-  }
-
-  let product = 1;
-  for (const leg of legs) {
-    const odd = validOdd(leg?.originalOdd) ?? validOdd(leg?.odd);
-    if (odd === null) return null;
-    product *= odd;
-  }
-  return round2(product);
-}
-
-/** Alguma perna que conta traz o preço de antes do boost? */
-function isBoostPriced(bet: Bet): boolean {
-  return (bet.selections || []).some(
-    (selection) =>
-      selection?.result !== "ANULADA" &&
-      validOdd(selection?.originalOdd) !== null,
-  );
-}
-
-/**
- * A odd contra a qual o CLV desta aposta se mede: a de antes do boost quando
- * se conhece, a apanhada quando não. É o único sítio onde esta escolha é
- * feita - o `bet.odd` continua a ser o preço turbinado em todo o resto da app,
- * porque é esse que a casa paga e é sobre ele que o retorno é calculado.
- */
-function oddForClv(bet: Bet): number | null {
-  const original = originalOddOf(bet);
-  if (original !== null) return original;
-  // Boost registado mas boletim por medir (perna com odd impossível): aqui não
-  // se cai para a odd turbinada, que daria justamente o número errado.
-  return isBoostPriced(bet) ? null : validOdd(bet.odd);
 }
 
 /**
@@ -224,142 +171,6 @@ function oddForClv(bet: Bet): number | null {
  * extensão) e a invariante "combinada = produto das pernas" não pode ser
  * calculada em dois sítios. O servidor usa esta mesma função.
  */
-/**
- * O apito do jogo, quando se sabe. Numa múltipla é o do jogo que começa por
- * ÚLTIMO: é a partir daí que todas as pernas têm linha de fecho.
- *
- * Cai no Bet.dateTime quando nenhuma perna traz hora - mas isso é um recurso,
- * não um equivalente: na Betclic o dateTime é o momento em que o boletim foi
- * feito (placed_date_utc), que pode ser dias antes do jogo.
- */
-export function kickoffOf(bet: Bet): string | undefined {
-  const times = (bet.selections || [])
-    .map((selection) => selection?.startsAt)
-    .filter((value): value is string => Boolean(value));
-  if (times.length === 0) return undefined;
-  return times.reduce((latest, value) => (value > latest ? value : latest));
-}
-
-/**
- * Mercados promocionais, para quando não há melhor: "Boost (10€ máx.)" é o
- * segundo mercado mais usado da conta real, e há ainda odds turbo e missões.
- *
- * É só a rede de segurança. O sinal bom é o `isBoosted` da perna, que vem do
- * `is_boosted_odd` da própria Betclic e apanha boosts que o rótulo do mercado
- * não denuncia; e melhor ainda é o `originalOdd`, escrito à mão, que além de
- * dizer QUE houve boost diz de quanto foi. A expressão fica para as apostas
- * escritas à mão e para os CSV, que não trazem a marca.
- *
- * Não inclui "Dicas da Casa": é uma escolha sugerida pela casa a preço normal,
- * não um preço turbinado - o CLV dessas diz alguma coisa.
- */
-const PROMO_MARKET_RE = /boost|turbo|missão|missao|super\s*odd/i;
-
-/**
- * Aposta promocional se QUALQUER perna o for - a mesma regra do filtro de
- * desporto. Numa múltipla basta uma perna turbinada para o preço do boletim
- * deixar de ser comparável com o mercado.
- */
-export function isPromoBet(bet: Bet): boolean {
-  return (bet.selections || []).some(
-    (selection) =>
-      selection?.isBoosted === true ||
-      validOdd(selection?.originalOdd) !== null ||
-      PROMO_MARKET_RE.test(`${selection?.market ?? ""} ${selection?.betType ?? ""}`),
-  );
-}
-
-/**
- * A aposta entra nas contas do CLV? Ignoradas e anuladas não; tudo o resto
- * sim, incluindo as que ainda estão por liquidar.
- */
-export function isClvEligible(bet: Bet): boolean {
-  return !bet.isIgnored && bet.status !== "ANULADA";
-}
-
-/**
- * A conta, uma vez só: uma odd apanhada contra uma linha de fecho.
- * null quando falta uma das duas ou quando não é uma odd a sério.
- */
-function clvEntre(bet: Bet, odd: number | null, close: number | null): ClvBetResult | null {
-  if (odd === null || close === null) return null;
-
-  const ratio = odd / close - 1;
-
-  return {
-    clvPct: round2(ratio * 100),
-    // A stake de uma freebet não é dinheiro do utilizador: em euros o CLV dela
-    // é zero, por melhor que a percentagem seja.
-    moneyClv: bet.isFreebet ? 0 : round2(safeNum(bet.stake) * ratio),
-    beatClose: odd > close,
-  };
-}
-
-/**
- * O CLV de uma aposta, ou null quando não há nada a medir - aposta não
- * elegível, sem odd de fecho registada, ou com odds que não fazem sentido.
- *
- * Numa aposta turbinada com preço original conhecido é esse o preço medido:
- * é a pergunta "a escolha era boa?", não "a casa foi generosa?".
- */
-export function betClv(bet: Bet): ClvBetResult | null {
-  if (!isClvEligible(bet)) return null;
-  return clvEntre(bet, oddForClv(bet), validOdd(bet.closingOdd));
-}
-
-/**
- * O CLV pelo preço que a casa REALMENTE deu - a odd turbinada, mesmo quando se
- * conhece a de antes do boost.
- *
- * É a medida de quanto valeu a promoção, e é essa que alimenta a linha
- * "Promoções" do painel. Numa aposta sem boost dá exatamente o mesmo que o
- * `betClv`.
- */
-export function betClvAtTakenPrice(bet: Bet): ClvBetResult | null {
-  if (!isClvEligible(bet)) return null;
-  return clvEntre(bet, validOdd(bet.odd), validOdd(bet.closingOdd));
-}
-
-/**
- * O mesmo CLV, mas contra a linha de fecho SEM a margem da casa.
- *
- * É a medida honesta, e vai dar sempre um número MAIS BAIXO do que o cru - a
- * margem estava a inflacionar o CLV, não a encolhê-lo. Medido num 1X2 real da
- * Betclic com 9.8% de margem: quem apanhou 1.30 contra um fecho de 1.23 tem
- * +5.7% de CLV cru e -3.8% de CLV real. Os +5.7% eram a margem da casa.
- *
- * null quando não há odd justa - o mercado completo nem sempre está na página.
- */
-export function betClvNoVig(bet: Bet): ClvBetResult | null {
-  if (!isClvEligible(bet)) return null;
-
-  const odd = oddForClv(bet);
-  const close = validOdd(bet.closingOddNoVig);
-  if (odd === null || close === null) return null;
-
-  const ratio = odd / close - 1;
-
-  return {
-    clvPct: round2(ratio * 100),
-    moneyClv: bet.isFreebet ? 0 : round2(safeNum(bet.stake) * ratio),
-    beatClose: odd > close,
-  };
-}
-
-/**
- * A aposta está à espera de que alguém lhe registe a odd de fecho? É isto que
- * alimenta a caixa de entrada: elegível, sem odd de fecho e com o evento já
- * começado - antes disso ainda não existe linha de fecho nenhuma.
- */
-export function needsClosingOdd(bet: Bet, now: Date = new Date()): boolean {
-  if (!isClvEligible(bet)) return false;
-  if (validOdd(bet.closingOdd) !== null) return false;
-  // O apito, quando o conhecemos; senão a data do boletim, que na Betclic é a
-  // da aposta e por isso pode chegar aqui antes de o jogo sequer começar.
-  const start = toTimestamp(kickoffOf(bet) ?? bet.dateTime);
-  return start > 0 && start <= now.getTime();
-}
-
 export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
   let eligibleBets = 0;
   let trackedBets = 0;

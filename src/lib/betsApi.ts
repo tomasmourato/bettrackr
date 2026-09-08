@@ -3,6 +3,7 @@
 // verdade - estas funções falam com as rotas /api/bets protegidas por JWT
 // e traduzem entre o formato snake_case da BD e o modelo Bet do frontend.
 
+import { apiError } from "./apiError";
 import { authFetch, parseJsonResponse } from "./authApi";
 import { Bet, BetStatus, BetType, FreebetType, Selection, SelectionResult } from "../types";
 import { safeNum } from "../utils";
@@ -165,7 +166,7 @@ export function mapBetToApi(bet: Bet) {
 export async function fetchBets(): Promise<Bet[]> {
   const res = await authFetch("/api/bets");
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao obter as apostas.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.list");
   return (data.bets as ApiBetRow[]).map(mapBetFromApi);
 }
 
@@ -178,7 +179,7 @@ export async function createBet(bet: Bet): Promise<Bet> {
     body: JSON.stringify(mapBetToApi(bet)),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao criar a aposta.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.create");
   return mapBetFromApi(data.bet);
 }
 
@@ -191,7 +192,7 @@ export async function createBets(bets: Bet[]): Promise<Bet[]> {
     body: JSON.stringify({ bets: bets.map(mapBetToApi) }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao importar as apostas.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.import");
   return (data.bets as ApiBetRow[]).map(mapBetFromApi);
 }
 
@@ -204,7 +205,7 @@ export async function updateBet(bet: Bet): Promise<Bet> {
     body: JSON.stringify(mapBetToApi(bet)),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao atualizar a aposta.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.update");
   return mapBetFromApi(data.bet);
 }
 
@@ -225,7 +226,7 @@ export async function setBetIgnored(
     body: JSON.stringify(body),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao ignorar a aposta.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.ignore");
   return mapBetFromApi(data.bet);
 }
 
@@ -255,7 +256,7 @@ export async function setBetClosingOdd(
     body: JSON.stringify(input),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao gravar a odd de fecho.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.closingOdd");
   return mapBetFromApi(data.bet);
 }
 
@@ -265,7 +266,7 @@ export async function setBetClosingOdd(
 export async function deleteBet(id: string): Promise<void> {
   const res = await authFetch(`/api/bets/${id}`, { method: "DELETE" });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao apagar a aposta.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.delete");
 }
 
 // ------------------------------------------------------------
@@ -274,5 +275,5 @@ export async function deleteBet(id: string): Promise<void> {
 export async function deleteAllBets(): Promise<void> {
   const res = await authFetch("/api/bets", { method: "DELETE" });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao apagar as apostas.");
+  if (!res.ok) throw apiError(data, res, "errors.bets.deleteAll");
 }

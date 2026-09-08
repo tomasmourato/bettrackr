@@ -8,6 +8,7 @@
 // extensão está instalada e disparar a importação a partir de um botão do app.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { TKey } from "../lib/i18n";
 
 const APP = "bettrackr-app";
 const EXT = "bettrackr-ext";
@@ -55,6 +56,11 @@ export interface BookmakerImportResult {
 
 export interface AllSourcesImportResult extends BookmakerImportResult {
   sourceResults?: Record<string, BookmakerImportResult>;
+  /**
+   * Erro NOSSO, como chave. O `error` continua a existir para o que vem da
+   * extensão, que escreve as suas próprias frases e não passa por aqui.
+   */
+  errorKey?: TKey;
 }
 
 export function useBetclicExtension() {
@@ -134,7 +140,7 @@ export function useBetclicExtension() {
     window.setTimeout(() => {
       setImporting((busy) => {
         if (busy) {
-          setResult({ ok: false, error: "A extensão não respondeu. Reabre o histórico da Betclic ou da Betano." });
+          setResult({ ok: false, errorKey: "ext.noResponse" });
         }
         return false;
       });

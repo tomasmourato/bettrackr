@@ -75,14 +75,23 @@ export interface PushResult {
   body: string;
 }
 
+// Etiqueta uma aposta com a conta a que pertence (a bookie_account do BetTrackr).
+// E o que encaminha as apostas de cada conta Betclic para a conta certa, tal
+// como a extensao faz (ver betPayload em extension/src/background.js). accountId
+// null/ausente = "sem conta" (comportamento antigo). Nao muta o objeto original.
+export function withAccountId(bet: any, accountId: string | null | undefined): any {
+  return accountId ? { ...bet, accountId } : bet;
+}
+
 // Envia um lote (max 1000). O corpo e { bets: Bet[] } em camelCase, tal como a
 // extensao envia. NAO mexe em closingOdd: as apostas mapeadas nao a trazem, por
-// isso a odd de fecho apanhada pelo cron do CLV fica intacta.
-export async function pushBets(cfg: BettrackrConfig, bets: any[]): Promise<PushResult> {
+// isso a odd de fecho apanhada pelo cron do CLV fica intacta. Cada aposta leva o
+// accountId da conta que se esta a importar.
+export async function pushBets(cfg: BettrackrConfig, bets: any[], accountId?: string | null): Promise<PushResult> {
   const res = await fetch(`${cfg.base}/api/bets/bulk`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.token}` },
-    body: JSON.stringify({ bets }),
+    body: JSON.stringify({ bets: bets.map((b) => withAccountId(b, accountId)) }),
   });
   const body = await res.text();
   return { enviadas: bets.length, status: res.status, ok: res.ok, body };
@@ -92,11 +101,19 @@ export async function pushBets(cfg: BettrackrConfig, bets: any[]): Promise<PushR
 // muda de estado (pendente -> liquidada). O corpo e a aposta mapeada, que NAO
 // traz closingOdd; por isso o servidor cai no ramo de preservacao e a odd de
 // fecho do CLV fica intacta (ver ownsClosingOdds em routes/betsRoutes.ts).
-export async function updateBet(cfg: BettrackrConfig, id: string, bet: any): Promise<PushResult> {
+//
+// O accountId TEM de ir no corpo: o PUT faz account_id = <corpo> e so preserva a
+// closingOdd, nao a conta - omiti-lo apagava a conta da aposta.
+export async function updateBet(
+  cfg: BettrackrConfig,
+  id: string,
+  bet: any,
+  accountId?: string | null,
+): Promise<PushResult> {
   const res = await fetch(`${cfg.base}/api/bets/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.token}` },
-    body: JSON.stringify(bet),
+    body: JSON.stringify(withAccountId(bet, accountId)),
   });
   const body = await res.text();
   return { enviadas: 1, status: res.status, ok: res.ok, body };
@@ -142,12 +159,13 @@ export async function fetchFreshToken(cfg: BettrackrConfig): Promise<string | nu
   }
 }
 
-// Apaga a ativacao guardada no BetTrackr (DELETE /api/bot/context-token). Usado
-// depois de um re-enrolment automatico para consumir o token e nao repetir o
-// registo em ciclo. Best-effort - se falhar, nao e critico.
-export async function deleteContextToken(cfg: BettrackrConfig): Promise<void> {
+// Apaga a ativacao guardada de UMA conta (DELETE /api/bot/context-token
+// ?accountId=). Usado depois de um re-enrolment automatico para consumir o token
+// dessa conta e nao repetir o registo em ciclo. Best-effort - se falhar, nao e
+// critico.
+export async function deleteContextToken(cfg: BettrackrConfig, accountId: string): Promise<void> {
   try {
-    await fetch(`${cfg.base}/api/bot/context-token`, {
+    await fetch(`${cfg.base}/api/bot/context-token?accountId=${encodeURIComponent(accountId)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${cfg.token}` },
     });
@@ -156,19 +174,36 @@ export async function deleteContextToken(cfg: BettrackrConfig): Promise<void> {
   }
 }
 
-// Vai buscar ao BetTrackr o token de contexto que o admin ativou na app (painel
-// /bot -> GET /api/bot/context-token). E o que dispensa o BETCLIC_CONTEXT_TOKEN
-// a mao: no arranque frio, o bot puxa daqui em vez de exigir a env. Devolve null
-// se nao houver (404), se expirou (410) ou se a rede falhar - o arranque decide.
-export async function fetchContextToken(cfg: BettrackrConfig): Promise<string | null> {
+// Uma ativacao ativada na app, por conta: o token de contexto da Betclic + a
+// conta (bookie_account) a que pertence.
+export interface Activation {
+  accountId: string;
+  token: string;
+}
+
+// Extrai as ativacoes validas do corpo do GET /context-token. Ignora entradas
+// sem accountId ou sem token (defensivo: o corpo vem do servidor, mas validamos
+// na mesma). Puro, para ser testavel sem rede.
+export function parseActivations(data: any): Activation[] {
+  const list = Array.isArray(data?.activations) ? data.activations : [];
+  return list
+    .filter((a: any) => typeof a?.accountId === "string" && a.accountId && typeof a?.token === "string" && a.token)
+    .map((a: any) => ({ accountId: String(a.accountId), token: String(a.token) }));
+}
+
+// Vai buscar ao BetTrackr as ativacoes que o dono ativou na app (painel /bot ->
+// GET /api/bot/context-token). E o que dispensa o BETCLIC_CONTEXT_TOKEN a mao:
+// no arranque frio, o bot puxa daqui uma ativacao por conta. Devolve [] se nao
+// houver nenhuma, se todas expiraram, ou se a rede falhar - o arranque decide.
+export async function fetchActivations(cfg: BettrackrConfig): Promise<Activation[]> {
   try {
     const res = await fetch(`${cfg.base}/api/bot/context-token`, {
       headers: { Authorization: `Bearer ${cfg.token}` },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data: any = await res.json().catch(() => ({}));
-    return typeof data.token === "string" && data.token ? data.token : null;
+    return parseActivations(data);
   } catch {
-    return null;
+    return [];
   }
 }

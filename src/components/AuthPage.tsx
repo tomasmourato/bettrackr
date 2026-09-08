@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { login, register } from "../lib/authApi";
 import { BrandMark } from "./BrandMark";
 import { useI18n } from "../lib/i18n";
+import { messageOf } from "../lib/apiError";
 
 type Mode = "login" | "signup";
 
@@ -41,7 +42,7 @@ export default function AuthPage({ onAuthenticated }: AuthPageProps) {
           : await register(username, email, password);
       onAuthenticated(user);
     } catch (err: any) {
-      setError(err.message || t("auth.genericError"));
+      setError(messageOf(err, t, "auth.genericError"));
     } finally {
       setLoading(false);
     }

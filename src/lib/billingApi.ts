@@ -6,6 +6,7 @@
 // esconder um botão não protege a quota do Gemini.
 
 import { apiUrl, isNativeApp } from "./apiBase";
+import { apiError, ApiError } from "./apiError";
 import { authFetch, getToken, parseJsonResponse } from "./authApi";
 
 export type AccessSource = "admin" | "subscription" | "trial" | "role" | "none";
@@ -33,26 +34,10 @@ export interface BillingStatus {
   checkoutAvailable: boolean;
 }
 
-/**
- * Lançado quando a API responde 402. Distingue-se de um erro qualquer para a
- * UI poder mostrar o convite a subscrever em vez de uma mensagem vermelha.
- */
-export class SubscriptionRequiredError extends Error {
-  constructor(message = "Subscrição necessária.") {
-    super(message);
-    this.name = "SubscriptionRequiredError";
-  }
-}
-
-/** True se a resposta é o 402 do portão de subscrição. */
-export function isPaywalled(res: Response): boolean {
-  return res.status === 402;
-}
-
 export async function fetchBillingStatus(): Promise<BillingStatus> {
   const res = await authFetch("/api/billing/status");
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  if (!res.ok) throw apiError(data, res, "errors.billing.status");
   return data as BillingStatus;
 }
 
@@ -64,12 +49,10 @@ export async function fetchBillingStatus(): Promise<BillingStatus> {
  * uma interface inglesa. Quem apanha este erro traduz o `code` e só usa o
  * texto do servidor quando não reconhece o código.
  */
-export class BillingError extends Error {
-  readonly code: string | null;
-  constructor(message: string, code: string | null) {
-    super(message);
+export class BillingError extends ApiError {
+  constructor(status: number, code?: string, serverMessage?: string) {
+    super("errors.billing.request", status, code, serverMessage);
     this.name = "BillingError";
-    this.code = code;
   }
 }
 
@@ -77,7 +60,7 @@ async function requestUrl(path: string): Promise<string> {
   const res = await authFetch(path, { method: "POST", body: "{}" });
   const data = await parseJsonResponse(res);
   if (!res.ok || !data?.url) {
-    throw new BillingError(data?.error || `HTTP ${res.status}`, data?.code ?? null);
+    throw new BillingError(res.status, data?.code ?? undefined, data?.error);
   }
   return data.url as string;
 }

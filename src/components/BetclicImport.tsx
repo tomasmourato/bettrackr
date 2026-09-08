@@ -244,7 +244,7 @@ export default function BetclicImport({ accounts = [], enabledBookmakers }: Betc
           {result && !result.ok && (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-200 rounded-sm border border-rose-200 dark:border-rose-900 flex items-center gap-2 text-xs font-medium">
               <AlertCircle size={14} className="text-rose-600 dark:text-rose-400 shrink-0" />
-              <span>{result.error || t("ext.importFailed")}</span>
+              <span>{result.errorKey ? t(result.errorKey) : result.error || t("ext.importFailed")}</span>
             </div>
           )}
 

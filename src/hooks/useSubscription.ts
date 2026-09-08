@@ -9,9 +9,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SessionExpiredError } from "../lib/authApi";
+import { messageOf } from "../lib/apiError";
+import type { TFn } from "../lib/i18n";
 import { fetchBillingStatus, type BillingStatus } from "../lib/billingApi";
 
-export function useSubscription(enabled: boolean, onSessionExpired: () => void) {
+// O `t` vem de fora de propósito: este hook corre ACIMA do <I18nProvider>
+// (ver src/App.tsx), onde um useI18n() devolveria sempre o contexto por
+// omissão - português - sem dar erro nenhum.
+export function useSubscription(enabled: boolean, onSessionExpired: () => void, t: TFn) {
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +25,12 @@ export function useSubscription(enabled: boolean, onSessionExpired: () => void) 
   useEffect(() => {
     onSessionExpiredRef.current = onSessionExpired;
   }, [onSessionExpired]);
+
+  // O `t` muda quando o idioma muda; a ref mantém o load estável.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   const cancelledRef = useRef(false);
 
@@ -34,7 +45,7 @@ export function useSubscription(enabled: boolean, onSessionExpired: () => void) 
       if (err instanceof SessionExpiredError) {
         onSessionExpiredRef.current();
       } else if (!cancelledRef.current) {
-        setError(err instanceof Error ? err.message : String(err));
+        setError(messageOf(err, tRef.current, "errors.billing.status"));
       }
     } finally {
       if (!cancelledRef.current) setIsLoading(false);

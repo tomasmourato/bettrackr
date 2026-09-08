@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { curaDeHorario, legsToRead } from "../../routes/clvRoutes";
+import { aplicarNaPerna, curaDeHorario, legsToRead } from "../../routes/clvRoutes";
 
 // Quais as pernas que o cron vai mesmo ler numa passagem. É aqui que se decide
 // se a linha de fecho é apanhada perto do apito, se uma perna preenchida à mão
@@ -202,5 +202,77 @@ describe("adiamento: o apito anunciado manda sobre o importado", () => {
 
   test("página sem apito não estraga o que lá está", () => {
     expect(curaDeHorario(null, { kickoff: importado, exact: true })).toBeNull();
+  });
+});
+
+// ------------------------------------------------------------
+// O que fica gravado na perna
+//
+// A regra que aqui se fixa é a que impede o pior estado possível: uma odd
+// justa VELHA ao lado de uma crua NOVA. A crua é reescrita sempre que a página
+// dá preço; a justa só existe quando o mercado completo deu para confiar. Se
+// numa passagem seguinte o mercado já não for de fiar, a justa tem de
+// desaparecer - senão o CLV "sem margem" passa a comparar duas capturas
+// diferentes, e ninguém repara.
+// ------------------------------------------------------------
+describe("aplicarNaPerna", () => {
+  const perna = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
+    event: "Benfica - Porto",
+    odd: 2,
+    ...over,
+  });
+
+  test("a crua sozinha grava só a crua", () => {
+    const { depois, mexeu } = aplicarNaPerna(perna(), { closingOdd: 1.9 });
+    expect(mexeu).toBe(true);
+    expect(depois.closingOdd).toBe(1.9);
+    expect(depois.closingOddNoVig).toBeUndefined();
+  });
+
+  test("a crua com mercado de confiança grava as três", () => {
+    const { depois } = aplicarNaPerna(perna(), {
+      closingOdd: 1.9,
+      closingOddNoVig: 2.08,
+      closingOddMargin: 9.5,
+    });
+    expect(depois.closingOdd).toBe(1.9);
+    expect(depois.closingOddNoVig).toBe(2.08);
+    expect(depois.closingOddMargin).toBe(9.5);
+  });
+
+  test("uma crua nova sem mercado APAGA a justa velha", () => {
+    const velha = perna({ closingOdd: 1.85, closingOddNoVig: 2.01, closingOddMargin: 8.7 });
+    const { depois } = aplicarNaPerna(velha, { closingOdd: 1.9 });
+    expect(depois.closingOdd).toBe(1.9);
+    expect("closingOddNoVig" in depois).toBe(false);
+    expect("closingOddMargin" in depois).toBe(false);
+  });
+
+  test("sem odd nenhuma a justa que lá está não se mexe", () => {
+    // Uma passagem que só corrige o horário não pode mexer no CLV.
+    const velha = perna({ closingOdd: 1.85, closingOddNoVig: 2.01 });
+    const { depois, mexeu } = aplicarNaPerna(velha, { startsAtUtc: "2026-08-30T19:00:00.000Z" });
+    expect(mexeu).toBe(true);
+    expect(depois.closingOdd).toBe(1.85);
+    expect(depois.closingOddNoVig).toBe(2.01);
+    expect(depois.startsAtUtc).toBe("2026-08-30T19:00:00.000Z");
+  });
+
+  test("um update vazio não mexe em nada", () => {
+    const { depois, mexeu } = aplicarNaPerna(perna({ closingOdd: 1.85 }), {});
+    expect(mexeu).toBe(false);
+    expect(depois).toEqual(perna({ closingOdd: 1.85 }));
+  });
+
+  test("um horário igual ao que lá está não conta como mexida", () => {
+    const igual = perna({ startsAtUtc: "2026-08-30T19:00:00.000Z" });
+    const { mexeu } = aplicarNaPerna(igual, { startsAtUtc: "2026-08-30T19:00:00.000Z" });
+    expect(mexeu).toBe(false);
+  });
+
+  test("a perna original não é modificada", () => {
+    const original = perna({ closingOddNoVig: 2.01 });
+    aplicarNaPerna(original, { closingOdd: 1.9 });
+    expect(original.closingOddNoVig).toBe(2.01);
   });
 });

@@ -1,3 +1,7 @@
+// Só o tipo das chaves de tradução. Vem do pt.ts (que não importa nada) e
+// não do índice do i18n, para não fechar um ciclo com este ficheiro.
+import type { TKey } from "./lib/i18n/pt";
+
 export type BetStatus = 'POR_LIQUIDAR' | 'GANHA' | 'PERDIDA' | 'ANULADA' | 'MEIO_GANHA' | 'MEIO_PERDIDA' | 'CASHOUT';
 export type BetType = 'SIMPLES' | 'MULTIPLA';
 export type SelectionResult = Exclude<BetStatus, 'CASHOUT'>;
@@ -218,11 +222,23 @@ export interface Preferences {
   language: Language;
 }
 
+/**
+ * A linha do registo, guardada como CHAVE + variáveis e não como frase.
+ * A frase forma-se na renderização (src/lib/auditDisplay.ts), para o registo
+ * acompanhar a mudança de idioma em vez de ficar congelado na língua em que
+ * a operação foi feita.
+ */
+export interface AuditDetail {
+  key: TKey;
+  vars?: Record<string, string | number>;
+}
+
 export interface AuditLog {
   id: string;
   timestamp: string;
+  /** Código da operação, não texto. Traduzido por auditAction(). */
   action: string;
-  details: string;
+  details: AuditDetail;
 }
 
 export interface DashboardStats {

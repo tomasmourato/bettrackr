@@ -6,6 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Bet } from "../types";
 import { SessionExpiredError } from "../lib/authApi";
+import { messageOf } from "../lib/apiError";
+import type { TFn } from "../lib/i18n";
 import {
   fetchBets,
   createBet,
@@ -18,7 +20,10 @@ import {
   type ClosingOddInput,
 } from "../lib/betsApi";
 
-export function useBets(enabled: boolean, onSessionExpired: () => void, initialBets?: Bet[]) {
+// O `t` vem de fora de propósito: este hook corre ACIMA do <I18nProvider>
+// (ver src/App.tsx), onde um useI18n() devolveria sempre o contexto por
+// omissão - português - sem dar erro nenhum.
+export function useBets(enabled: boolean, onSessionExpired: () => void, t: TFn, initialBets?: Bet[]) {
   const [bets, setBets] = useState<Bet[]>(() => initialBets ?? []);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +36,18 @@ export function useBets(enabled: boolean, onSessionExpired: () => void, initialB
     onSessionExpiredRef.current = onSessionExpired;
   }, [onSessionExpired]);
 
+  // O `t` muda quando o idioma muda; a ref mantém o handleError estável.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
   // Tratamento central de erros das mutações/carregamento.
   const handleError = (err: unknown) => {
     if (err instanceof SessionExpiredError) {
       onSessionExpiredRef.current();
-    } else if (err instanceof Error) {
-      setError(err.message);
     } else {
-      setError("Ocorreu um erro inesperado.");
+      setError(messageOf(err, tRef.current));
     }
   };
 

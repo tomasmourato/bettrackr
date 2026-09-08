@@ -24,6 +24,7 @@ import {
 } from "../lib/socialApi";
 import MemberProfile from "./MemberProfile";
 import { useI18n } from "../lib/i18n";
+import { messageOf } from "../lib/apiError";
 
 interface SocialProps {
   currency: string;
@@ -61,7 +62,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       setIncoming(r.incoming);
       setOutgoing(r.outgoing);
     } catch (e: any) {
-      setError(e?.message || t("social.error.load"));
+      setError(messageOf(e, t, "errors.social.friends"));
     } finally {
       setLoading(false);
     }
@@ -109,7 +110,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       flashNotice(t(status === "friends" ? "social.nowFriends" : "social.requestSent", { username: u.username }));
       refresh();
     } catch (e: any) {
-      setError(e?.message || t("social.error.send"));
+      setError(messageOf(e, t, "errors.social.send"));
     }
   };
 
@@ -119,7 +120,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       flashNotice(t("social.accepted", { username: r.username }));
       refresh();
     } catch (e: any) {
-      setError(e?.message || t("social.error.accept"));
+      setError(messageOf(e, t, "errors.social.accept"));
     }
   };
 
@@ -128,7 +129,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       await removeFriendRequest(r.id);
       refresh();
     } catch (e: any) {
-      setError(e?.message || t("social.error.removeRequest"));
+      setError(messageOf(e, t, "errors.social.removeRequest"));
     }
   };
 
@@ -138,7 +139,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       if (viewing?.id === f.id) setViewing(null);
       refresh();
     } catch (e: any) {
-      setError(e?.message || t("social.error.removeFriend"));
+      setError(messageOf(e, t, "errors.social.removeFriend"));
     }
   };
 
@@ -151,7 +152,7 @@ export default function Social({ currency, isDark }: SocialProps) {
       const { bets } = await fetchFriendBets(f.id);
       setFriendBets(bets);
     } catch (e: any) {
-      setViewError(e?.message || t("social.error.friendBets"));
+      setViewError(messageOf(e, t, "errors.social.friendBets"));
     } finally {
       setViewLoading(false);
     }

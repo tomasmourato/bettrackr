@@ -203,20 +203,41 @@ unidade systemd em [betclic-bot.service](betclic-bot.service) (intervalo default
 | Var | Para que serve |
 | --- | --- |
 | `BETCLIC_BOT_KEY` | passphrase do cofre (decifra a chave da passkey). Obrigatoria. |
-| `BETCLIC_CONTEXT_TOKEN` | token begmedia para o PRIMEIRO arranque. **Opcional** se ativares o bot pelo painel /bot da app (recomendado - ver abaixo); depois a sessao guardada rearranca sozinha. |
+| `BETCLIC_CONTEXT_TOKEN` | so o dry-run legado. No modo real (multi-conta) o arranque de cada conta vem da ativacao no painel /bot, nao daqui. |
 | `BETTRACKR_BASE` / `BETTRACKR_TOKEN` | destino no BetTrackr. Sem eles => dry-run. Tambem deixam o bot puxar a ativacao da app. O `BETTRACKR_TOKEN` so serve de ARRANQUE: o bot auto-renova-o a cada passagem (GET /api/bot/token) e guarda-o na sessao cifrada, por isso nao ha refresh a mao de 7 em 7 dias enquanto o bot correr dentro da validade. |
 | `BOT_INTERVAL_SEC` | intervalo entre passagens (default 1800 = 30 min). |
-| `BOT_VAULT` / `BOT_KEYFILE` | caminhos do cofre / da chave em claro (defaults sensatos). |
-| `BOT_SESSION` | caminho do ficheiro de sessao cifrada (default bot/session.enc). |
+| `BOT_DIR` | pasta onde vivem os cofres e sessoes POR CONTA (default: a pasta `bot/`). Multi-conta guarda aqui `passkey-<accountId>.enc` e `session-<accountId>.enc`, um par por conta Betclic. |
+| `BOT_VAULT` / `BOT_KEYFILE` | so o dry-run legado (sem `BETTRACKR_*`): cofre `passkey.enc` / chave em claro `marco0-key.json`, para testar o mapeamento localmente sem multi-conta. |
+
+### Varias contas Betclic (multi-conta)
+
+Um dono pode ter 2+ contas na Betclic. O painel **/bot** mostra **um cartao por
+conta Betclic** (as bookie_accounts de bookmaker Betclic, criadas nas contas por
+casa). Ativa-se **uma vez por conta**: com cada conta Betclic com sessao
+iniciada, captura-se/cola-se o token dessa conta no cartao dela.
+
+Este processo (o bot) trata **todas** as contas ativadas em cada passagem, uma a
+uma, cada uma com o seu `passkey-<accountId>.enc` e `session-<accountId>.enc` na
+pasta `BOT_DIR`. As apostas de cada conta vao etiquetadas com o `accountId`, por
+isso caem na bookie_account certa (tal como a extensao encaminha por username).
+**Isolamento de falhas:** se uma conta falhar (ex.: sessao Betclic expirada), so
+essa pausa nessa passagem - as outras seguem e o bot nao morre.
+
+> **Migracao a partir do bot antigo (uma conta):** os ficheiros antigos
+> `passkey.enc` / `session.enc` (sem `accountId` no nome) deixam de ser usados no
+> modo real. Reativa **cada** conta uma vez no painel /bot e o bot cria os cofres
+> por conta sozinho (enrolment automatico). Podes apagar os ficheiros antigos.
 
 ### Ativacao pela app (dispensa o `BETCLIC_CONTEXT_TOKEN` a mao)
 
-Cada admin ativa o bot da **sua** conta no painel **/bot** da app - e la, nao
-neste ficheiro, que o token de contexto e entregue:
+Cada dono ativa o bot no painel **/bot** da app - e la, nao neste ficheiro, que o
+token de contexto e entregue, **por conta** (ver acima):
 
 - **Desktop / webapp:** a extensao BetTrackr capta o token da Betclic sozinha.
-  Botao «Capturar token da extensao» -> a app envia-o cifrado para o servidor.
-- **Mobile:** cola-se o token no campo do painel.
+  Botao «Capturar token da extensao» no cartao da conta -> a app envia-o cifrado
+  para o servidor. Inicia sessao na Betclic com a conta desse cartao antes de
+  capturar.
+- **Mobile:** cola-se o token da conta no campo do cartao dela.
 
 O bot (este processo) puxa esse token no arranque frio via
 `GET /api/bot/context-token`, autenticado com o `BETTRACKR_TOKEN`. Ou seja: basta
@@ -236,16 +257,18 @@ passkey a mao antes de por o bot a correr.)
 
 ### Arranque e reinicio
 
-O bot precisa de UM token de contexto begmedia para o **primeiro** arranque. Ha
-tres formas de lho dar, por ordem de preferencia: (1) ativa-lo no painel /bot da
-app - o bot puxa-o sozinho; (2) a sessao cifrada de uma passagem anterior; (3) o
-`BETCLIC_CONTEXT_TOKEN` a mao. A partir dai encadeia sozinho: cada login por
-passkey da um access_token (~2h) que serve de contexto ao seguinte.
+Cada conta precisa de UM token de contexto begmedia para o **primeiro** arranque.
+Duas formas, por ordem de preferencia: (1) ativa-la no painel /bot da app - o bot
+puxa o token dessa conta sozinho; (2) a sessao cifrada de uma passagem anterior
+dessa conta. A partir dai cada conta encadeia sozinha: cada login por passkey da
+um access_token (~2h) que serve de contexto ao seguinte.
 
-Apos cada passagem com sucesso o bot **guarda a sessao cifrada** (`session.enc`,
-com a `BETCLIC_BOT_KEY`). Num reinicio - deploy, crash, reboot - le essa sessao e,
-se o access ainda for valido (< 2h), rearranca **sem** precisar de um token novo.
+Apos cada passagem com sucesso o bot **guarda a sessao cifrada** de cada conta
+(`session-<accountId>.enc`, com a `BETCLIC_BOT_KEY`). Num reinicio - deploy,
+crash, reboot - le essas sessoes e, se o access ainda for valido (< 2h),
+rearranca **sem** precisar de um token novo. O token do BetTrackr (do dono, nao
+da conta) tambem fica guardado nessas sessoes e e reutilizado no arranque.
 
-Se o bot ficar mais de ~2h desligado, a sessao expira - e ai a ativacao pela app
-fecha o caso: reativa no painel /bot e a passagem seguinte puxa o token novo, sem
-tocar neste ficheiro. (Era o unico cabo solto do desenho anterior.)
+Se uma conta ficar mais de ~2h sem passar, a sua sessao expira - e ai a ativacao
+pela app fecha o caso: reativa essa conta no painel /bot e a passagem seguinte
+puxa o token novo, sem tocar em ficheiros.

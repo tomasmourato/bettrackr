@@ -43,6 +43,9 @@ export interface SyncDeps {
   contextToken: string;
   // Destino no BetTrackr. Omitir => dry-run (so imprime, nao envia, nao lista).
   bettrackr?: BettrackrConfig;
+  // A bookie_account a que esta conta Betclic pertence. Etiqueta as apostas
+  // importadas na conta certa (multi-conta). Ausente = "sem conta".
+  accountId?: string | null;
   log?: (msg: string) => void;
 }
 
@@ -130,16 +133,18 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncResult> {
     }
     if (updates.length > 5) log(`  [dry] ... e mais ${updates.length - 5} a atualizar`);
   } else {
-    // Inserir em lotes de 500 (limite de 1000 no bulk), como a extensao.
+    // Inserir em lotes de 500 (limite de 1000 no bulk), como a extensao. Cada
+    // aposta vai etiquetada com a conta que se esta a importar.
     for (let i = 0; i < inserts.length; i += 500) {
       const lote = inserts.slice(i, i + 500);
-      const r = await pushBets(deps.bettrackr!, lote);
+      const r = await pushBets(deps.bettrackr!, lote, deps.accountId);
       if (!r.ok) throw new Error(`envio ao BetTrackr falhou (${r.status}): ${r.body.slice(0, 200)}`);
       enviadas += lote.length;
     }
-    // Atualizar uma a uma (PUT /:id). CLV preservado (sem closingOdd no corpo).
+    // Atualizar uma a uma (PUT /:id). CLV preservado (sem closingOdd no corpo);
+    // o accountId vai no corpo para nao apagar a conta no update.
     for (const u of updates) {
-      const r = await updateBet(deps.bettrackr!, u.id, u.bet);
+      const r = await updateBet(deps.bettrackr!, u.id, u.bet, deps.accountId);
       if (!r.ok) throw new Error(`atualizacao de ${u.id} falhou (${r.status}): ${r.body.slice(0, 200)}`);
       atualizadas += 1;
     }

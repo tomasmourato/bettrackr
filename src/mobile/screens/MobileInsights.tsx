@@ -35,6 +35,19 @@ import {
   type EvaluatedBet,
 } from "../../lib/betEvaluation";
 import { SectionHeader, MobileCard, Pressable, PullToRefresh, SegmentedControl, useToast } from "../ui";
+import { apiError, messageOf } from "../../lib/apiError";
+
+/**
+ * O histórico de CLV de quem está a ler, no mercado (ou desporto) desta pick.
+ * Vem do servidor já calculado - ver clvForPick em routes/insightsRoutes.ts.
+ * Ausente para quem ainda não tem apostas medidas que cheguem.
+ */
+interface PickClv {
+  bets: number;
+  avgClvPct: number;
+  beatCloseRate: number;
+  scope: "market" | "sport";
+}
 
 interface Pick {
   sport: string;
@@ -46,6 +59,7 @@ interface Pick {
   approxOdd: number | null;
   confidence: number;
   rationale: string;
+  userClv?: PickClv | null;
 }
 
 interface InsightsResponse {
@@ -171,14 +185,14 @@ export default function MobileInsights({ onSessionExpired, bankrollBalance, curr
     try {
       const res = await authFetch(`/api/insights?lang=${lang}`);
       const body = await parseJsonResponse(res);
-      if (!res.ok) throw new Error(body.error || t("insights.error.picks"));
+      if (!res.ok) throw apiError(body, res, "insights.error.picks");
       setData(body as InsightsResponse);
     } catch (err) {
       if (err instanceof SessionExpiredError) {
         onSessionExpired();
         return;
       }
-      setError(err instanceof Error ? err.message : t("insights.error.unexpected"));
+      setError(messageOf(err, t, "insights.error.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -241,7 +255,7 @@ export default function MobileInsights({ onSessionExpired, bankrollBalance, curr
           text: evalText.trim() || undefined,
           lang,
         },
-        t("ai.evalError"),
+        "ai.evalError",
       );
       setEvaluation(result);
     } catch (err) {
@@ -249,7 +263,7 @@ export default function MobileInsights({ onSessionExpired, bankrollBalance, curr
         onSessionExpired();
         return;
       }
-      const msg = err instanceof Error ? err.message : t("insights.error.unexpected");
+      const msg = messageOf(err, t, "insights.error.unexpected");
       setEvalError(msg);
       toast.show(msg, "error");
     } finally {
@@ -265,12 +279,8 @@ export default function MobileInsights({ onSessionExpired, bankrollBalance, curr
     groups.set(pick.sport, list);
   }
 
-  const formattedDate = data?.date
-    ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "full" }).format(new Date(`${data.date}T12:00:00`))
-    : "";
-  const generatedTime = data?.generatedAt
-    ? new Intl.DateTimeFormat("pt-PT", { hour: "2-digit", minute: "2-digit" }).format(new Date(data.generatedAt))
-    : "";
+  const formattedDate = data?.date ? formatDate(`${data.date}T12:00:00`, { dateStyle: "full" }) : "";
+  const generatedTime = data?.generatedAt ? formatTime(data.generatedAt) : "";
 
   const header = (
     <div className="space-y-4">
@@ -395,6 +405,23 @@ export default function MobileInsights({ onSessionExpired, bankrollBalance, curr
 
                         {pick.rationale && (
                           <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">{pick.rationale}</p>
+                        )}
+
+                        {pick.userClv && (
+                          <p
+                            className="text-[10px] text-zinc-400 dark:text-zinc-500"
+                            title={t("insights.userClv.help")}
+                          >
+                            {t(
+                              pick.userClv.scope === "market"
+                                ? "insights.userClv.market"
+                                : "insights.userClv.sport",
+                              {
+                                n: pick.userClv.bets,
+                                pct: `${pick.userClv.avgClvPct >= 0 ? "+" : ""}${pick.userClv.avgClvPct.toFixed(1)}`,
+                              },
+                            )}
+                          </p>
                         )}
                       </MobileCard>
                     ))}

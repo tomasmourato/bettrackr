@@ -15,6 +15,8 @@ import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
 import { requireSubscription } from "../middleware/accessMiddleware.js";
 import { getGeminiClient, extractJson } from "../lib/gemini.js";
+import { buildClvProfile, marketFamily, type ClvGroupRow, type ClvProfile } from "../lib/clvProfile.js";
+import type { ClvBet } from "../lib/clvMath.js";
 
 const router = Router();
 
@@ -30,6 +32,11 @@ const MAX_PICKS = 12;
 // passar do limite da função.
 const MAX_ATTEMPTS = 3;
 const TIME_BUDGET_MS = 40_000;
+
+// Teto do histórico lido para o retrato do CLV. Não é por causa do prompt (o
+// retrato que sai daqui são poucas linhas), é por causa da consulta: o retrato
+// é recalculado a cada avaliação e a cada leitura das dicas.
+const MAX_APOSTAS_RETRATO = 1000;
 
 /** Data de "hoje" em Lisboa (o dia desportivo do utilizador, não UTC). */
 // Idiomas com dicionário na app (espelha src/lib/i18n e o settingsRoutes).
@@ -97,6 +104,8 @@ interface Pick {
   marginPct?: number | null;
   confidence: number;
   rationale: string;
+  /** O histórico de CLV de QUEM está a ler, neste mercado. Ver clvForPick. */
+  userClv?: PickClv | null;
 }
 
 // ============================================================
@@ -482,6 +491,137 @@ async function generateInsights(dateLisbon: string, lang: Lang) {
   throw lastError;
 }
 
+
+// ============================================================
+// O CLV do utilizador como contexto
+//
+// O que a IA sabia até aqui era o jogo. Isto acrescenta-lhe QUEM está a
+// perguntar: se costuma apanhar preços acima ou abaixo da linha de fecho, e em
+// que mercados. É a única estatística da app que mede PROCESSO em vez de
+// resultado, por isso é a única que diz alguma coisa sobre as escolhas de
+// alguém ao fim de poucas dezenas de apostas.
+//
+// As contas são as do painel - vêm do lib/clvProfile.ts, que por sua vez usa o
+// lib/clvMath.ts. O servidor recalcula a partir da base de dados em vez de
+// receber o retrato do cliente: um prompt construído com números que o cliente
+// mandou não é contexto, é entrada do utilizador com outro nome.
+//
+// O CLV é uma funcionalidade paga e estas rotas já estão atrás do
+// requireSubscription, por isso não há aqui um portão a mais - mas também não
+// há um a menos.
+// ============================================================
+
+/** As apostas de UM utilizador que interessam ao retrato do CLV. */
+async function loadBetsForClv(userId: string): Promise<ClvBet[]> {
+  const { rows } = await pool.query(
+    `SELECT stake::float8 AS stake, odd::float8 AS odd,
+            closing_odd::float8 AS "closingOdd",
+            is_freebet AS "isFreebet", is_ignored AS "isIgnored",
+            status, bookmaker, selections
+       FROM bets
+      WHERE user_id = $1
+        AND is_ignored = false
+        AND status <> 'ANULADA'
+        AND closing_odd IS NOT NULL
+      ORDER BY date_time DESC
+      LIMIT ${MAX_APOSTAS_RETRATO}`,
+    [userId],
+  );
+  return rows as ClvBet[];
+}
+
+/**
+ * O retrato, ou null. Nunca rebenta o pedido: um erro a ler o histórico tira o
+ * contexto, não a resposta - a avaliação sem contexto continua a valer.
+ */
+async function clvProfileOf(userId: string | undefined): Promise<ClvProfile | null> {
+  if (!userId) return null;
+  try {
+    return buildClvProfile(await loadBetsForClv(userId));
+  } catch (error: any) {
+    console.warn("[insights] retrato de CLV indisponível:", error?.message);
+    return null;
+  }
+}
+
+/** As linhas de um eixo, em texto curto. "" quando não há nada a dizer. */
+function eixo(titulo: string, linhas: ClvGroupRow[]): string {
+  if (linhas.length === 0) return "";
+  const corpo = linhas
+    .map((l) => `${l.label}: ${sinal(l.avgClvPct)} em ${l.bets} apostas (bateu a linha em ${Math.round(l.beatCloseRate)}%)`)
+    .join("; ");
+  return `
+${titulo}: ${corpo}.`;
+}
+
+const sinal = (pct: number) => `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+
+/**
+ * O bloco que entra no prompt. Vazio quando não há retrato - e aí o prompt
+ * fica exatamente como estava, sem uma secção vazia a dizer que não sabe nada.
+ */
+function blocoClv(profile: ClvProfile | null): string {
+  if (!profile) return "";
+  return `
+
+CONTEXTO SOBRE QUEM PERGUNTA (histórico, não é informação sobre este jogo).
+O CLV compara a odd apanhada com a odd de fecho: positivo = costuma apanhar
+preços melhores do que o mercado fecha, negativo = pior. Em ${profile.bets} apostas
+medidas, a média é ${sinal(profile.avgClvPct)} e bateu a linha de fecho em ${Math.round(profile.beatCloseRate)}% delas.${eixo("Por mercado", profile.byMarketFamily)}${eixo("Por desporto", profile.bySport)}
+
+COMO USAR ISTO: serve para calibrar o TOM e os RISCOS - se a pessoa costuma
+ficar abaixo da linha num tipo de mercado, vale a pena dizê-lo nos "risks".
+NÃO uses isto para mexer na "estimatedProbability": o histórico de quem aposta
+não muda a probabilidade de uma equipa ganhar. Não inventes causas para estes
+números nem os repitas como se fossem análise do jogo.`;
+}
+
+
+// ============================================================
+// A camada por utilizador das dicas do dia
+//
+// As dicas são UMA linha por (dia, idioma), partilhada por toda a gente - é
+// isso que mantém a geração em duas chamadas ao Gemini por dia em vez de N.
+// Pôr o CLV de cada um no prompt deitaria essa cache fora.
+//
+// Por isso a anotação é feita DEPOIS, aqui, sem modelo nenhum pelo meio: o
+// histórico do utilizador no mercado e no desporto de cada pick, cruzado por
+// código. A linha em daily_insights não muda; o que muda é a resposta.
+//
+// v1 ANOTA, não reordena. Reordenar por pessoa uma lista partilhada torna
+// qualquer conversa sobre ela impossível ("eu não vejo essa dica em terceiro").
+// ============================================================
+
+/** O que o utilizador tem feito num mercado/desporto como o desta pick. */
+export interface PickClv {
+  bets: number;
+  avgClvPct: number;
+  beatCloseRate: number;
+  /** Em que base foi encontrado: o mercado é mais específico do que o desporto. */
+  scope: "market" | "sport";
+}
+
+/** A linha do retrato que melhor descreve esta pick, ou null. */
+export function clvForPick(pick: Pick, profile: ClvProfile | null): PickClv | null {
+  if (!profile) return null;
+
+  const family = marketFamily(pick.market);
+  const porMercado = profile.byMarketFamily.find((l) => l.label === family);
+  if (porMercado) {
+    return { bets: porMercado.bets, avgClvPct: porMercado.avgClvPct, beatCloseRate: porMercado.beatCloseRate, scope: "market" };
+  }
+
+  // Sem histórico naquele mercado, o desporto ainda diz alguma coisa.
+  const porDesporto = profile.bySport.find(
+    (l) => l.label.toLowerCase() === String(pick.sport ?? "").toLowerCase(),
+  );
+  if (porDesporto) {
+    return { bets: porDesporto.bets, avgClvPct: porDesporto.avgClvPct, beatCloseRate: porDesporto.beatCloseRate, scope: "sport" };
+  }
+
+  return null;
+}
+
 // ============================================================
 // Avaliação de apostas (print e/ou texto) -> Valor Esperado
 // O modelo pesquisa e estima a PROBABILIDADE justa; os números (EV, prob.
@@ -498,7 +638,14 @@ interface EvaluatedLeg {
   estimatedProbability: number;
 }
 
-function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean, insistOnJson: boolean, lang: Lang): string {
+function buildEvalPrompt(
+  dateLisbon: string,
+  userText: string,
+  hasImage: boolean,
+  insistOnJson: boolean,
+  lang: Lang,
+  profile: ClvProfile | null,
+): string {
   const langBlock = outputLanguageBlock(lang, ["sport", "competition", "market", "selection", "justification", "keyFactors", "risks"]);
   const insist = insistOnJson
     ? `\n\nATENÇÃO: a resposta anterior não continha JSON válido. Responde SÓ com o objeto JSON, a começar em { e a terminar em }. Sem texto antes ou depois, sem blocos de código.`
@@ -512,6 +659,8 @@ function buildEvalPrompt(dateLisbon: string, userText: string, hasImage: boolean
         : "na descrição escrita abaixo";
 
   const textBlock = userText ? `\n\nDescrição do utilizador:\n"""\n${userText}\n"""` : "";
+
+  const clvBlock = blocoClv(profile);
 
   return `Hoje é ${dateLisbon} (fuso Europe/Lisbon). És um analista quantitativo de apostas desportivas - rigoroso, calibrado e prudente - ${LANG_INSTRUCTION[lang]}.
 
@@ -551,7 +700,7 @@ Responde SÓ com JSON válido, a começar em { e a terminar em }, sem texto à v
     }
   ]
 }
-"confidence" é um inteiro de 1 (muito incerto) a 5 (muito seguro). Inclui "legs" apenas em múltiplas.${insist}`;
+"confidence" é um inteiro de 1 (muito incerto) a 5 (muito seguro). Inclui "legs" apenas em múltiplas.${clvBlock}${insist}`;
 }
 
 async function callEvalModel(prompt: string, imageBase64?: string): Promise<string> {
@@ -701,14 +850,14 @@ function buildEvalSummary(bets: any[], lang: Lang): string {
   return `${bets.length} apostas avaliadas: ${parts.join(", ")}.`;
 }
 
-async function evaluateBet(input: { imageBase64?: string; text: string; lang: Lang }) {
+async function evaluateBet(input: { imageBase64?: string; text: string; lang: Lang; profile: ClvProfile | null }) {
   const started = Date.now();
   let lastError: unknown = new Error("Falha desconhecida ao avaliar a aposta.");
 
   for (let attempt = 1; attempt <= EVAL_MAX_ATTEMPTS; attempt++) {
     if (attempt > 1 && Date.now() - started > EVAL_TIME_BUDGET_MS) break;
     try {
-      const prompt = buildEvalPrompt(todayInLisbon(), input.text, Boolean(input.imageBase64), attempt > 1, input.lang);
+      const prompt = buildEvalPrompt(todayInLisbon(), input.text, Boolean(input.imageBase64), attempt > 1, input.lang, input.profile);
       const text = await callEvalModel(prompt, input.imageBase64);
       return sanitizeEvaluation(extractJson(text), input.lang);
     } catch (err) {
@@ -796,11 +945,18 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
   const lang = cleanLang(req.query.lang);
   try {
     const { row } = await ensureInsightsForDate(date, lang);
+    // A linha é a mesma para toda a gente; a anotação é que é de cada um.
+    const profile = await clvProfileOf(req.user?.id);
+    const content = row?.content ?? {};
+    const picks = Array.isArray(content.picks)
+      ? content.picks.map((pick: Pick) => ({ ...pick, userClv: clvForPick(pick, profile) }))
+      : content.picks;
     res.json({
       date,
       lang,
       generatedAt: row?.created_at ?? new Date().toISOString(),
-      ...row?.content,
+      ...content,
+      picks,
     });
   } catch (error: any) {
     console.error("Erro ao gerar insights:", error);
@@ -826,7 +982,8 @@ router.post("/evaluate", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
-    const result = await evaluateBet({ imageBase64: hasImage ? imageBase64 : undefined, text: cleanText, lang });
+    const profile = await clvProfileOf(req.user?.id);
+    const result = await evaluateBet({ imageBase64: hasImage ? imageBase64 : undefined, text: cleanText, lang, profile });
     res.json({ evaluatedAt: new Date().toISOString(), ...result });
   } catch (error: any) {
     console.error("[insights] avaliação falhou:", error?.message);

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { X, LogOut, Copy, Check, Mail, Fingerprint, CalendarDays, AtSign, AlertCircle } from "lucide-react";
 import { CurrentUser, fetchCurrentUser, SessionExpiredError } from "../lib/authApi";
 import { Language } from "../types";
-import type { TFn } from "../lib/i18n";
+import { formatDate, type TFn } from "../lib/i18n";
 
 interface AccountPanelProps {
   open: boolean;
@@ -93,9 +93,7 @@ export default function AccountPanel({
   const shown = profile ?? user;
 
   const memberSince = profile?.created_at
-    ? new Intl.DateTimeFormat(language === "en" ? "en-GB" : "pt-PT", { dateStyle: "long" }).format(
-        new Date(profile.created_at)
-      )
+    ? formatDate(language, profile.created_at, { dateStyle: "long" })
     : null;
 
   const copyId = async () => {

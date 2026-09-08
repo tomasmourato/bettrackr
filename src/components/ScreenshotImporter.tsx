@@ -17,6 +17,7 @@ import { defaultFreebetTypeFor } from "../lib/bookmakers";
 import { authFetch, parseJsonResponse } from "../lib/authApi";
 import { matchBookmaker, matchStatus } from "../lib/screenshotMatch";
 import { useI18n } from "../lib/i18n";
+import { messageOf } from "../lib/apiError";
 
 interface ScreenshotImporterProps {
   currency: string;
@@ -247,7 +248,7 @@ export default function ScreenshotImporter({ currency, onAddBet }: ScreenshotImp
 
     } catch (error: any) {
       console.error("Error analyzing image:", error);
-      setErrorMessage(error.message || t("import.error.generic"));
+      setErrorMessage(messageOf(error, t, "import.error.generic"));
     } finally {
       setIsLoading(false);
       setLoadingStep("");

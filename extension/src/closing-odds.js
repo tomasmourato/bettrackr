@@ -256,16 +256,30 @@ export function collectSelectionOdds(state) {
 
 /** Extrai o bloco ng-state do HTML da página do jogo. null se não estiver lá. */
 /**
- * A banda em que a soma das probabilidades de um mercado completo pode cair.
- *
- * Abaixo do mínimo faltam seleções à página. Acima do máximo não é um mercado
- * coerente - é uma lista de nomes que por acaso tem odds.
+ * Abaixo disto faltam seleções à página: a margem daria negativa e a
+ * "correção" inventava odds mais altas do que as reais.
  */
 const OVERROUND_MIN = 1.005;
-const OVERROUND_MAX = 1.25;
+
+/**
+ * O crivo mede a margem POR SAÍDA. Cópia fiel do lib/betclicOdds.ts - a
+ * explicação e as medições estão lá, e o teste de paridade em
+ * test/server/betclic-odds.test.ts falha se as duas divergirem.
+ */
+const MARGEM_MIN_POR_SAIDA = 0.015;
+const MARGEM_MAX_POR_SAIDA = 0.15;
+const OVERROUND_TETO = 2;
 
 /** O menor número de seleções que ainda faz um mercado. */
 const MIN_SELECTIONS = 2;
+
+/** A soma das probabilidades é de um mercado exclusivo e completo? */
+export function somaPlausivel(overround, n) {
+    if (n < MIN_SELECTIONS) return false;
+    if (overround < OVERROUND_MIN || overround > OVERROUND_TETO) return false;
+    const porSaida = (overround - 1) / n;
+    return porSaida >= MARGEM_MIN_POR_SAIDA && porSaida <= MARGEM_MAX_POR_SAIDA;
+}
 
 /**
  * Os mercados de confiança da página, indexados por id de seleção.
@@ -354,7 +368,7 @@ export function marketFrom(ids, odds) {
         limpas.push(n);
     }
     const overround = limpas.reduce((soma, o) => soma + 1 / o, 0);
-    if (overround < OVERROUND_MIN || overround > OVERROUND_MAX) return null;
+    if (!somaPlausivel(overround, limpas.length)) return null;
     return { odds: limpas, overround };
 }
 

@@ -22,6 +22,7 @@ import {
   SegmentedControl,
   useToast,
 } from "../ui";
+import { messageOf } from "../../lib/apiError";
 
 interface MobileImportProps {
   currency: string;
@@ -136,7 +137,7 @@ export default function MobileImport({ currency, onAddBet }: MobileImportProps) 
       loadDetectedBet(betsArr[0]);
       setReviewOpen(true);
     } catch (error: any) {
-      toast.show(error?.message || t("import.error.genericMobile"), "error");
+      toast.show(messageOf(error, t, "import.error.genericMobile"), "error");
       setSelectedImage(null);
     } finally {
       steps.forEach(clearTimeout);

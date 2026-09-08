@@ -21,6 +21,7 @@ import { SectionHeader, ListGroup, ListItem, MobileCard, SheetPage, BottomSheet,
 import { useI18n } from "../../lib/i18n";
 
 import MobileMemberProfile from "../components/MobileMemberProfile";
+import { messageOf } from "../../lib/apiError";
 
 interface MobileSocialProps {
   currency: string;
@@ -60,7 +61,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       setIncoming(r.incoming);
       setOutgoing(r.outgoing);
     } catch (e: any) {
-      toast.show(e?.message || t("social.error.load"), "error");
+      toast.show(messageOf(e, t, "errors.social.friends"), "error");
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       toast.show(t(status === "friends" ? "social.nowFriends" : "social.requestSent", { username: u.username }), "success");
       void refresh();
     } catch (e: any) {
-      toast.show(e?.message || t("social.error.send"), "error");
+      toast.show(messageOf(e, t, "errors.social.send"), "error");
     }
   };
 
@@ -113,7 +114,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       toast.show(t("social.accepted", { username: r.username }), "success");
       void refresh();
     } catch (e: any) {
-      toast.show(e?.message || t("social.error.accept"), "error");
+      toast.show(messageOf(e, t, "errors.social.accept"), "error");
     }
   };
 
@@ -122,7 +123,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       await removeFriendRequest(r.id);
       void refresh();
     } catch (e: any) {
-      toast.show(e?.message || t("social.error.removeRequest"), "error");
+      toast.show(messageOf(e, t, "errors.social.removeRequest"), "error");
     }
   };
 
@@ -134,7 +135,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       toast.show(t("social.removed", { username: f.username }), "success");
       void refresh();
     } catch (e: any) {
-      toast.show(e?.message || t("social.error.removeFriend"), "error");
+      toast.show(messageOf(e, t, "errors.social.removeFriend"), "error");
     }
   };
 
@@ -146,7 +147,7 @@ export default function MobileSocial({ currency, isDark }: MobileSocialProps) {
       const { bets } = await fetchFriendBets(f.id);
       setFriendBets(bets);
     } catch (e: any) {
-      toast.show(e?.message || t("social.error.friendBets"), "error");
+      toast.show(messageOf(e, t, "errors.social.friendBets"), "error");
     } finally {
       setViewLoading(false);
     }

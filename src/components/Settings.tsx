@@ -29,6 +29,8 @@ import { fetchSettings, updateEnabledBookmakers, SUPPORTED_BOOKMAKERS } from "..
 import { useI18n } from "../lib/i18n";
 import { exportBetsCSV, exportBackupJSON, importBetsFromFile } from "../lib/dataTransfer";
 import FilterDropdown from "./FilterDropdown";
+import { messageOf } from "../lib/apiError";
+import { auditAction, auditDetails } from "../lib/auditDisplay";
 
 interface SettingsProps {
   preferences: Preferences;
@@ -126,7 +128,7 @@ export default function Settings({
       })
       .catch((err) => {
         if (!alive) return;
-        setBookmakersError(err?.message || t("settings.bookmakers.loadError"));
+        setBookmakersError(messageOf(err, t, "errors.settings.load"));
       })
       .finally(() => {
         if (alive) setBookmakersLoading(false);
@@ -151,7 +153,7 @@ export default function Settings({
       setEnabledBookmakers(saved.enabledBookmakers);
     } catch (err) {
       setEnabledBookmakers(previous); // reverte
-      setBookmakersError((err as Error)?.message || t("settings.bookmakers.saveError"));
+      setBookmakersError(messageOf(err, t, "errors.settings.save"));
     } finally {
       setBookmakersSaving(false);
     }
@@ -202,12 +204,12 @@ export default function Settings({
     importBetsFromFile(file, accounts, onImportCSV, (movements) => {
       void onImportBankroll(movements);
     })
-      .then((message) => {
-        setSuccessMsg(message);
+      .then((result) => {
+        setSuccessMsg(t(result.key, result.vars));
         setTimeout(() => setSuccessMsg(null), 4000);
       })
-      .catch((err: Error) => {
-        setErrorMsg(err.message);
+      .catch((err: unknown) => {
+        setErrorMsg(messageOf(err, t));
         setTimeout(() => setErrorMsg(null), 5000);
       });
   };
@@ -535,10 +537,10 @@ export default function Settings({
             {auditLogs.map((log) => (
               <div key={log.id} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-sm border border-zinc-200 dark:border-zinc-700 space-y-1 text-xs">
                 <div className="flex justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">{log.action}</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">{auditAction(log, t)}</span>
                   <span className="font-mono">{log.timestamp.split("T")[1].slice(0, 8)}</span>
                 </div>
-                <p className="text-zinc-700 dark:text-zinc-300 leading-normal">{log.details}</p>
+                <p className="text-zinc-700 dark:text-zinc-300 leading-normal">{auditDetails(log, t)}</p>
               </div>
             ))}
 

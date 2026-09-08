@@ -30,11 +30,14 @@ import {
   deactivateBot,
   type BotStatus,
   type BotRun,
-  type BotActivation,
+  type BotAccountActivation,
   type BotActivationSource,
 } from "../lib/botApi";
+import { fetchAccounts } from "../lib/accountsApi";
+import type { BookieAccount } from "../types";
 import { requestBetclicToken } from "../hooks/useBetclicExtension";
 import { useI18n } from "../lib/i18n";
+import { messageOf } from "../lib/apiError";
 
 export type BotMode = "desktop" | "mobile";
 
@@ -86,9 +89,10 @@ function RunRow({ run }: { run: BotRun }) {
 }
 
 // Selo do estado de ativação: ativo (verde), expirado (âmbar) ou por ativar.
-function ActivationBadge({ activation }: { activation: BotActivation }) {
+// activation ausente (conta sem token guardado) = por ativar.
+function ActivationBadge({ activation }: { activation: BotAccountActivation | undefined }) {
   const { t, formatDate } = useI18n();
-  if (activation.active) {
+  if (activation?.active) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
         <ShieldCheck size={14} />
@@ -101,7 +105,7 @@ function ActivationBadge({ activation }: { activation: BotActivation }) {
       </span>
     );
   }
-  if (activation.expired) {
+  if (activation?.expired) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
         <AlertTriangle size={14} />
@@ -130,15 +134,21 @@ function Steps({ items }: { items: string[] }) {
   );
 }
 
-// O cartão de ativação. mode decide a modalidade: desktop capta da extensão
-// (com colagem manual como recurso); mobile cola sempre à mão.
+// O cartão de ativação de UMA conta Betclic. mode decide a modalidade: desktop
+// capta da extensão (com colagem manual como recurso); mobile cola sempre à mão.
+// A ativação fica ancorada a esta conta (account.id) - é o que permite ao bot
+// etiquetar as apostas importadas na bookie_account certa.
 function ActivationCard({
   mode,
+  account,
   activation,
+  showSteps,
   onChanged,
 }: {
   mode: BotMode;
-  activation: BotActivation;
+  account: BookieAccount;
+  activation: BotAccountActivation | undefined;
+  showSteps: boolean;
   onChanged: () => void;
 }) {
   const { t } = useI18n();
@@ -151,17 +161,17 @@ function ActivationCard({
       setBusy(true);
       setMsg(null);
       try {
-        await activateBot(token, source);
+        await activateBot(token, source, account.id);
         setPaste("");
         setMsg({ ok: true, text: t("bot.act.saved") });
         onChanged();
       } catch (e) {
-        setMsg({ ok: false, text: e instanceof Error ? e.message : t("bot.act.errGeneric") });
+        setMsg({ ok: false, text: messageOf(e, t, "bot.act.errGeneric") });
       } finally {
         setBusy(false);
       }
     },
-    [t, onChanged],
+    [t, onChanged, account.id],
   );
 
   const capture = useCallback(async () => {
@@ -180,15 +190,15 @@ function ActivationCard({
     setBusy(true);
     setMsg(null);
     try {
-      await deactivateBot();
+      await deactivateBot(account.id);
       setMsg({ ok: true, text: t("bot.act.deactivated") });
       onChanged();
     } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : t("bot.act.errGeneric") });
+      setMsg({ ok: false, text: messageOf(e, t, "bot.act.errGeneric") });
     } finally {
       setBusy(false);
     }
-  }, [t, onChanged]);
+  }, [t, onChanged, account.id]);
 
   const steps =
     mode === "desktop"
@@ -198,13 +208,18 @@ function ActivationCard({
   return (
     <div className={`${CARD} px-4 py-4 space-y-3`}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-display">{t("bot.act.title")}</h2>
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-display truncate">
+            {account.label}
+          </h2>
+          {account.username && (
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono truncate">@{account.username}</p>
+          )}
           <div className="mt-1">
             <ActivationBadge activation={activation} />
           </div>
         </div>
-        {activation.active && (
+        {activation?.active && (
           <button type="button" onClick={() => void remove()} className={GHOST_BUTTON} disabled={busy}>
             <Trash2 size={14} />
             {t("bot.act.deactivate")}
@@ -212,66 +227,68 @@ function ActivationCard({
         )}
       </div>
 
-      {!activation.configured ? (
-        <p className="text-xs text-amber-600 dark:text-amber-400">{t("bot.act.serverOff")}</p>
-      ) : (
-        <>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("bot.act.subtitle")}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("bot.act.subtitle")}</p>
 
-          {mode === "desktop" && (
-            <button type="button" onClick={() => void capture()} className={PRIMARY_BUTTON} disabled={busy}>
-              {busy ? <Loader2 size={15} className="animate-spin" /> : <DownloadCloud size={15} />}
-              {t("bot.act.captureBtn")}
-            </button>
-          )}
+      {mode === "desktop" && (
+        <button type="button" onClick={() => void capture()} className={PRIMARY_BUTTON} disabled={busy}>
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <DownloadCloud size={15} />}
+          {t("bot.act.captureBtn")}
+        </button>
+      )}
 
-          {/* Colagem manual: única via no mobile; recurso no desktop. */}
-          <div className="space-y-2">
-            {mode === "desktop" && (
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                {t("bot.act.orPaste")}
-              </p>
-            )}
-            <textarea
-              value={paste}
-              onChange={(e) => setPaste(e.target.value)}
-              placeholder={t("bot.act.pastePlaceholder")}
-              rows={3}
-              spellCheck={false}
-              className="w-full rounded-sm border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 resize-y focus:outline-none focus:border-emerald-500/50"
-            />
-            <button
-              type="button"
-              onClick={() => void send(paste.trim(), "manual")}
-              className={PRIMARY_BUTTON}
-              disabled={busy || paste.trim().length === 0}
-            >
-              {busy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
-              {t("bot.act.submit")}
-            </button>
-          </div>
+      {/* Colagem manual: única via no mobile; recurso no desktop. */}
+      <div className="space-y-2">
+        {mode === "desktop" && (
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            {t("bot.act.orPaste")}
+          </p>
+        )}
+        <textarea
+          value={paste}
+          onChange={(e) => setPaste(e.target.value)}
+          placeholder={t("bot.act.pastePlaceholder")}
+          rows={3}
+          spellCheck={false}
+          className="w-full rounded-sm border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 resize-y focus:outline-none focus:border-emerald-500/50"
+        />
+        <button
+          type="button"
+          onClick={() => void send(paste.trim(), "manual")}
+          className={PRIMARY_BUTTON}
+          disabled={busy || paste.trim().length === 0}
+        >
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
+          {t("bot.act.submit")}
+        </button>
+      </div>
 
-          {msg && (
-            <p className={`text-xs ${msg.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-              {msg.text}
-            </p>
-          )}
+      {msg && (
+        <p className={`text-xs ${msg.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+          {msg.text}
+        </p>
+      )}
 
-          <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
-            <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-              {t("bot.act.howTitle")}
-            </p>
-            <Steps items={steps} />
-          </div>
-        </>
+      {showSteps && (
+        <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            {t("bot.act.howTitle")}
+          </p>
+          <Steps items={steps} />
+        </div>
       )}
     </div>
   );
 }
 
+// É uma conta da Betclic? (o bot só faz Betclic; o id da casa é "betclic".)
+function isBetclic(account: BookieAccount): boolean {
+  return account.bookmaker.trim().toLowerCase() === "betclic";
+}
+
 export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const { t, formatDate } = useI18n();
   const [status, setStatus] = useState<BotStatus | null>(null);
+  const [accounts, setAccounts] = useState<BookieAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -279,7 +296,9 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
     setLoading(true);
     setError(null);
     try {
-      setStatus(await fetchBotStatus());
+      const [st, accs] = await Promise.all([fetchBotStatus(), fetchAccounts()]);
+      setStatus(st);
+      setAccounts(accs);
     } catch {
       setError(t("bot.loadError"));
     } finally {
@@ -290,6 +309,12 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Uma ativação por conta, indexada por accountId para casar com cada cartão.
+  const activationByAccount = new Map<string, BotAccountActivation>(
+    (status?.activations ?? []).map((a) => [a.accountId, a]),
+  );
+  const betclicAccounts = accounts.filter(isBetclic);
 
   return (
     <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-5">
@@ -313,7 +338,28 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
 
       {status && (
         <>
-          <ActivationCard mode={mode} activation={status.activation} onChanged={() => void load()} />
+          {!status.configured ? (
+            <div className={`${CARD} px-4 py-4`}>
+              <p className="text-xs text-amber-600 dark:text-amber-400">{t("bot.act.serverOff")}</p>
+            </div>
+          ) : betclicAccounts.length === 0 ? (
+            <div className={`${CARD} px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400 text-center`}>
+              {t("bot.act.noAccounts")}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {betclicAccounts.map((account, i) => (
+                <ActivationCard
+                  key={account.id}
+                  mode={mode}
+                  account={account}
+                  activation={activationByAccount.get(account.id)}
+                  showSteps={i === 0}
+                  onChanged={() => void load()}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Metric

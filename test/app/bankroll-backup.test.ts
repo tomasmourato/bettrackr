@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { importBetsFromFile } from "../../src/lib/dataTransfer";
+import { importBetsFromFile, type ImportResult } from "../../src/lib/dataTransfer";
 import type { BankrollMovement, Bet } from "../../src/types";
 
 // O backup JSON passou a levar a banca (versão "1.1"). Estes testes fixam o
@@ -28,7 +28,7 @@ function backupFile(payload: unknown): File {
 // valiam à partida. `importedMovements` virava `null` e cada acesso a seguir
 // dava "Property ... does not exist on type 'never'".
 interface Importado {
-  message: string;
+  resultado: ImportResult;
   importedBets: Bet[];
   importedMovements: BankrollMovement[] | null;
 }
@@ -37,7 +37,7 @@ async function runImport(file: File): Promise<Importado> {
   let importedBets: Bet[] = [];
   let importedMovements: BankrollMovement[] | null = null;
 
-  const message = await importBetsFromFile(
+  const resultado = await importBetsFromFile(
     file,
     [],
     (bets) => {
@@ -48,14 +48,14 @@ async function runImport(file: File): Promise<Importado> {
     },
   );
 
-  return { message, importedBets, importedMovements };
+  return { resultado, importedBets, importedMovements };
 }
 
 const umaAposta = [{ id: "b1", stake: 10, odd: 2, selections: [] }];
 
 describe("restauro da banca a partir do backup", () => {
   test("um backup 1.1 devolve os movimentos ao lado das apostas", async () => {
-    const { importedMovements, message } = await runImport(
+    const { importedMovements, resultado } = await runImport(
       backupFile({
         version: "1.1",
         bets: umaAposta,
@@ -67,7 +67,8 @@ describe("restauro da banca a partir do backup", () => {
     );
 
     expect(importedMovements).toHaveLength(2);
-    expect(message).toContain("banca");
+    expect(resultado.key).toBe("transfer.backupWithBankroll");
+    expect(resultado.vars).toEqual({ n: 2 });
 
     // O sinal do ficheiro é preservado: é ele que o servidor volta a aplicar.
     expect(importedMovements![0].kind).toBe("DEPOSITO");
@@ -124,12 +125,12 @@ describe("restauro da banca a partir do backup", () => {
   });
 
   test("um backup 1.0 continua a importar, apenas sem banca", async () => {
-    const { importedBets, importedMovements, message } = await runImport(
+    const { importedBets, importedMovements, resultado } = await runImport(
       backupFile({ version: "1.0", bets: umaAposta }),
     );
 
     expect(importedBets).toHaveLength(1);
     expect(importedMovements).toBeNull();
-    expect(message).not.toContain("banca");
+    expect(resultado.key).toBe("transfer.backupImported");
   });
 });

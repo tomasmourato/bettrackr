@@ -1,5 +1,6 @@
 // Autenticação e wrapper de fetch para as rotas protegidas da API.
 
+import { apiError, ApiError } from "./apiError";
 import { apiUrl } from "./apiBase";
 import { STORAGE_KEYS } from "./storageKeys";
 
@@ -14,7 +15,12 @@ export interface StoredUser {
 
 // Lançado quando o backend responde 401 (token inválido/expirado).
 // Permite às camadas superiores distinguir uma sessão expirada de outros erros.
-export class SessionExpiredError extends Error {}
+export class SessionExpiredError extends ApiError {
+  constructor() {
+    super("errors.session", 401);
+    this.name = "SessionExpiredError";
+  }
+}
 
 /**
  * Lê o corpo da resposta como JSON sem rebentar quando ele não é JSON.
@@ -30,11 +36,6 @@ export async function parseJsonResponse(res: Response): Promise<any> {
   } catch {
     return {};
   }
-}
-
-/** Mensagem de erro a partir da resposta, com fallback legível por status. */
-function errorFrom(data: any, res: Response, fallback: string): Error {
-  return new Error(data?.error || `${fallback} (HTTP ${res.status})`);
 }
 
 export function saveToken(token: string) {
@@ -87,7 +88,7 @@ export async function register(username: string, email: string, password: string
     body: JSON.stringify({ username, email, password }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw errorFrom(data, res, "Erro ao registar");
+  if (!res.ok) throw apiError(data, res, "errors.auth.register");
   saveToken(data.token);
   saveUser(data.user);
   return data.user;
@@ -103,7 +104,7 @@ export async function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw errorFrom(data, res, "Erro ao autenticar");
+  if (!res.ok) throw apiError(data, res, "errors.auth.login");
   saveToken(data.token);
   saveUser(data.user);
   return data.user;
@@ -113,10 +114,17 @@ export async function login(email: string, password: string) {
 // Alterar a password (exige a password atual)
 // ------------------------------------------------------------
 
-/** Erro do /api/auth que carrega o código estável devolvido pelo servidor. */
-export class AuthError extends Error {
-  constructor(message: string, readonly code?: string) {
-    super(message);
+/**
+ * Erro do /api/auth que carrega o código estável devolvido pelo servidor.
+ *
+ * O código é mais específico do que a chave da operação - "a password atual
+ * está errada" em vez de "não foi possível alterar a palavra-passe" - por isso
+ * quem o sabe ler (useChangePassword) traduz o código primeiro.
+ */
+export class AuthError extends ApiError {
+  constructor(status: number, code?: string, serverMessage?: string) {
+    super("errors.auth.password", status, code, serverMessage);
+    this.name = "AuthError";
   }
 }
 
@@ -132,7 +140,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   });
   const data = await parseJsonResponse(res);
   if (!res.ok) {
-    throw new AuthError(data?.error || `Erro ao alterar a password (HTTP ${res.status})`, data?.code);
+    throw new AuthError(res.status, data?.code, data?.error);
   }
   // O servidor devolve um token novo; guardá-lo mantém a sessão a durar mais
   // sete dias em vez de continuar com o relógio do token antigo.
@@ -156,7 +164,7 @@ export interface CurrentUser extends StoredUser {
 export async function fetchCurrentUser(): Promise<CurrentUser> {
   const res = await authFetch("/api/auth/me");
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw errorFrom(data, res, "Erro ao obter o utilizador");
+  if (!res.ok) throw apiError(data, res, "errors.auth.me");
   const user = data.user as CurrentUser;
   saveUser({ id: user.id, username: user.username, email: user.email });
   return user;
@@ -185,7 +193,7 @@ export async function authFetch(url: string, options: RequestInit = {}) {
     // Token inválido ou expirado -> força novo login
     clearToken();
     localStorage.removeItem(USER_KEY);
-    throw new SessionExpiredError("Sessão expirada. Por favor inicia sessão novamente.");
+    throw new SessionExpiredError();
   }
 
   return res;

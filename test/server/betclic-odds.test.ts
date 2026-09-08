@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
   betclicMatchPath,
   collectMarkets,
@@ -7,6 +8,7 @@ import {
   findKickoffUtc,
   kickoffMs,
   leadMinutesFrom,
+  marketFrom,
   lisbonToUtcMs,
   parseNgState,
   readMatchPage,
@@ -275,12 +277,18 @@ describe("collectMarkets", () => {
     expect(collectMarkets(semId).size).toBe(0);
   });
 
-  test("dois cartões do mesmo mercado juntam-se antes de se julgar a margem", () => {
+  test("uma lista de marcadores é recusada, em metades ou inteira", () => {
     // Caso real: a Betclic parte os marcadores em dois cartões, um por equipa.
-    // O cartão da Roma sozinho somava 1.065 - 6.5% de margem, plausível - e
-    // teria passado. Juntando-lhe o cartão do Lecce, que a casa marca com o
-    // MESMO betslipMarketId, o mercado inteiro dá uma soma impossível e é
-    // recusado, que é o que devia ser.
+    // Marcar não é exclusivo, por isso nenhuma das duas formas pode ser
+    // de-vigada - e o crivo recusa as duas, por caminhos diferentes:
+    //
+    //   cartão da Roma sozinho  n=21  soma 1.065  0.31% por saída
+    //   os dois cartões juntos  n=44  soma 1.388  0.88% por saída
+    //
+    // Espalhar tão pouca margem por tantas saídas é a assinatura de um mercado
+    // que não é exclusivo, e é o piso da margem por saída que as apanha. A
+    // soma total não servia: 1.388 em 44 saídas é indistinguível de um
+    // resultado exato completo se só se olhar para o total.
     // Odds reais, do cartão "2 golos ou +" de um Lecce - Roma.
     const roma = [5, 5.5, 8.5, 9.5, 10, 13, 20, 20, 30, 50, 50, 60, 60, 60, 90,
                   90, 100, 125, 150, 150, 150];          // soma 1.065
@@ -289,10 +297,7 @@ describe("collectMarkets", () => {
     const cartao = (odds: number[], quem: string) =>
       odds.map((o, i) => ({ id: `${quem}-${i}`, odds: o, betslipMarketId: "marcador" }));
 
-    // O cartão sozinho cai na banda plausível...
-    expect(collectMarkets({ splitCardGroups: [{ selections: cartao(roma, "roma") }] }).size)
-      .toBeGreaterThan(0);
-    // ...mas o mercado inteiro, como a casa o define, não.
+    expect(collectMarkets({ splitCardGroups: [{ selections: cartao(roma, "roma") }] }).size).toBe(0);
     expect(
       collectMarkets({
         splitCardGroups: [
@@ -506,5 +511,100 @@ describe("readMatchSnapshot", () => {
     };
     const s = readMatchSnapshot(html(pagina(cartoes)), "111")!;
     expect(s.markets.some((m) => m.id === "M9")).toBe(false);
+  });
+});
+
+// ------------------------------------------------------------
+// O crivo contra páginas REAIS
+//
+// As fixtures são o que o scripts/recon-markets.mjs leu de duas páginas da
+// Betclic em 2026-09-08, reduzidas aos grupos de `betslipMarketId`. Existem
+// porque as medições que os comentários citavam tinham sido feitas à mão e não
+// se conseguiam repetir - e sem as repetir não há como mexer no crivo sem
+// adivinhar. Regravar: node scripts/recon-markets.mjs <matchId> --fixture <f>
+// ------------------------------------------------------------
+describe("crivo da margem contra páginas reais", () => {
+  const carregar = (nome: string) =>
+    JSON.parse(readFileSync(new URL(`./fixtures/${nome}.json`, import.meta.url), "utf8")) as {
+      event: string;
+      precos: number;
+      grupos: Array<{ marketId: string; nome: string; odds: number[] }>;
+    };
+
+  const paginas = ["betclic-mercados-amadora", "betclic-mercados-ettifaq"].map(carregar);
+
+  /** O mercado com este nome foi aceite? */
+  const aceite = (pagina: ReturnType<typeof carregar>, nome: string) =>
+    pagina.grupos
+      .filter((g) => g.nome === nome)
+      .map((g) => marketFrom(g.odds.map((_, i) => String(i)), g.odds) !== null);
+
+  test("os mercados que as pessoas apostam a sério entram todos", () => {
+    for (const pagina of paginas) {
+      for (const nome of [
+        "Total de golos - acima/abaixo",
+        "As duas equipas marcam",
+        "Resultado (Tempo Regulamentar)",
+        "Resultado handicap",
+      ]) {
+        const r = aceite(pagina, nome);
+        expect(r.length).toBeGreaterThan(0);
+        // `some` e não `every`: as linhas que a página só renderizou em parte
+        // (soma abaixo de 1) continuam de fora, e é isso que se quer.
+        expect(r.some(Boolean)).toBe(true);
+      }
+    }
+  });
+
+  test("o resultado exato passa a entrar - é o que o teto fixo deixava fora", () => {
+    for (const pagina of paginas) {
+      const exatos = pagina.grupos.filter((g) => g.nome.startsWith("Resultado correcto"));
+      expect(exatos.length).toBeGreaterThan(0);
+      for (const g of exatos) {
+        expect(marketFrom(g.odds.map((_, i) => String(i)), g.odds)).not.toBeNull();
+      }
+    }
+  });
+
+  test("o que não é exclusivo continua de fora", () => {
+    for (const pagina of paginas) {
+      // O resultado duplo cobre duas saídas em cada aposta: soma ~2.
+      // "Um dos jogadores marca" e os marcadores de uma equipa somam o que
+      // quiserem, porque marcar não exclui ninguém.
+      for (const g of pagina.grupos) {
+        const naoExclusivo =
+          g.nome === "Resultado duplo" ||
+          g.nome === "Um dos jogadores marca" ||
+          (g.odds.length === 20 && g.nome === "Ettifaq FC");
+        if (!naoExclusivo) continue;
+        expect(marketFrom(g.odds.map((_, i) => String(i)), g.odds)).toBeNull();
+      }
+    }
+  });
+
+  test("a cobertura sobe, e fica registada", () => {
+    const medido = paginas.map((pagina) => {
+      let precos = 0;
+      for (const g of pagina.grupos) {
+        if (marketFrom(g.odds.map((_, i) => String(i)), g.odds)) precos += g.odds.length;
+      }
+      return { evento: pagina.event, total: pagina.precos, cobertos: precos };
+    });
+
+    // Eram 44 em 85 e 42 em 174 com o teto fixo de 1.25.
+    expect(medido[0]).toEqual({ evento: "Estrela Amadora Sub -23 - UD Leiria Sub-23", total: 85, cobertos: 82 });
+    expect(medido[1]).toEqual({ evento: "Ettifaq FC - Al Faisaly FC", total: 174, cobertos: 80 });
+  });
+
+  test("a extensão decide exatamente o mesmo", () => {
+    for (const pagina of paginas) {
+      for (const g of pagina.grupos) {
+        const ids = g.odds.map((_, i) => String(i));
+        const aqui = marketFrom(ids, g.odds);
+        const la = ext.marketFrom(ids, g.odds);
+        expect(la === null).toBe(aqui === null);
+        if (aqui && la) expect(la.overround).toBeCloseTo(aqui.overround, 10);
+      }
+    }
   });
 });

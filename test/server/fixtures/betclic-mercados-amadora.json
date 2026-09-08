@@ -1,0 +1,219 @@
+{
+  "medidoEm": "2026-09-08",
+  "matchId": "1218898834784256",
+  "event": "Estrela Amadora Sub -23 - UD Leiria Sub-23",
+  "precos": 85,
+  "grupos": [
+    {
+      "marketId": "1220029738655774",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        1.06,
+        4.15
+      ]
+    },
+    {
+      "marketId": "1219008125759491",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        1.42,
+        2.1
+      ]
+    },
+    {
+      "marketId": "1219008125759492",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        2.25,
+        1.37
+      ]
+    },
+    {
+      "marketId": "1219008125759493",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        3.7,
+        1.1
+      ]
+    },
+    {
+      "marketId": "1220029738655773",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        5.1,
+        1.02
+      ]
+    },
+    {
+      "marketId": "1219008125759498",
+      "nome": "As duas equipas marcam",
+      "odds": [
+        1.85,
+        1.47
+      ]
+    },
+    {
+      "marketId": "1220029738655790",
+      "nome": "Estrela Amadora Sub -23 - Total de golos",
+      "odds": [
+        1.37,
+        2.25
+      ]
+    },
+    {
+      "marketId": "1219008125759502",
+      "nome": "Estrela Amadora Sub -23 - Total de golos",
+      "odds": [
+        2.6,
+        1.25
+      ]
+    },
+    {
+      "marketId": "1219836542750720",
+      "nome": "UD Leiria Sub-23 - Total de golos",
+      "odds": [
+        1.37,
+        2.25
+      ]
+    },
+    {
+      "marketId": "1219008125759501",
+      "nome": "UD Leiria Sub-23 - Total de golos",
+      "odds": [
+        2.6,
+        1.25
+      ]
+    },
+    {
+      "marketId": "1218898836856842",
+      "nome": "Resultado (Tempo Regulamentar)",
+      "odds": [
+        2.45,
+        2.75,
+        2.45
+      ]
+    },
+    {
+      "marketId": "1218898836856840",
+      "nome": "Resultado duplo",
+      "odds": [
+        1.3,
+        1.22,
+        1.3
+      ]
+    },
+    {
+      "marketId": "1220029738655809",
+      "nome": "Equipa marca o Primeiro golo",
+      "odds": [
+        1.9,
+        5.8,
+        1.85
+      ]
+    },
+    {
+      "marketId": "1219052571750400",
+      "nome": "Resultado handicap",
+      "odds": [
+        12,
+        5.4,
+        1.07
+      ]
+    },
+    {
+      "marketId": "1219008125759488",
+      "nome": "Resultado handicap",
+      "odds": [
+        5.4,
+        3.55,
+        1.37
+      ]
+    },
+    {
+      "marketId": "1219008125759489",
+      "nome": "Resultado handicap",
+      "odds": [
+        1.37,
+        3.55,
+        5.3
+      ]
+    },
+    {
+      "marketId": "1219008125759490",
+      "nome": "Resultado handicap",
+      "odds": [
+        1.07,
+        5.4,
+        12
+      ]
+    },
+    {
+      "marketId": "1220029738655800",
+      "nome": "1.ª parte",
+      "odds": [
+        3.6,
+        1.55,
+        3.4
+      ]
+    },
+    {
+      "marketId": "1220029738655766",
+      "nome": "2.ª parte",
+      "odds": [
+        2.6,
+        2.25,
+        2.65
+      ]
+    },
+    {
+      "marketId": "1220029738655804",
+      "nome": "Resultado correcto - Primeira Parte",
+      "odds": [
+        4.4,
+        1.65,
+        4.2,
+        23,
+        11.5,
+        21,
+        65,
+        60,
+        100,
+        100
+      ]
+    },
+    {
+      "marketId": "1219008125759499",
+      "nome": "Resultado correcto",
+      "odds": [
+        5.6,
+        5.7,
+        5.6,
+        10.5,
+        5.2,
+        10,
+        9.75,
+        18,
+        9.75,
+        29,
+        100,
+        28,
+        27,
+        27,
+        50,
+        50,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ]
+    }
+  ]
+}

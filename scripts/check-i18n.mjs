@@ -75,6 +75,40 @@ const MIGRATED = [
   "src/lib/adminDisplay.ts",
   "src/hooks/useBillingActions.ts",
   "src/hooks/useAdminPanel.ts",
+
+  // Fase 5 - camada de erros: a chave do cliente ganha ao texto do servidor
+  "src/lib/apiError.ts",
+  "src/lib/accountsApi.ts",
+  "src/lib/adminApi.ts",
+  "src/lib/authApi.ts",
+  "src/lib/bankrollApi.ts",
+  "src/lib/betEvaluation.ts",
+  "src/lib/betsApi.ts",
+  "src/lib/billingApi.ts",
+  "src/lib/botApi.ts",
+  "src/lib/dataTransfer.ts",
+  "src/lib/settingsApi.ts",
+  "src/lib/socialApi.ts",
+  "src/hooks/useAccounts.ts",
+  "src/hooks/useBankroll.ts",
+  "src/hooks/useBets.ts",
+  "src/hooks/useSubscription.ts",
+  "src/hooks/useBetclicExtension.ts",
+
+  // Fase 5 - registo de alterações da sessão (chave + variáveis)
+  "src/App.tsx",
+  "src/hooks/useAuditLog.ts",
+  "src/lib/auditDisplay.ts",
+
+  // Fase 5 - ficheiros que já estavam traduzidos e faltava registar
+  "src/components/BotPanel.tsx",
+  "src/components/MemberProfile.tsx",
+  "src/components/AccountPanel.tsx",
+  "src/components/PasswordCard.tsx",
+  "src/components/ClvLock.tsx",
+  "src/mobile/AccountSheet.tsx",
+  "src/mobile/components/MobileMemberProfile.tsx",
+  "src/hooks/useChangePassword.ts",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são
@@ -153,12 +187,27 @@ for (const [key, ptEntry] of pt) {
 //   - comentários (o código é comentado em português de propósito);
 //   - chamadas console.* - diagnóstico para quem desenvolve, não para quem
 //     usa a app, por isso não são traduzidas (mesma categoria dos comentários).
+// Uma linha marcada com `// i18n-ignore` fica de fora. É para o português que
+// NÃO é interface: heurísticas que fazem match em dados de entrada
+// portugueses, e tokens de formatos de ficheiro que têm de continuar iguais
+// para os ficheiros antigos continuarem a entrar.
+const IGNORE_RE = /\/\/\s*i18n-ignore/;
+
 function stripNoise(source) {
   return source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "")
-    .replace(/\/\/.*$/gm, "")
-    .replace(/console\.\w+\([\s\S]*?\);/g, "");
+    // O bloco vira linhas em branco em vez de desaparecer: os números de linha
+    // dos erros têm de bater certo com o ficheiro.
+    .replace(/\/\*[\s\S]*?\*\//g, (bloco) => bloco.replace(/[^\n]/g, ""))
+    // `[^\n]` e não `.`: os ficheiros estão em CRLF, e um `.*$` com o `\s*`
+    // à frente engolia as mudanças de linha à volta dos comentários - 47
+    // linhas a menos só no dataTransfer, e todos os números de linha errados.
+    .replace(/^[ \t]*\/\/[^\n]*/gm, "")
+    .replace(/\/\/[^\n]*/g, "")
+    // Só a chamada que cabe numa linha. Com [\s\S] apagava tudo entre um
+    // console.* e o `);` seguinte - e o código que estivesse pelo meio deixava
+    // de ser verificado. Era um ponto cego a sério: um "Erro ao obter as
+    // apostas." no betsApi ficou fora de uma medição por causa disto.
+    .replace(/console\.\w+\(.*\);?/g, "");
 }
 
 for (const file of MIGRATED) {
@@ -169,9 +218,12 @@ for (const file of MIGRATED) {
     warnings.push(`MIGRATED aponta para um ficheiro que não existe: ${file}`);
     continue;
   }
+  const originais = source.split("\n");
   const cleaned = stripNoise(source);
   cleaned.split("\n").forEach((line, index) => {
     if (!PT_ACCENTS.test(line) && !PT_WORD_RE.test(line)) return;
+    // A marca está na linha original: o stripNoise já lhe tirou o comentário.
+    if (IGNORE_RE.test(originais[index] ?? "")) return;
     errors.push(`${file}:${index + 1}: português fixo num ficheiro já traduzido - ${line.trim().slice(0, 90)}`);
   });
 }

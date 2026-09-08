@@ -1,0 +1,332 @@
+{
+  "medidoEm": "2026-09-08",
+  "matchId": "1217982315388928",
+  "event": "Ettifaq FC - Al Faisaly FC",
+  "precos": 174,
+  "grupos": [
+    {
+      "marketId": "1217984035061794",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        18
+      ]
+    },
+    {
+      "marketId": "1217984040296448",
+      "nome": "Equipa tem 2 golos de vantagem ou vence (tempo reg.)",
+      "odds": [
+        1.81,
+        4.3
+      ]
+    },
+    {
+      "marketId": "1217984035061790",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        1.09,
+        3.75
+      ]
+    },
+    {
+      "marketId": "1217984035061791",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        1.75,
+        1.65
+      ]
+    },
+    {
+      "marketId": "1217984035061792",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        3.15,
+        1.16
+      ]
+    },
+    {
+      "marketId": "1217984035061793",
+      "nome": "Total de golos - acima/abaixo",
+      "odds": [
+        8.25,
+        1.01
+      ]
+    },
+    {
+      "marketId": "1217984035065936",
+      "nome": "As duas equipas marcam",
+      "odds": [
+        2.5,
+        1.22
+      ]
+    },
+    {
+      "marketId": "1217984035065871",
+      "nome": "Ettifaq FC - Total de golos",
+      "odds": [
+        1.33,
+        2.4
+      ]
+    },
+    {
+      "marketId": "1217984035037200",
+      "nome": "Ettifaq FC - Total de golos",
+      "odds": [
+        2.65,
+        1.25
+      ]
+    },
+    {
+      "marketId": "1217984035065867",
+      "nome": "Al Faisaly FC - Total de golos",
+      "odds": [
+        2,
+        1.5
+      ]
+    },
+    {
+      "marketId": "1217984035065868",
+      "nome": "Al Faisaly FC - Total de golos",
+      "odds": [
+        5,
+        1.02
+      ]
+    },
+    {
+      "marketId": "1217984035065884",
+      "nome": "Resultado handicap",
+      "odds": [
+        30,
+        26
+      ]
+    },
+    {
+      "marketId": "1217982319583234",
+      "nome": "Resultado (Tempo Regulamentar)",
+      "odds": [
+        1.82,
+        2.5,
+        4.4
+      ]
+    },
+    {
+      "marketId": "1217982319583232",
+      "nome": "Resultado duplo",
+      "odds": [
+        1.12,
+        1.32,
+        1.62
+      ]
+    },
+    {
+      "marketId": "1217984035057741",
+      "nome": "Equipa marca o Primeiro golo",
+      "odds": [
+        1.6,
+        3.5,
+        3.05
+      ]
+    },
+    {
+      "marketId": "1217984035065883",
+      "nome": "Resultado handicap",
+      "odds": [
+        26,
+        7,
+        1.01
+      ]
+    },
+    {
+      "marketId": "1217984035037208",
+      "nome": "Resultado handicap",
+      "odds": [
+        9.25,
+        4.8,
+        1.13
+      ]
+    },
+    {
+      "marketId": "1217984035037206",
+      "nome": "Resultado handicap",
+      "odds": [
+        4,
+        2.7,
+        1.72
+      ]
+    },
+    {
+      "marketId": "1217984035037207",
+      "nome": "Resultado handicap",
+      "odds": [
+        1.12,
+        4.5,
+        12
+      ]
+    },
+    {
+      "marketId": "1217984035065881",
+      "nome": "Resultado handicap",
+      "odds": [
+        1.01,
+        12,
+        30
+      ]
+    },
+    {
+      "marketId": "1217984035061789",
+      "nome": "Resultado - Segunda parte",
+      "odds": [
+        1.8,
+        2.45,
+        4.25
+      ]
+    },
+    {
+      "marketId": "1217984035065860",
+      "nome": "Resultado correcto",
+      "odds": [
+        3.4,
+        3.75,
+        6.25,
+        6,
+        5.75,
+        17,
+        8.5,
+        21,
+        14,
+        13,
+        45,
+        20,
+        40,
+        35,
+        50,
+        30,
+        40,
+        60,
+        55
+      ]
+    },
+    {
+      "marketId": "1220018405646440",
+      "nome": "Resultado correcto - Segunda parte",
+      "odds": [
+        3.4,
+        3.6,
+        6.25,
+        6,
+        5.75,
+        17,
+        8.5,
+        21,
+        14,
+        13,
+        45,
+        20,
+        40,
+        35,
+        50,
+        30,
+        40,
+        60,
+        55
+      ]
+    },
+    {
+      "marketId": "1218133156192258",
+      "nome": "Ettifaq FC",
+      "odds": [
+        3.15,
+        3.9,
+        4.1,
+        7.5,
+        8,
+        9.75,
+        11,
+        11.5,
+        14,
+        15,
+        4.9,
+        8,
+        8,
+        8.5,
+        14,
+        15,
+        16,
+        20,
+        21,
+        23
+      ]
+    },
+    {
+      "marketId": "1218133159342082",
+      "nome": "Um dos jogadores marca",
+      "odds": [
+        1.98,
+        2.02,
+        2.18,
+        2.2,
+        2.42,
+        2.48,
+        2.48,
+        2.53,
+        2.53,
+        2.53,
+        2.57,
+        2.65,
+        2.83,
+        2.85,
+        2.88,
+        2.92,
+        2.92,
+        2.92,
+        2.93,
+        2.97,
+        3.02,
+        3.02,
+        3.02,
+        3.07,
+        3.1,
+        3.22,
+        3.23,
+        3.33,
+        3.33,
+        3.33,
+        3.38,
+        3.4,
+        3.45,
+        3.53,
+        3.6,
+        3.6,
+        4.05,
+        4.1,
+        4.1,
+        4.1,
+        4.15,
+        4.15,
+        4.15,
+        4.2,
+        4.25,
+        4.3,
+        4.3,
+        4.3,
+        4.6,
+        4.7,
+        4.7,
+        4.7,
+        4.85,
+        5.4,
+        5.6,
+        5.6,
+        5.6,
+        5.6,
+        5.9,
+        5.9,
+        5.9,
+        5.9,
+        6.1,
+        6.25,
+        6.6,
+        7.75
+      ]
+    }
+  ]
+}

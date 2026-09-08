@@ -5,7 +5,9 @@
 // estimativa de probabilidade e calcula os números (EV, edge, Kelly...); aqui
 // só se descrevem os tipos e se faz o pedido.
 
+import { apiError } from "./apiError";
 import { authFetch, parseJsonResponse } from "./authApi";
+import type { TKey } from "./i18n";
 
 export interface EvaluatedLeg {
   event: string;
@@ -62,8 +64,9 @@ export function formatEvPct(pct: number): string {
  * Pede a avaliação ao servidor. Lança SessionExpiredError (via authFetch) num
  * 401 - cada shell trata-o com o seu onSessionExpired.
  */
-// `fallbackError` vem traduzido de quem chama: este modulo nao e um hook e
-// por isso nao tem acesso ao useI18n().
+// A chave vem de quem chama: este modulo nao e um hook e por isso nao tem
+// acesso ao useI18n(). Chave e nao frase - quem apanha o erro e que traduz,
+// com o messageOf.
 export async function requestBetEvaluation(
   payload: {
     imageBase64?: string;
@@ -71,13 +74,13 @@ export async function requestBetEvaluation(
     /** Idioma em que a IA deve responder. */
     lang: string;
   },
-  fallbackError: string,
+  fallbackKey: TKey,
 ): Promise<BetEvaluationResponse> {
   const res = await authFetch("/api/insights/evaluate", {
     method: "POST",
     body: JSON.stringify(payload),
   });
   const body = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(body.error || fallbackError);
+  if (!res.ok) throw apiError(body, res, fallbackKey);
   return body as BetEvaluationResponse;
 }

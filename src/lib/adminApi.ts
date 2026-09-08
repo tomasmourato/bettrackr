@@ -2,6 +2,7 @@
 // Cliente das rotas /api/admin. Todas exigem role = 'admin' no servidor -
 // nada aqui dá permissões, só apresenta o que o servidor deixa fazer.
 
+import { apiError } from "./apiError";
 import { authFetch, parseJsonResponse } from "./authApi";
 import type { SubscriptionSnapshot } from "./billingApi";
 import { mapBetFromApi } from "./betsApi";
@@ -65,7 +66,7 @@ export interface AdminUsersPage {
 async function call<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await authFetch(path, options);
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  if (!res.ok) throw apiError(data, res, "errors.admin.request");
   return data as T;
 }
 
@@ -113,7 +114,7 @@ export interface MemberProfileData {
 export async function fetchMemberBets(id: string): Promise<MemberProfileData> {
   const res = await authFetch(`/api/admin/users/${id}/bets`);
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data?.error || "Erro ao obter o perfil do membro.");
+  if (!res.ok) throw apiError(data, res, "errors.admin.profile");
   return {
     user: data.user,
     bets: (data.bets as any[]).map(mapBetFromApi),

@@ -101,24 +101,88 @@ export function findKickoffUtc(state: unknown, matchId: string): string | null {
 // fecho com margem INFLACIONA o CLV: quem apostou a 1.30 parece ter batido a
 // linha em +5.7% quando na verdade pagou 3.7% acima do preço justo.
 //
-// Só se de-viga um mercado que esteja COMPLETO na página. Medido na mesma
-// página: de 10 grupos de odds, 4 somavam menos de 1 (mercado incompleto - a
-// margem daria negativa e a "correção" inventava odds mais altas do que as
-// reais) e 4 somavam mais de 1.25 (listas de marcadores, que não são mercados
-// exclusivos). Quando não dá para confiar, não se de-viga e fica a odd crua.
+// Só se de-viga um mercado que esteja COMPLETO na página e que seja
+// EXCLUSIVO - só um dos resultados pode sair. Quando não dá para confiar, não
+// se de-viga e fica a odd crua.
+//
+// O que fica de fora, medido: mercados que a página só renderizou em parte
+// (somam menos de 1, e aí a "correção" inventava odds maiores do que as
+// reais), e mercados onde vários resultados acontecem ao mesmo tempo -
+// resultado duplo, listas de marcadores. Ver o teto, mais abaixo.
+//
+// O que este crivo NÃO sabe distinguir: um mercado exclusivo completo de um
+// exclusivo a que a página cortou as saídas menos prováveis. Nesse caso a soma
+// vem baixa de mais, a margem parece menor do que é e o CLV sai otimista. Só
+// uma verificação estrutural (o nó do mercado diz quantas saídas tem) resolve
+// isso, e essa ainda não existe.
 // ------------------------------------------------------------
 
 /**
- * A banda em que a soma das probabilidades de um mercado completo pode cair.
- *
- * Abaixo do mínimo faltam seleções à página. Acima do máximo não é um mercado
- * coerente - é uma lista de nomes que por acaso tem odds.
+ * Abaixo disto faltam seleções à página: a margem daria negativa e a
+ * "correção" inventava odds mais altas do que as reais.
  */
 const OVERROUND_MIN = 1.005;
-const OVERROUND_MAX = 1.25;
+
+/**
+ * O crivo mede a margem POR SAÍDA, e não a margem total.
+ *
+ * O teto fixo de 1.25 que estava aqui fazia duas coisas ao mesmo tempo e só
+ * uma era legítima. Recusava bem os mercados NÃO EXCLUSIVOS - onde vários
+ * resultados podem sair ao mesmo tempo a soma não tende para 1, e normalizá-la
+ * para 1 é matemática errada. Mas recusava também mercados exclusivos,
+ * completos e legitimamente caros: a casa cobra mais margem no total quando há
+ * mais saídas, e o resultado exato ficava sempre de fora - 42 preços em 174
+ * numa página medida.
+ *
+ * A margem total não separa os dois casos, e não é por falta de afinação: os
+ * marcadores de um Lecce - Roma somam 1.39 em 44 saídas (ver o teste da junção
+ * dos cartões) e um resultado exato de 19 saídas soma 1.67. Nenhum teto que
+ * cresça com `n` aceita o segundo e recusa o primeiro.
+ *
+ * A margem POR SAÍDA separa-os, e com folga nos dois sentidos. Medido em duas
+ * páginas reais (2026-09-08, scripts/recon-markets.mjs, fixtures em
+ * test/server/fixtures) mais o caso dos marcadores que já estava nos testes:
+ *
+ *   ACEITE                                   n     soma    por saída
+ *   Acima/Abaixo, Ambas Marcam ........... 2      1.11-1.22   5.6% - 11.0%
+ *   1X2, handicaps, partes ............... 3      1.11-1.24   3.6% -  8.0%
+ *   Resultado correto (1.ª parte) ........ 10     1.302       3.0%
+ *   Resultado correto .................... 19     1.673       3.5%
+ *   Resultado correto .................... 28     1.495       1.8%
+ *
+ *   RECUSADO
+ *   Cartão de marcadores (metade) ........ 21     1.065       0.3%   <- piso
+ *   Marcadores, cartões juntos ........... 44     1.388       0.9%   <- piso
+ *   Resultado duplo ...................... 3      2.27-2.36  42%-45% <- teto
+ *   Marcadores de uma equipa ............. 20     2.408       7.0%   <- soma
+ *   Um dos jogadores marca ............... 66     18.840     27.0%   <- soma
+ *
+ * O piso é o que apanha as listas de marcadores: marcar não é exclusivo, e uma
+ * lista de nomes espalha a probabilidade por saídas de mais para a margem por
+ * saída fazer sentido. O teto apanha o resultado duplo, que cobre duas saídas
+ * em cada aposta. E a soma tem um limite absoluto de 2, porque um mercado onde
+ * só um resultado pode sair nunca vale duas probabilidades inteiras - é isso
+ * que apanha os marcadores de uma equipa, que passariam pelos outros dois.
+ *
+ * Um mercado recusado não perde nada: fica com a odd crua, como antes.
+ */
+const MARGEM_MIN_POR_SAIDA = 0.015;
+const MARGEM_MAX_POR_SAIDA = 0.15;
+const OVERROUND_TETO = 2;
 
 /** O menor número de seleções que ainda faz um mercado. */
 const MIN_SELECTIONS = 2;
+
+/**
+ * A soma das probabilidades é de um mercado exclusivo e completo?
+ * Exportado para os testes e para o scripts/recon-markets.mjs.
+ */
+export function somaPlausivel(overround: number, n: number): boolean {
+    if (n < MIN_SELECTIONS) return false;
+    if (overround < OVERROUND_MIN || overround > OVERROUND_TETO) return false;
+    const porSaida = (overround - 1) / n;
+    return porSaida >= MARGEM_MIN_POR_SAIDA && porSaida <= MARGEM_MAX_POR_SAIDA;
+}
 
 export interface Market {
     /** Odds de TODAS as seleções do mercado, como vieram. */
@@ -147,6 +211,11 @@ export interface Market {
  * metade tem uma soma sem sentido e uma delas chegou a cair na banda plausível
  * por acaso (6.5%, com 21 seleções). Juntas pelo id do mercado dão 588% e são
  * recusadas, que é o que deviam ser.
+ *
+ * Cobertura, nas duas páginas de 2026-09-08 (scripts/recon-markets.mjs):
+ * 85 preços em 21 mercados -> 82 aceites (eram 44), e 174 preços em 25
+ * mercados -> 80 aceites (eram 42). O que entrou de novo foi o resultado
+ * exato; o que continua de fora são os marcadores e o resultado duplo.
  *
  * O crivo da soma é o mesmo `marketFrom` que o servidor aplica ao que o agente
  * lhe manda: uma decisão, um sítio.
@@ -214,7 +283,7 @@ export function marketFrom(ids: unknown, odds: unknown): Market | null {
         limpas.push(n);
     }
     const overround = limpas.reduce((soma, o) => soma + 1 / o, 0);
-    if (overround < OVERROUND_MIN || overround > OVERROUND_MAX) return null;
+    if (!somaPlausivel(overround, limpas.length)) return null;
     return { odds: limpas, overround };
 }
 
@@ -285,9 +354,10 @@ export interface MatchSnapshot {
 /**
  * Os mercados de confianca de um jogo, com nomes e ja sem margem.
  *
- * Mesmo crivo do collectMarkets - so `mainSelections`, e so quando a soma das
- * probabilidades cai na banda plausivel. Um mercado incompleto daria margem
- * negativa e odds "justas" maiores do que as reais.
+ * Mesmo crivo do collectMarkets: agrupado pelo `betslipMarketId` e so quando a
+ * soma das probabilidades cai na banda plausivel para aquele numero de saidas.
+ * Um mercado incompleto daria margem negativa e odds "justas" maiores do que as
+ * reais.
  */
 export function readMatchSnapshot(html: string, matchId: string): MatchSnapshot | null {
     const state = parseNgState(html);

@@ -3,6 +3,7 @@
 // Segue o mesmo padrão de betsApi: fala com o servidor via authFetch e
 // traduz snake_case -> camelCase.
 
+import { apiError } from "./apiError";
 import { authFetch, parseJsonResponse } from "./authApi";
 import { BookieAccount } from "../types";
 
@@ -21,7 +22,7 @@ function mapAccountFromApi(row: ApiAccountRow): BookieAccount {
 export async function fetchAccounts(): Promise<BookieAccount[]> {
   const res = await authFetch("/api/accounts");
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao obter as contas.");
+  if (!res.ok) throw apiError(data, res, "errors.accounts.list");
   return (data.accounts as ApiAccountRow[]).map(mapAccountFromApi);
 }
 
@@ -35,7 +36,7 @@ export async function createAccount(
     body: JSON.stringify({ bookmaker, label, username: username ?? null }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao criar a conta.");
+  if (!res.ok) throw apiError(data, res, "errors.accounts.create");
   return mapAccountFromApi(data.account);
 }
 
@@ -49,12 +50,12 @@ export async function renameAccount(
     body: JSON.stringify({ label, username: username ?? null }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao renomear a conta.");
+  if (!res.ok) throw apiError(data, res, "errors.accounts.rename");
   return mapAccountFromApi(data.account);
 }
 
 export async function deleteAccount(id: string): Promise<void> {
   const res = await authFetch(`/api/accounts/${encodeURIComponent(id)}`, { method: "DELETE" });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao apagar a conta.");
+  if (!res.ok) throw apiError(data, res, "errors.accounts.delete");
 }

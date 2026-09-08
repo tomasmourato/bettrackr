@@ -6,6 +6,7 @@
 // O saldo não vem daqui: é calculado no cliente por calculateBankroll
 // (src/lib/bankroll.ts) a partir destes movimentos e das apostas.
 
+import { apiError } from "./apiError";
 import { authFetch, parseJsonResponse } from "./authApi";
 import { BankrollMovement, BankrollMovementKind } from "../types";
 
@@ -39,7 +40,7 @@ export interface BankrollMovementInput {
 export async function fetchMovements(): Promise<BankrollMovement[]> {
   const res = await authFetch("/api/bankroll");
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao obter os movimentos da banca.");
+  if (!res.ok) throw apiError(data, res, "errors.bankroll.list");
   return (data.movements as ApiMovementRow[]).map(mapMovementFromApi);
 }
 
@@ -54,7 +55,7 @@ export async function createMovement(input: BankrollMovementInput): Promise<Bank
     }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao registar o movimento.");
+  if (!res.ok) throw apiError(data, res, "errors.bankroll.create");
   return mapMovementFromApi(data.movement);
 }
 
@@ -72,12 +73,12 @@ export async function updateMovement(
     }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao editar o movimento.");
+  if (!res.ok) throw apiError(data, res, "errors.bankroll.update");
   return mapMovementFromApi(data.movement);
 }
 
 export async function deleteMovement(id: string): Promise<void> {
   const res = await authFetch(`/api/bankroll/${encodeURIComponent(id)}`, { method: "DELETE" });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao apagar o movimento.");
+  if (!res.ok) throw apiError(data, res, "errors.bankroll.delete");
 }

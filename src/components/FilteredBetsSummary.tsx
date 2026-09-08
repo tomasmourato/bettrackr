@@ -12,8 +12,6 @@ interface FilteredBetsSummaryProps {
     fixedSelectionHeight?: boolean;
 }
 
-const money = (value: number, currency: string) =>
-    `${value.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${currency}`;
 
 function FreebetAsterisk() {
     const { t } = useI18n();
@@ -86,8 +84,9 @@ export default function FilteredBetsSummary({
     footer,
     fixedSelectionHeight = false,
 }: FilteredBetsSummaryProps) {
-    const { t } = useI18n();
+    const { t, formatMoney } = useI18n();
     const summary = calculateFilteredBetsSummary(bets);
+    const money = (value: number) => formatMoney(value, currency);
     const reduceMotion = useReducedMotion();
     const compactMetrics = Boolean(footer);
     const profitClass =
@@ -101,20 +100,20 @@ export default function FilteredBetsSummary({
         <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {!freebetOnly && (
                 <span className="text-zinc-900 dark:text-zinc-100">
-                    {money(summary.settledStake, currency)}
+                    {money(summary.settledStake)}
                 </span>
             )}
             {(freebetOnly || summary.freebetStake > 0) && (
                 <span className="whitespace-nowrap text-violet-700 dark:text-violet-300">
                     {!freebetOnly && "("}
                     <FreebetAsterisk />
-                    {money(summary.freebetStake, currency)}
+                    {money(summary.freebetStake)}
                     {!freebetOnly && ")"}
                 </span>
             )}
             {summary.pendingStake > 0 && (
                 <span className="whitespace-nowrap text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
-                    (+{money(summary.pendingStake, currency)} por liquidar)
+                    {t("summary.pending", { amount: money(summary.pendingStake) })}
                 </span>
             )}
         </span>
@@ -129,13 +128,13 @@ export default function FilteredBetsSummary({
         },
         {
             label: t("summary.totalReturned"),
-            value: money(summary.totalReturn, currency),
+            value: money(summary.totalReturn),
             valueKey: String(summary.totalReturn),
             className: "text-zinc-900 dark:text-zinc-100",
         },
         {
             label: t("summary.netResult"),
-            value: `${summary.netProfit > 0 ? "+" : ""}${money(summary.netProfit, currency)}`,
+            value: `${summary.netProfit > 0 ? "+" : ""}${money(summary.netProfit)}`,
             valueKey: String(summary.netProfit),
             className: profitClass,
         },

@@ -101,6 +101,48 @@ interface LegUpdate {
 }
 
 /**
+ * A leitura aplicada a UMA perna. Sem base de dados pelo meio, para a regra
+ * poder ser testada - é a regra que impede uma odd justa velha de ficar ao
+ * lado de uma crua nova, e essa não pode partir-se em silêncio.
+ *
+ * Devolve a perna nova e se alguma coisa mexeu.
+ */
+export function aplicarNaPerna(
+    antes: Record<string, unknown>,
+    update: LegUpdate,
+): { depois: Record<string, unknown>; mexeu: boolean } {
+    const depois = { ...antes };
+    let mexeu = false;
+
+    // Reescreve-se quando difere, nao so quando falta: um jogo pode
+    // ser adiado depois de a aposta entrar, e quem sabe a horas certas
+    // e a pagina da casa. Quem decide se vale a pena e `curaDeHorario`;
+    // aqui so nao se grava o que ja la esta igual.
+    if (update.startsAtUtc && update.startsAtUtc !== antes.startsAtUtc) {
+        depois.startsAtUtc = update.startsAtUtc;
+        mexeu = true;
+    }
+
+    if (update.closingOdd !== undefined) {
+        depois.closingOdd = update.closingOdd;
+        // As tres andam juntas: a crua fica sempre, a justa e a margem
+        // so quando o mercado completo deu para confiar. Uma perna que
+        // deixe de ter mercado fiavel perde a justa em vez de ficar com
+        // uma justa velha ao lado de uma crua nova.
+        if (update.closingOddNoVig !== undefined) {
+            depois.closingOddNoVig = update.closingOddNoVig;
+            depois.closingOddMargin = update.closingOddMargin;
+        } else {
+            delete depois.closingOddNoVig;
+            delete depois.closingOddMargin;
+        }
+        mexeu = true;
+    }
+
+    return { depois, mexeu };
+}
+
+/**
  * Aplica as leituras a uma aposta, com a linha bloqueada.
  *
  * O FOR UPDATE é pela mesma razão do PATCH /api/bets/:id/closing-odd: o
@@ -128,39 +170,16 @@ async function applyToBet(
 
         for (const [index, update] of updates) {
             if (!selections[index]) continue;
-            const antes = selections[index];
-            const depois = { ...antes };
-            // Reescreve-se quando difere, nao so quando falta: um jogo pode
-            // ser adiado depois de a aposta entrar, e quem sabe a horas certas
-            // e a pagina da casa. Quem decide se vale a pena e `curaDeHorario`;
-            // aqui so nao se grava o que ja la esta igual.
-            if (update.startsAtUtc && update.startsAtUtc !== antes.startsAtUtc) {
-                depois.startsAtUtc = update.startsAtUtc;
-                mexeu = true;
+            const resultado = aplicarNaPerna(selections[index], update);
+            if (resultado.mexeu) mexeu = true;
+            if (update.closingOdd !== undefined && update.leadMinutes !== undefined) {
+                // A pior perna manda na marca de qualidade, que é o honesto.
+                piorLead =
+                    piorLead === null
+                        ? update.leadMinutes
+                        : Math.max(piorLead, update.leadMinutes);
             }
-            if (update.closingOdd !== undefined) {
-                depois.closingOdd = update.closingOdd;
-                // As tres andam juntas: a crua fica sempre, a justa e a margem
-                // so quando o mercado completo deu para confiar. Uma perna que
-                // deixe de ter mercado fiavel perde a justa em vez de ficar com
-                // uma justa velha ao lado de uma crua nova.
-                if (update.closingOddNoVig !== undefined) {
-                    depois.closingOddNoVig = update.closingOddNoVig;
-                    depois.closingOddMargin = update.closingOddMargin;
-                } else {
-                    delete depois.closingOddNoVig;
-                    delete depois.closingOddMargin;
-                }
-                mexeu = true;
-                if (update.leadMinutes !== undefined) {
-                    // A pior perna manda na marca de qualidade, que é o honesto.
-                    piorLead =
-                        piorLead === null
-                            ? update.leadMinutes
-                            : Math.max(piorLead, update.leadMinutes);
-                }
-            }
-            selections[index] = depois;
+            selections[index] = resultado.depois;
         }
 
         if (!mexeu) return false;

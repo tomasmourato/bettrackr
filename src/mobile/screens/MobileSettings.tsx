@@ -48,6 +48,8 @@ import {
   ChipGroup,
   useToast,
 } from "../ui";
+import { messageOf } from "../../lib/apiError";
+import { auditAction, auditDetails } from "../../lib/auditDisplay";
 
 interface MobileSettingsProps {
   preferences: Preferences;
@@ -175,7 +177,7 @@ export default function MobileSettings({
         setEnabledBookmakers(s.enabledBookmakers);
       })
       .catch((err) => {
-        if (alive) toast.show(err?.message || t("settings.bookmakers.loadError"), "error");
+        if (alive) toast.show(messageOf(err, t, "errors.settings.load"), "error");
       })
       .finally(() => {
         if (alive) setBookmakersLoading(false);
@@ -196,7 +198,7 @@ export default function MobileSettings({
       setEnabledBookmakers(saved.enabledBookmakers);
     } catch (err) {
       setEnabledBookmakers(previous); // reverte
-      toast.show((err as Error)?.message || t("settings.bookmakers.saveError"), "error");
+      toast.show(messageOf(err, t, "errors.settings.save"), "error");
     } finally {
       setBookmakersSaving(false);
     }
@@ -231,8 +233,8 @@ export default function MobileSettings({
     importBetsFromFile(file, accounts, onImportCSV, (movements) => {
       void onImportBankroll(movements);
     })
-      .then((message) => toast.show(message, "success"))
-      .catch((err: Error) => toast.show(err.message, "error"));
+      .then((result) => toast.show(t(result.key, result.vars), "success"))
+      .catch((err: unknown) => toast.show(messageOf(err, t), "error"));
     e.target.value = "";
   };
 
@@ -711,9 +713,9 @@ export default function MobileSettings({
               {auditLogs.map((log) => (
                 <div key={log.id} className="rounded-lg bg-zinc-100 dark:bg-zinc-800/60 px-3 py-2">
                   <p className="text-[10px] font-bold font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    {log.action}
+                    {auditAction(log, t)}
                   </p>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-0.5">{log.details}</p>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-0.5">{auditDetails(log, t)}</p>
                   <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono mt-0.5">{log.timestamp}</p>
                 </div>
               ))}

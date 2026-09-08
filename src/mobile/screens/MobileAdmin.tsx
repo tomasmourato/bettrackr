@@ -14,6 +14,7 @@ import MobileMemberProfile from "../components/MobileMemberProfile";
 import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../../lib/adminDisplay";
 import { formatPrice, useI18n } from "../../lib/i18n";
 import { BottomSheet, FilterChips, ListGroup, ListItem, MobileCard, Pressable, SectionHeader, SheetPage } from "../ui";
+import { messageOf } from "../../lib/apiError";
 
 const TONE: Record<"ok" | "warn" | "off", string> = {
   ok: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
@@ -80,7 +81,7 @@ export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isD
       const { bets } = await fetchMemberBets(user.id);
       setProfileBets(bets);
     } catch (err: any) {
-      setProfileError(err?.message || t("admin.profile.error"));
+      setProfileError(messageOf(err, t, "errors.admin.profile"));
     } finally {
       setProfileLoading(false);
     }

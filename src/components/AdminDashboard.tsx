@@ -16,6 +16,7 @@ import {
   X,
   Eye,
 } from "lucide-react";
+import { messageOf } from "../lib/apiError";
 
 import { useAdminPanel } from "../hooks/useAdminPanel";
 import type { AdminUser } from "../lib/adminApi";
@@ -80,7 +81,7 @@ export default function AdminDashboard({ onAccessChanged, viewerRole, currency, 
       const { bets } = await fetchMemberBets(user.id);
       setProfileBets(bets);
     } catch (err: any) {
-      setProfileError(err?.message || t("admin.profile.error"));
+      setProfileError(messageOf(err, t, "errors.admin.profile"));
     } finally {
       setProfileLoading(false);
     }

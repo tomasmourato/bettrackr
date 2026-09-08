@@ -7,6 +7,7 @@ import { useState } from "react";
 import { isNativeApp } from "../lib/apiBase";
 import { BillingError, goToStripe, openBillingPortal, startCheckout } from "../lib/billingApi";
 import { useI18n, type TKey } from "../lib/i18n";
+import { messageOf } from "../lib/apiError";
 
 // Códigos devolvidos pelo /api/billing (ver routes/billingRoutes.ts). O texto
 // que vem do servidor está em português; o utilizador vê a tradução do código.
@@ -39,9 +40,7 @@ export function useBillingActions() {
       const fallback = kind === "checkout" ? "billing.checkoutError" : "billing.portalError";
       // Só se usa o texto do servidor quando o código é desconhecido - e aí
       // uma frase em português é melhor do que nenhuma pista.
-      setError(
-        key ? t(key) : err instanceof BillingError && err.code ? err.message : t(fallback),
-      );
+      setError(key ? t(key) : messageOf(err, t, fallback));
       setBusy(null);
     }
   };

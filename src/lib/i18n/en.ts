@@ -176,12 +176,6 @@ export const EN: Record<TKey, Entry> = {
   "social.accepted": "You accepted {username}'s request.",
   "social.removed": "{username} removed from friends.",
   "social.table.event": "Event",
-  "social.error.load": "Could not load the social data.",
-  "social.error.send": "Could not send the request.",
-  "social.error.accept": "Could not accept the request.",
-  "social.error.removeRequest": "Could not remove the request.",
-  "social.error.removeFriend": "Could not remove the friendship.",
-  "social.error.friendBets": "Could not load the friend's bets.",
 
   // ----------------------------------------------------------------
   // Navigation / shell
@@ -448,6 +442,7 @@ export const EN: Record<TKey, Entry> = {
   // Filtered bets financial summary (FilteredBetsSummary)
   // ----------------------------------------------------------------
   "summary.aria": "Financial summary of the filtered bets",
+  "summary.pending": "(+{amount} unsettled)",
   "summary.totalStaked": "Total staked",
   "summary.totalReturned": "Total returned",
   "summary.netResult": "Net result",
@@ -618,6 +613,7 @@ export const EN: Record<TKey, Entry> = {
   "ext.nothingNew": "Nothing new to import.",
   "ext.nothingNewSkipped": "Nothing new to import ({n} already existed).",
   "ext.importFailed": "Import failed.",
+  "ext.noResponse": "The extension did not answer. Reopen your Betclic or Betano bet history.",
   "ext.beforeImport":
     "Before importing, open betclic.pt and/or the betano.pt home page. Keep the main Betano tab open during the import.",
   "ext.reinstall": "Reinstall or install on another device",
@@ -724,6 +720,16 @@ export const EN: Record<TKey, Entry> = {
   "import.error.notImageMobile": "Select image files only (PNG, JPG, WEBP).",
   "import.error.tooLargeCrop": "The image exceeds 3MB. Crop the screenshot and try again.",
   "insights.legs": "Accumulator legs",
+  "insights.userClv.market": {
+    one: "Your CLV in this market: {pct}% over 1 bet.",
+    other: "Your CLV in this market: {pct}% over {n} bets.",
+  },
+  "insights.userClv.sport": {
+    one: "Your CLV in this sport: {pct}% over 1 bet.",
+    other: "Your CLV in this sport: {pct}% over {n} bets.",
+  },
+  "insights.userClv.help":
+    "Your track record in markets like this one - the odds you took against the closing line. It is history, not a prediction about this match.",
   "insights.error.picks": "Could not load today's tips.",
   "insights.error.unexpected": "An unexpected error occurred.",
 
@@ -769,8 +775,6 @@ export const EN: Record<TKey, Entry> = {
     "Pick the bookmakers you use. Only the selected ones show up (and get imported) on the site and in the browser extension.",
   "settings.bookmakers.none":
     "No bookmaker selected, you won't be able to import bets until you pick at least one.",
-  "settings.bookmakers.loadError": "Could not load the enabled bookmakers.",
-  "settings.bookmakers.saveError": "Could not save the enabled bookmakers.",
 
   // ----------------------------------------------------------------
   // Settings: bookmaker accounts
@@ -1085,7 +1089,6 @@ export const EN: Record<TKey, Entry> = {
   "bot.empty": "The bot has not reported any run yet. Run it at home (see bot/README.md).",
   "bot.refresh": "Refresh",
   "bot.loadError": "Could not read the bot status.",
-  "bot.act.title": "Activation",
   "bot.act.subtitle": "Hand the bot a Betclic context token (valid ~2 hours). It renews itself from there on; you only come back if it stays off for more than 2 hours.",
   "bot.act.active": "Active",
   "bot.act.expired": "Token expired — re-activate",
@@ -1101,11 +1104,12 @@ export const EN: Record<TKey, Entry> = {
   "bot.act.errGeneric": "Could not activate. Try again.",
   "bot.act.errNoToken": "The extension returned no token. Open Betclic and your bet history first, then try again.",
   "bot.act.serverOff": "Activation is not configured on the server (missing BOT_CTX_KEY/JWT_SECRET). Run the bot with BETCLIC_CONTEXT_TOKEN by hand until it is.",
+  "bot.act.noAccounts": "You don't have any Betclic account yet. Create one under bookmaker accounts (Settings) and come back — you activate the bot once per account.",
   "bot.act.howTitle": "How to activate",
   "bot.act.stepDesktop1": "Install the BetTrackr extension and sign in to Betclic in the same browser.",
-  "bot.act.stepDesktop2": "Open betclic.pt and go to your bet history (that makes the extension capture the token).",
-  "bot.act.stepDesktop3": "Come back here and click “Capture token from the extension”. Repeat whenever the status shows expired.",
-  "bot.act.stepMobile1": "On your phone, sign in to Betclic and open your bet history.",
+  "bot.act.stepDesktop2": "Sign in to Betclic with the account for this card and open its bet history (that makes the extension capture that account's token).",
+  "bot.act.stepDesktop3": "Come back here and click “Capture token from the extension” on the matching card. Repeat whenever the status shows expired.",
+  "bot.act.stepMobile1": "On your phone, sign in to Betclic with the account for this card and open its bet history.",
   "bot.act.stepMobile2": "Copy the access token (the same Bearer the app uses) and paste it in the field above.",
   "bot.act.stepMobile3": "Tap “Activate”. The bot running in Termux (crontab, see bot/README.md) pulls it on its next run.",
   "admin.title": "Admin",
@@ -1147,7 +1151,6 @@ export const EN: Record<TKey, Entry> = {
   // A member's profile seen from the panel (founder only).
   "admin.profile.open": "View profile",
   "admin.profile.subtitle": "Member",
-  "admin.profile.error": "Could not open this member's profile.",
   "admin.action.promote": "Make admin",
   "admin.action.demote": "Remove admin",
   "admin.action.grant": "Grant subscription",
@@ -1183,4 +1186,115 @@ export const EN: Record<TKey, Entry> = {
   "admin.audit.action.subscription.revoke": "{admin} revoked the subscription of {user}",
   "admin.audit.action.user.delete": "{admin} deleted the account {user}",
   "admin.audit.action.unknown": "{admin}: {action} ({user})",
+
+  // ----------------------------------------------------------------
+  // Session change log (see src/lib/auditDisplay.ts)
+  // ----------------------------------------------------------------
+  "audit.action.system": "System",
+  "audit.action.betAdd": "Bet added",
+  "audit.action.betUpdate": "Bet edited",
+  "audit.action.betIgnore": "Bet ignored",
+  "audit.action.betRestore": "Bet restored",
+  "audit.action.closingOdd": "Closing odds",
+  "audit.action.betDelete": "Bet deleted",
+  "audit.action.betDuplicate": "Bets duplicated",
+  "audit.action.preferences": "Preferences",
+  "audit.action.clearData": "Data cleared",
+  "audit.action.resetData": "Data reset",
+  "audit.action.import": "Import",
+  "audit.action.unknown": "{action}",
+
+  "audit.session.start": "Session started.",
+  "audit.bet.add": "Bet on \"{event}\" recorded with a {stake} stake.",
+  "audit.bet.update": "Bet #{id} edited and recalculated (profit: {profit}).",
+  "audit.bet.ignore": "Bet #{id} ignored (excluded from the stats).",
+  "audit.bet.restore": "Bet #{id} back in the stats.",
+  "audit.bet.closingOdd": "Bet #{id}: closing odds {odd}.",
+  "audit.bet.closingOddRemoved": "Bet #{id}: closing odds removed.",
+  "audit.bet.delete": "Bet on \"{event}\" deleted.",
+  "audit.bet.duplicate": {
+    one: "{n} bet duplicated.",
+    other: "{n} bets duplicated.",
+  },
+  "audit.preferences": "General app preferences updated.",
+  "audit.data.clear": "Data removed from the database.",
+  "audit.data.reset": "Original demo data restored.",
+  "audit.bankroll.import": {
+    one: "{n} bankroll movement imported from the backup.",
+    other: "{n} bankroll movements imported from the backup.",
+  },
+  "audit.import.empty": "No bet slip imported (empty list).",
+  "audit.import.allExisting": "No new bet slip imported (they all existed already).",
+  "audit.import.synced": {
+    one: "Synced {n} new bet slip from the file import.",
+    other: "Synced {n} new bet slips from the file import.",
+  },
+
+  // ----------------------------------------------------------------
+  // File import (see src/lib/dataTransfer.ts)
+  // ----------------------------------------------------------------
+  "transfer.backupImported": "Backup imported successfully!",
+  "transfer.backupWithBankroll": {
+    one: "Backup imported successfully (bets and 1 bankroll movement)!",
+    other: "Backup imported successfully (bets and {n} bankroll movements)!",
+  },
+  "transfer.betsImported": "Bets imported successfully!",
+  "transfer.betsImportedCount": {
+    one: "1 bet imported successfully!",
+    other: "{n} bets imported successfully!",
+  },
+
+  // ----------------------------------------------------------------
+  // API errors (see src/lib/apiError.ts)
+  // ----------------------------------------------------------------
+  "errors.generic": "Something went wrong.",
+  "errors.session": "Your session has expired. Please sign in again.",
+
+  "errors.auth.register": "Could not create the account.",
+  "errors.auth.login": "Could not sign you in.",
+  "errors.auth.me": "Could not load your account details.",
+  "errors.auth.password": "Could not change the password.",
+
+  "errors.bets.list": "Could not load your bets.",
+  "errors.bets.create": "Could not create the bet.",
+  "errors.bets.import": "Could not import the bets.",
+  "errors.bets.update": "Could not update the bet.",
+  "errors.bets.ignore": "Could not ignore the bet.",
+  "errors.bets.closingOdd": "Could not save the closing odds.",
+  "errors.bets.delete": "Could not delete the bet.",
+  "errors.bets.deleteAll": "Could not delete the bets.",
+
+  "errors.social.search": "Could not search for users.",
+  "errors.social.friends": "Could not load your friends.",
+  "errors.social.requests": "Could not load the requests.",
+  "errors.social.send": "Could not send the request.",
+  "errors.social.accept": "Could not accept the request.",
+  "errors.social.removeRequest": "Could not remove the request.",
+  "errors.social.removeFriend": "Could not remove the friend.",
+  "errors.social.friendBets": "Could not load your friend's bets.",
+
+  "errors.bankroll.list": "Could not load the bankroll movements.",
+  "errors.bankroll.create": "Could not record the movement.",
+  "errors.bankroll.update": "Could not edit the movement.",
+  "errors.bankroll.delete": "Could not delete the movement.",
+
+  "errors.accounts.list": "Could not load the accounts.",
+  "errors.accounts.create": "Could not create the account.",
+  "errors.accounts.rename": "Could not rename the account.",
+  "errors.accounts.delete": "Could not delete the account.",
+
+  "errors.settings.load": "Could not load the settings.",
+  "errors.settings.save": "Could not save the settings.",
+
+  "errors.admin.request": "Could not reach the server.",
+  "errors.admin.profile": "Could not open this member's profile.",
+
+  "errors.billing.status": "Could not load the subscription status.",
+  "errors.billing.request": "Could not reach the payment service.",
+
+  "errors.transfer.readFile": "Could not read the file. Check that it is a valid file.",
+  "errors.transfer.format": "Invalid file format.",
+  "errors.transfer.emptyCsv": "The CSV file is empty.",
+  "errors.transfer.csvColumns": "Invalid CSV format. The required columns DATE, GAME, STAKE, ODDS are missing.",
+  "errors.transfer.noRows": "No valid bet rows were found.",
 };

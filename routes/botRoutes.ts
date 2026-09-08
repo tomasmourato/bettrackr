@@ -5,14 +5,20 @@
 // privada (ver db/migrations/021_bot_runs.sql):
 //
 //   POST   /api/bot/heartbeat       -> o bot reporta uma passagem
-//   GET    /api/bot/status          -> o painel lê as passagens + estado de ativação
-//   POST   /api/bot/context-token   -> o admin ativa: entrega um token de contexto (cifrado)
-//   GET    /api/bot/context-token   -> o bot no telemóvel puxa o token no arranque frio
-//   DELETE /api/bot/context-token   -> o admin desativa
+//   GET    /api/bot/status          -> o painel lê as passagens + ativações por conta
+//   POST   /api/bot/context-token   -> ativa UMA conta: entrega um token de contexto (cifrado)
+//   GET    /api/bot/context-token   -> o bot no telemóvel puxa as ativações no arranque frio
+//   DELETE /api/bot/context-token   -> desativa UMA conta
 //
-// A identidade vem sempre do JWT (req.user.id), nunca do corpo: cada admin só
-// vê e escreve o seu próprio estado. O único segredo que aqui passa é o token de
-// contexto da Betclic (curto, do próprio admin) - e esse é guardado CIFRADO
+// ÂMBITO DE CONTA (migração 024): há donos com 2+ contas na Betclic, por isso a
+// ativação é por (user_id, account_id) - account_id é uma bookie_account de
+// bookmaker Betclic. O bot processa todas as ativações do dono, uma por conta, e
+// etiqueta as apostas com esse account_id.
+//
+// A identidade vem sempre do JWT (req.user.id), nunca do corpo: cada dono só vê
+// e escreve o seu próprio estado, e uma conta só se aceita depois de confirmada
+// como dele (ownsBetclicAccount). O único segredo que aqui passa é o token de
+// contexto da Betclic (curto, do próprio dono) - e esse é guardado CIFRADO
 // (lib/botCrypto.ts), nunca em claro. A chave da passkey nunca toca no servidor.
 
 import { Router } from "express";
@@ -54,6 +60,20 @@ function decodeJwtExpMs(token: string): number | null {
 function isExpired(expiresAt: string | Date | null): boolean {
   if (!expiresAt) return false;
   return new Date(expiresAt).getTime() <= Date.now();
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// A conta é do próprio dono E de bookmaker Betclic? A ativação tem de estar
+// ancorada a uma bookie_account real dele - senão o bot etiquetaria as apostas
+// numa conta que não é sua. (Espelha o validateAccountOwnership de betsRoutes,
+// duplicado de propósito para não acoplar as rotas.) Betclic case-insensitive.
+async function ownsBetclicAccount(userId: string, accountId: string): Promise<boolean> {
+  const r = await pool.query(
+    "SELECT 1 FROM bookie_accounts WHERE id = $1 AND user_id = $2 AND LOWER(bookmaker) = 'betclic'",
+    [accountId, userId],
+  );
+  return r.rows.length > 0;
 }
 
 // ------------------------------------------------------------
@@ -115,26 +135,37 @@ router.get("/status", async (req: AuthenticatedRequest, res) => {
          FROM bot_runs WHERE user_id = $1 AND started_at > NOW() - INTERVAL '30 days'`,
       [req.user!.id],
     );
-    // Estado de ativação (sem decifrar o token - só metadados para o painel).
+    // Ativações POR CONTA (sem decifrar o token - só metadados para o painel).
+    // Join a bookie_accounts para o painel mostrar o nome da conta. Só as que
+    // têm conta associada (a linha legada de account_id NULL não aparece).
     const act = await pool.query(
-      `SELECT expires_at, source, updated_at FROM bot_context_tokens WHERE user_id = $1`,
+      `SELECT t.account_id, t.expires_at, t.source, t.updated_at, a.label, a.username
+         FROM bot_context_tokens t
+         JOIN bookie_accounts a ON a.id = t.account_id
+        WHERE t.user_id = $1
+        ORDER BY a.label ASC`,
       [req.user!.id],
     );
-    const arow = act.rows[0];
-    const expired = arow ? isExpired(arow.expires_at) : false;
+    const activations = act.rows.map((row) => {
+      const expired = isExpired(row.expires_at);
+      return {
+        accountId: row.account_id,
+        label: row.label,
+        username: row.username ?? null,
+        active: !expired,
+        expired,
+        expiresAt: row.expires_at ?? null,
+        source: row.source ?? null,
+        updatedAt: row.updated_at ?? null,
+      };
+    });
     res.json({
       runs: runs.rows,
       lastSuccess: lastOk.rows[0] ?? null,
       importedTotal30d: totals.rows[0].imported_total,
       failures30d: totals.rows[0].failures_30d,
-      activation: {
-        configured: activationConfigured(),
-        active: !!arow && !expired,
-        expired,
-        expiresAt: arow?.expires_at ?? null,
-        source: arow?.source ?? null,
-        updatedAt: arow?.updated_at ?? null,
-      },
+      configured: activationConfigured(),
+      activations,
     });
   } catch (err) {
     console.error("Erro ao ler o estado do bot:", err);
@@ -143,9 +174,9 @@ router.get("/status", async (req: AuthenticatedRequest, res) => {
 });
 
 // ------------------------------------------------------------
-// POST /context-token - o admin ativa o bot: entrega um token de contexto da
-// Betclic (o Bearer que a página usa contra a begmedia). Guardado CIFRADO.
-// Corpo: { token, source?: "manual" | "extension" }
+// POST /context-token - ativa UMA conta Betclic: entrega um token de contexto
+// (o Bearer que a página usa contra a begmedia). Guardado CIFRADO, por conta.
+// Corpo: { token, accountId, source?: "manual" | "extension" }
 // ------------------------------------------------------------
 router.post("/context-token", async (req: AuthenticatedRequest, res) => {
   if (!activationConfigured()) {
@@ -154,8 +185,17 @@ router.post("/context-token", async (req: AuthenticatedRequest, res) => {
   }
   const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
   const source = req.body?.source === "extension" ? "extension" : "manual";
+  const accountId = typeof req.body?.accountId === "string" ? req.body.accountId.trim() : "";
   if (!token) {
     res.status(400).json({ error: "Token em falta." });
+    return;
+  }
+  if (!accountId || !UUID_RE.test(accountId)) {
+    res.status(400).json({ error: "Falta a conta (accountId) a que esta ativação pertence." });
+    return;
+  }
+  if (!(await ownsBetclicAccount(req.user!.id, accountId))) {
+    res.status(400).json({ error: "Conta Betclic inválida ou inexistente." });
     return;
   }
   const expMs = decodeJwtExpMs(token);
@@ -170,16 +210,16 @@ router.post("/context-token", async (req: AuthenticatedRequest, res) => {
   try {
     const enc = encryptToken(token);
     await pool.query(
-      `INSERT INTO bot_context_tokens (user_id, token_enc, source, expires_at, updated_at)
-         VALUES ($1, $2, $3, $4, TIMEZONE('utc', NOW()))
-       ON CONFLICT (user_id) DO UPDATE
+      `INSERT INTO bot_context_tokens (user_id, account_id, token_enc, source, expires_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, TIMEZONE('utc', NOW()))
+       ON CONFLICT (user_id, account_id) DO UPDATE
          SET token_enc = EXCLUDED.token_enc,
              source = EXCLUDED.source,
              expires_at = EXCLUDED.expires_at,
              updated_at = TIMEZONE('utc', NOW())`,
-      [req.user!.id, enc, source, new Date(expMs).toISOString()],
+      [req.user!.id, accountId, enc, source, new Date(expMs).toISOString()],
     );
-    res.status(201).json({ success: true, expiresAt: new Date(expMs).toISOString(), source });
+    res.status(201).json({ success: true, accountId, expiresAt: new Date(expMs).toISOString(), source });
   } catch (err) {
     console.error("Erro ao guardar o token de ativação do bot:", err);
     res.status(500).json({ error: "Erro ao guardar a ativação." });
@@ -187,9 +227,10 @@ router.post("/context-token", async (req: AuthenticatedRequest, res) => {
 });
 
 // ------------------------------------------------------------
-// GET /context-token - o bot (no telemóvel do admin) puxa o token no arranque
-// frio, autenticado com o JWT do BetTrackr do próprio admin. 404 se não houver,
-// 410 se expirou (o bot trata os dois como "sem token").
+// GET /context-token - o bot (no telemóvel do dono) puxa as ativações no
+// arranque frio, autenticado com o JWT do BetTrackr do próprio dono. Devolve
+// um ARRAY de ativações não expiradas (uma por conta) para o bot iterar. Uma
+// lista vazia é resposta válida (o bot fica sem nada por que arrancar).
 // ------------------------------------------------------------
 router.get("/context-token", async (req: AuthenticatedRequest, res) => {
   if (!activationConfigured()) {
@@ -198,38 +239,45 @@ router.get("/context-token", async (req: AuthenticatedRequest, res) => {
   }
   try {
     const r = await pool.query(
-      `SELECT token_enc, expires_at, source FROM bot_context_tokens WHERE user_id = $1`,
+      `SELECT account_id, token_enc, expires_at, source
+         FROM bot_context_tokens
+        WHERE user_id = $1 AND account_id IS NOT NULL`,
       [req.user!.id],
     );
-    const row = r.rows[0];
-    if (!row) {
-      res.status(404).json({ error: "Sem token de ativação. Ativa o bot no painel /bot." });
-      return;
+    const activations: Array<{ accountId: string; token: string; expiresAt: string | null; source: string }> = [];
+    for (const row of r.rows) {
+      if (isExpired(row.expires_at)) continue; // não servir tokens mortos
+      let token: string;
+      try {
+        token = decryptToken(row.token_enc);
+      } catch {
+        continue; // chave do servidor mudou: ignora esta, não parte a resposta toda
+      }
+      activations.push({ accountId: row.account_id, token, expiresAt: row.expires_at ?? null, source: row.source });
     }
-    if (isExpired(row.expires_at)) {
-      res.status(410).json({ error: "Token de ativação expirado. Reativa o bot no painel /bot." });
-      return;
-    }
-    let token: string;
-    try {
-      token = decryptToken(row.token_enc);
-    } catch {
-      res.status(500).json({ error: "Não foi possível decifrar o token (a chave do servidor mudou?)." });
-      return;
-    }
-    res.json({ token, expiresAt: row.expires_at, source: row.source });
+    res.json({ activations });
   } catch (err) {
-    console.error("Erro ao ler o token de ativação do bot:", err);
+    console.error("Erro ao ler os tokens de ativação do bot:", err);
     res.status(500).json({ error: "Erro ao ler a ativação." });
   }
 });
 
 // ------------------------------------------------------------
-// DELETE /context-token - o admin desativa (apaga o token guardado).
+// DELETE /context-token - desativa UMA conta (apaga o token guardado dessa
+// conta). O accountId vem no query (?accountId=) - usado pelo painel ao
+// desativar e pelo bot ao consumir uma ativação após um re-enrolment.
 // ------------------------------------------------------------
 router.delete("/context-token", async (req: AuthenticatedRequest, res) => {
+  const accountId = typeof req.query.accountId === "string" ? req.query.accountId.trim() : "";
+  if (!accountId || !UUID_RE.test(accountId)) {
+    res.status(400).json({ error: "Falta a conta (accountId) a desativar." });
+    return;
+  }
   try {
-    await pool.query("DELETE FROM bot_context_tokens WHERE user_id = $1", [req.user!.id]);
+    await pool.query(
+      "DELETE FROM bot_context_tokens WHERE user_id = $1 AND account_id = $2",
+      [req.user!.id, accountId],
+    );
     res.json({ success: true });
   } catch (err) {
     console.error("Erro ao apagar o token de ativação do bot:", err);

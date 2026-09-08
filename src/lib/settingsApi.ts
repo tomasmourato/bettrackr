@@ -8,6 +8,7 @@
 //
 // O PUT do servidor é parcial: cada função envia só o campo que muda.
 
+import { apiError } from "./apiError";
 import { authFetch, parseJsonResponse } from "./authApi";
 import type { Language } from "../types";
 
@@ -45,7 +46,7 @@ function normalizeSettings(data: any): UserSettings {
 export async function fetchSettings(): Promise<UserSettings> {
   const res = await authFetch("/api/settings");
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao obter as definições.");
+  if (!res.ok) throw apiError(data, res, "errors.settings.load");
   return normalizeSettings(data);
 }
 
@@ -55,7 +56,7 @@ export async function updateEnabledBookmakers(enabledBookmakers: string[]): Prom
     body: JSON.stringify({ enabledBookmakers }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao guardar as definições.");
+  if (!res.ok) throw apiError(data, res, "errors.settings.save");
   return normalizeSettings(data);
 }
 
@@ -65,6 +66,6 @@ export async function updateLanguage(language: Language): Promise<UserSettings> 
     body: JSON.stringify({ language }),
   });
   const data = await parseJsonResponse(res);
-  if (!res.ok) throw new Error(data.error || "Erro ao guardar as definições.");
+  if (!res.ok) throw apiError(data, res, "errors.settings.save");
   return normalizeSettings(data);
 }
