@@ -28,6 +28,20 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Notificações push (Firebase Cloud Messaging; src/lib/push.ts). O ícone
+             pequeno tem de ser só silhueta: o ícone da app aparecia como um
+             quadrado branco na barra de estado. O canal por omissão é o que a
+             app cria (bot_alerts). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_bettrackr" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="bot_alerts" />
     </application>
 
     <!-- Permissions -->
@@ -36,5 +50,8 @@
 
     <!-- Importador por fotografia (@capacitor/camera): tirar foto e escolher da galeria. -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Android 13+: sem esta permissão (pedida em src/lib/push.ts) os alertas push não aparecem. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

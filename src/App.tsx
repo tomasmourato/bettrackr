@@ -6,10 +6,11 @@ import { INITIAL_BETS, safeNum } from "./utils";
 
 import type { DashboardBetsFilters } from "./components/Dashboard";
 import type { AppTab, ShellProps } from "./navigation";
-import { canSeeAdmin, canSeeBot, TAB_PATHS, tabFromPath } from "./navigation";
+import { canSeeAdmin, canSeeBot, NOTIFICATIONS_VIEW_SEARCH, TAB_PATHS, tabFromPath } from "./navigation";
 import { serializeFilters } from "./lib/filterParams";
 import AuthPage from "./components/AuthPage";
 import { isAuthenticated, logout, getStoredUser, restoreBrowserSession } from "./lib/authApi";
+import { forgetPushDevice } from "./lib/push";
 import { usePreferences, DEFAULT_PREFERENCES } from "./hooks/usePreferences";
 import { useTheme } from "./hooks/useTheme";
 import { useAuditLog } from "./hooks/useAuditLog";
@@ -19,6 +20,7 @@ import { useBankroll } from "./hooks/useBankroll";
 import { calculateBankroll } from "./lib/bankroll";
 import { useLanguageSync } from "./hooks/useLanguageSync";
 import { useSubscription } from "./hooks/useSubscription";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import { I18nProvider, translate, type TFn } from "./lib/i18n";
 import { updateLanguage } from "./lib/settingsApi";
 import { useMobileUI } from "./lib/platform";
@@ -188,6 +190,22 @@ export default function App({ initialData }: AppProps) {
   const bankrollBalance = useMemo(
     () => calculateBankroll(bankrollMovements, bets).balance,
     [bankrollMovements, bets],
+  );
+
+  // Push da app Android, só para quem tem o bot - é quem recebe alertas. Fica
+  // aqui em cima pela mesma razão do saldo. Tocar num alerta abre-o: a página de
+  // notificações vive na Gestão; quem não a vê (o botuser) vai para o painel do
+  // bot, que mostra o mesmo aviso no topo.
+  usePushNotifications(
+    authed && canSeeBot(subscription?.role),
+    { name: t("notif.channel.name"), description: t("notif.channel.description") },
+    () => {
+      const tab: AppTab = canSeeAdmin(subscription?.role) ? "ADMIN" : "BOT";
+      const search = tab === "ADMIN" ? NOTIFICATIONS_VIEW_SEARCH : "";
+      window.history.pushState({ tab }, "", `${TAB_PATHS[tab]}${search}`);
+      setActiveTab(tab);
+      setLocationSearch(search);
+    },
   );
 
   const [isOnline, setIsOnline] = useState(() =>
@@ -432,6 +450,9 @@ export default function App({ initialData }: AppProps) {
   // Logout: termina a sessão e volta a mostrar o ecrã de login
   const handleLogout = () => {
     setIsAccountOpen(false);
+    // Antes do logout: o pedido para o servidor esquecer este telemóvel (e não
+    // lhe mandar mais os alertas desta conta) vai autenticado com a sessão.
+    forgetPushDevice();
     logout();
     setCurrentUser(null);
     setAuthed(false);

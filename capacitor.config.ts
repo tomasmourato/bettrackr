@@ -56,6 +56,12 @@ const config: CapacitorConfig = {
     Keyboard: {
       resize: "body" as any,
     },
+    // Notificações push (src/lib/push.ts). Com a app aberta, o Android só mostra
+    // o alerta se "alert" estiver aqui - sem isto chegava calado e só a página
+    // de notificações se atualizava.
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
     // Splash com a marca em vez do flash de fundo; escondido pela app após o
     // primeiro paint (src/mobile/lib/useNativeChrome.ts).
     // O splash esconde-se sozinho ao fim de launchShowDuration. É uma rede de

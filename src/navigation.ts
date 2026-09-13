@@ -125,6 +125,29 @@ export function navItemsFor(role: UserRole | undefined): NavItem[] {
   return items;
 }
 
+/**
+ * A página de notificações vive DENTRO da Gestão, no URL
+ * /admin?view=notifications - é lá que o push de "bot parado" abre. Pelo URL e
+ * não por estado do ecrã, para o voltar atrás e um link direto funcionarem.
+ */
+export const NOTIFICATIONS_VIEW_SEARCH = "?view=notifications";
+
+export function isNotificationsView(search: string | undefined): boolean {
+  return new URLSearchParams(search ?? "").get("view") === "notifications";
+}
+
+/**
+ * Abre ou fecha a página de notificações. O popstate é o mesmo canal que o
+ * back/forward usa: o App.tsx relê o URL e passa o search novo aos shells.
+ */
+export function setNotificationsView(open: boolean): void {
+  const target = `${TAB_PATHS.ADMIN}${open ? NOTIFICATIONS_VIEW_SEARCH : ""}`;
+  if (`${window.location.pathname}${window.location.search}` !== target) {
+    window.history.pushState({ tab: "ADMIN" }, "", target);
+  }
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export type StoredUser = ReturnType<typeof getStoredUser>;
 
 // Contrato partilhado: tudo o que um shell precisa de renderizar a app. O

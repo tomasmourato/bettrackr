@@ -33,6 +33,22 @@ jobs:
       - name: Sincronizar assets para o projeto Android
         run: npx cap sync android
 
+      # As notificações push (Firebase Cloud Messaging) precisam do
+      # google-services.json do projeto Firebase. Não vive no repositório: vem
+      # do segredo GOOGLE_SERVICES_JSON (Settings -> Secrets -> Actions), com o
+      # conteúdo do ficheiro tal e qual. Sem o segredo o APK compila na mesma,
+      # só não recebe pushes.
+      - name: Configuração do Firebase (push)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "google-services.json escrito."
+          else
+            echo "::warning::Sem o segredo GOOGLE_SERVICES_JSON - o APK não vai receber notificações push."
+          fi
+
       # O bit de execução perde-se em commits feitos no Windows.
       - name: Compilar APK (debug)
         run: |

@@ -18,6 +18,7 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import billingRoutes, { stripeWebhook } from "./routes/billingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import botRoutes from "./routes/botRoutes.js";
+import notificationsRoutes from "./routes/notificationsRoutes.js";
 import pool from "./db/pool.js";
 import {
   authenticateToken,
@@ -139,6 +140,7 @@ app.get("/api/health", async (_req, res) => {
     GEMINI_API_KEY: Boolean(process.env.GEMINI_API_KEY),
     STRIPE_SECRET_KEY: Boolean(process.env.STRIPE_SECRET_KEY),
     STRIPE_WEBHOOK_SECRET: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+    FCM_SERVICE_ACCOUNT: Boolean(process.env.FCM_SERVICE_ACCOUNT),
   };
 
   let database: { ok: boolean; error?: string } = { ok: false };
@@ -175,6 +177,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/bot", botRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 let aiClient: GoogleGenAI | null = null;
 function getAiClient(): GoogleGenAI {

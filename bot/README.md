@@ -194,6 +194,47 @@ E a entrada no `crontab -e` (Termux):
 */30 * * * * ~/bettrackr/bot/run.sh
 ```
 
+#### Quando o bot deixa de importar: `termux/religar-bot.sh`
+
+Copia [termux/religar-bot.sh](termux/religar-bot.sh) para o telemovel e corre-o no
+Termux:
+
+```bash
+bash religar-bot.sh
+```
+
+Segura o wake lock (o Android deixa de adormecer o Termux), garante o `crond` e a
+linha do bot no crontab (le a que ja la esta), instala um arranque para o
+Termux:Boot e corre uma passagem logo, com diagnostico. Quando o problema nao e o
+telemovel, diz o que falta:
+
+- `sem token de contexto valido` - a sessao da Betclic expirou (o bot esteve mais
+  de ~2h sem conseguir entrar). Reativa cada conta no painel /bot e volta a correr
+  o script.
+- `Sessao BetTrackr expirada (401)` - o `BETTRACKR_TOKEN` do `bot.env` ja nao serve.
+- `fetch failed` - sem rede.
+
+Caso real (11/09/2026): o telemovel adormeceu ~1h30 (Doze), a sessao da Betclic
+caducou, e o bot continuou a correr de 30 em 30 minutos a falhar sem recuperar. O
+cron estava vivo; faltava o wake lock e reativar as contas.
+
+Para levar o script ao telemovel: `git pull` se o repositorio estiver clonado no
+Termux, ou manda o ficheiro para as Transferencias e
+`cp ~/storage/downloads/religar-bot.sh ~/` (precisa de `termux-setup-storage` uma vez).
+
+#### Alerta quando o bot para
+
+O servidor avisa quando nao ha nenhuma passagem COM SUCESSO ha mais de 1 hora - nao
+so quando o bot deixa de correr: no caso acima ele continuava a correr, a falhar. O
+aviso aparece na pagina de notificacoes da Gestao (`/admin?view=notifications`) e no
+topo do painel /bot, e chega como push a app Android. Uma passagem com sucesso
+fecha-o sozinha.
+
+Pecas: `lib/botWatch.ts` (o vigia), `GET /api/bot/watch` chamado de 10 em 10 min pelo
+pg_cron do Supabase (`db/cron/bot-watch.sql`, aplicado a mao), a migracao
+`db/migrations/025_notificacoes.sql` (tambem a mao), e `FCM_SERVICE_ACCOUNT` na
+Vercel + `google-services.json` no APK para o push (`lib/push.ts`, `src/lib/push.ts`).
+
 **Alternativa (Raspberry Pi / PC sempre ligado):** o daemon continuo, com a
 unidade systemd em [betclic-bot.service](betclic-bot.service) (intervalo default
 1800s = 30 min). Os segredos vao no mesmo tipo de ficheiro de ambiente.

@@ -28,6 +28,7 @@ const MobileBot = lazy(() => import("./screens/MobileBot"));
 function MobileShell(props: ShellProps) {
   const {
     activeTab,
+    locationSearch,
     navigateToTab,
     navigateToFilteredBets,
     currentUser,
@@ -224,6 +225,8 @@ function MobileShell(props: ShellProps) {
                     viewerRole={subscription?.role}
                     currency={preferences.currency}
                     isDark={isDark}
+                    locationSearch={locationSearch}
+                    onOpenBot={() => navigateToTab("BOT")}
                   />
                 )}
                 {activeTab === "BOT" && <MobileBot />}

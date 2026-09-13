@@ -9,6 +9,7 @@
 //   POST   /api/bot/context-token   -> ativa UMA conta: entrega um token de contexto (cifrado)
 //   GET    /api/bot/context-token   -> o bot no telemóvel puxa as ativações no arranque frio
 //   DELETE /api/bot/context-token   -> desativa UMA conta
+//   GET    /api/bot/watch           -> o vigia do "bot parado" (pg_cron, Bearer CRON_SECRET)
 //
 // ÂMBITO DE CONTA (migração 024): há donos com 2+ contas na Betclic, por isso a
 // ativação é por (user_id, account_id) - account_id é uma bookie_account de
@@ -26,9 +27,38 @@ import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
 import { requireBotAccess } from "../middleware/accessMiddleware.js";
 import { activationConfigured, encryptToken, decryptToken } from "../lib/botCrypto.js";
+import { resolveBotAlert, runBotWatch } from "../lib/botWatch.js";
 import { signToken } from "./authRoutes.js";
 
 const router = Router();
+
+// ------------------------------------------------------------
+// GET /watch - o vigia (lib/botWatch.ts): abre um alerta, com push, a quem está
+// sem passagens com sucesso há mais de 1 hora. Chamado de 10 em 10 minutos pelo
+// pg_cron do Supabase (db/cron/bot-watch.sql). Fica ANTES do authenticateToken:
+// não há utilizador neste pedido, a autenticação é o segredo partilhado.
+// ------------------------------------------------------------
+router.get("/watch", async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  // Fail closed: sem segredo configurado, ninguém dispara o vigia.
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    res.status(401).json({ error: "Não autorizado." });
+    return;
+  }
+  try {
+    const summary = await runBotWatch();
+    console.info("[bot-watch] passagem:", JSON.stringify(summary));
+    res.json({ ok: true, ...summary });
+  } catch (error: any) {
+    console.error("[bot-watch] falhou:", error);
+    // A tabela das notificações vem da migração 025, aplicada à mão.
+    const semTabela = error?.code === "42P01";
+    res.status(semTabela ? 503 : 500).json({
+      ok: false,
+      error: semTabela ? "Falta aplicar a migração db/migrations/025_notificacoes.sql." : error?.message,
+    });
+  }
+});
 
 router.use(authenticateToken);
 router.use(requireBotAccess);
@@ -107,6 +137,9 @@ router.post("/heartbeat", async (req: AuthenticatedRequest, res) => {
       "DELETE FROM bot_runs WHERE user_id = $1 AND started_at < NOW() - INTERVAL '30 days'",
       [req.user!.id],
     );
+    // Uma passagem com sucesso fecha o alerta de "bot parado" que houver em
+    // aberto (lib/botWatch.ts). Nunca atira: sem a migração 025 segue na mesma.
+    if (b.ok) await resolveBotAlert(req.user!.id);
     res.status(201).json({ success: true, run: result.rows[0] });
   } catch (err) {
     console.error("Erro ao gravar heartbeat do bot:", err);

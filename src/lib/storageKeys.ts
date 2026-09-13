@@ -17,6 +17,9 @@ export const STORAGE_KEYS = {
   // Conveniência por-visor: quais os cartões de conta escondidos no painel /bot.
   // Só afeta a apresentação neste dispositivo; nunca vai para o servidor.
   botHiddenAccounts: `${NEW_PREFIX}bot_hidden_accounts`,
+  // O token FCM deste telemóvel, para o servidor o esquecer quando se sai da
+  // conta - senão o telemóvel continuava a receber os alertas de quem saiu.
+  pushToken: `${NEW_PREFIX}push_token`,
 } as const;
 
 /** Nome antigo correspondente a uma chave nova. */

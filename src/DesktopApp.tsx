@@ -287,6 +287,8 @@ export default function DesktopApp({
                     viewerRole={subscription?.role}
                     currency={preferences.currency}
                     isDark={isDark}
+                    locationSearch={locationSearch}
+                    onOpenBot={() => navigateToTab("BOT")}
                   />
                 )}
                 {activeTab === "BOT" && <BotPanel mode="desktop" />}

@@ -109,6 +109,13 @@ const MIGRATED = [
   "src/mobile/AccountSheet.tsx",
   "src/mobile/components/MobileMemberProfile.tsx",
   "src/hooks/useChangePassword.ts",
+
+  // Notificações (bot parado + push da app Android) - nascidos já traduzidos
+  "src/components/NotificationsPanel.tsx",
+  "src/hooks/useNotifications.ts",
+  "src/hooks/usePushNotifications.ts",
+  "src/lib/notificationsApi.ts",
+  "src/lib/push.ts",
 ];
 
 // Palavras inequivocamente portuguesas que não levam acento (as acentuadas são

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cor de destaque das notificações push: o esmeralda da marca (emerald-500). -->
+    <color name="notification_accent">#10B981</color>
+</resources>

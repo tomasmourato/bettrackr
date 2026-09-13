@@ -5,12 +5,15 @@
 // ações em vez de mostrar seis botões numa linha.
 
 import { useState } from "react";
-import { Eye, Gift, Hourglass, Loader2, RefreshCw, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { Bell, Eye, Gift, Hourglass, Loader2, RefreshCw, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 
 import { useAdminPanel } from "../../hooks/useAdminPanel";
+import { useNotifications } from "../../hooks/useNotifications";
 import { fetchMemberBets, type AdminUser } from "../../lib/adminApi";
 import type { Bet } from "../../types";
 import MobileMemberProfile from "../components/MobileMemberProfile";
+import NotificationsPanel from "../../components/NotificationsPanel";
+import { isNotificationsView, setNotificationsView } from "../../navigation";
 import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../../lib/adminDisplay";
 import { formatPrice, useI18n } from "../../lib/i18n";
 import { BottomSheet, FilterChips, ListGroup, ListItem, MobileCard, Pressable, SectionHeader, SheetPage } from "../ui";
@@ -49,11 +52,24 @@ interface MobileAdminProps {
   viewerRole: "user" | "admin" | "founder" | "botuser" | undefined;
   currency: string;
   isDark: boolean;
+  /** Query string atual: `?view=notifications` abre a página de notificações. */
+  locationSearch?: string;
+  /** O alerta de bot parado leva ao painel do bot, onde se resolve. */
+  onOpenBot?: () => void;
 }
 
-export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isDark }: MobileAdminProps) {
+export default function MobileAdmin({
+  onAccessChanged,
+  viewerRole,
+  currency,
+  isDark,
+  locationSearch,
+  onOpenBot,
+}: MobileAdminProps) {
   const { t, lang, formatNumber, formatDate } = useI18n();
   const panel = useAdminPanel(onAccessChanged);
+  // A página de notificações e o contador do sino leem a mesma lista.
+  const notifications = useNotifications();
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [months, setMonths] = useState("1");
@@ -117,15 +133,33 @@ export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isD
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("admin.subtitle")}</p>
         </div>
-        <Pressable
-          as="button"
-          onClick={() => void panel.reload()}
-          disabled={panel.loading}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400"
-          aria-label={t("admin.retry")}
-        >
-          <RefreshCw size={16} className={panel.loading ? "animate-spin" : ""} />
-        </Pressable>
+        <div className="flex items-center">
+          <Pressable
+            as="button"
+            onClick={() => setNotificationsView(true)}
+            className="relative w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400"
+            aria-label={t("notif.title")}
+          >
+            <Bell size={16} />
+            {notifications.unread > 0 && (
+              <span className="absolute top-1 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-amber-500 text-white text-[9px] font-bold font-mono flex items-center justify-center">
+                {notifications.unread}
+              </span>
+            )}
+          </Pressable>
+          <Pressable
+            as="button"
+            onClick={() => {
+              void panel.reload();
+              void notifications.reload();
+            }}
+            disabled={panel.loading}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400"
+            aria-label={t("admin.retry")}
+          >
+            <RefreshCw size={16} className={panel.loading ? "animate-spin" : ""} />
+          </Pressable>
+        </div>
       </div>
 
       {panel.error && (
@@ -406,6 +440,15 @@ export default function MobileAdmin({ onAccessChanged, viewerRole, currency, isD
             />
           )
         )}
+      </SheetPage>
+
+      {/* Notificações - a mesma página do desktop, numa folha inteira. */}
+      <SheetPage
+        open={isNotificationsView(locationSearch)}
+        onClose={() => setNotificationsView(false)}
+        title={t("notif.title")}
+      >
+        <NotificationsPanel mode="mobile" state={notifications} onOpenBot={onOpenBot} />
       </SheetPage>
 
     </div>

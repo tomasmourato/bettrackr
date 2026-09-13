@@ -41,6 +41,8 @@ import { fetchAccounts } from "../lib/accountsApi";
 import { STORAGE_KEYS } from "../lib/storageKeys";
 import type { BookieAccount } from "../types";
 import { requestBetclicToken } from "../hooks/useBetclicExtension";
+import { useNotifications } from "../hooks/useNotifications";
+import { BotAlertBanner, openBotAlert } from "./NotificationsPanel";
 import { useI18n } from "../lib/i18n";
 import { messageOf } from "../lib/apiError";
 
@@ -386,6 +388,11 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const [hidden, setHidden] = useState<Set<string>>(() => loadHiddenAccounts());
   const [showHidden, setShowHidden] = useState(false);
   const [showAllRuns, setShowAllRuns] = useState(false);
+  // O alerta de "bot parado" (lib/botWatch.ts) aparece no topo: é neste painel
+  // que se resolve, reativando as contas. Sem a migração 025 a lista não carrega
+  // e o aviso simplesmente não aparece.
+  const notifications = useNotifications();
+  const botAlert = openBotAlert(notifications.items);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -434,11 +441,21 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
             <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("bot.subtitle")}</p>
           </div>
         </div>
-        <button type="button" onClick={() => void load()} className={GHOST_BUTTON} disabled={loading}>
+        <button
+          type="button"
+          onClick={() => {
+            void load();
+            void notifications.reload();
+          }}
+          className={GHOST_BUTTON}
+          disabled={loading}
+        >
           {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {t("bot.refresh")}
         </button>
       </div>
+
+      {botAlert && <BotAlertBanner notification={botAlert} />}
 
       {error && (
         <div className={`${CARD} px-4 py-3 text-sm text-red-600 dark:text-red-400`}>{error}</div>

@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import {
+  Bell,
   Gift,
   Hourglass,
   Loader2,
@@ -19,10 +20,13 @@ import {
 import { messageOf } from "../lib/apiError";
 
 import { useAdminPanel } from "../hooks/useAdminPanel";
+import { useNotifications } from "../hooks/useNotifications";
 import type { AdminUser } from "../lib/adminApi";
 import { ACCESS_KEY, accessTone, auditLine, FILTERS, isProtected } from "../lib/adminDisplay";
 import { fetchMemberBets } from "../lib/adminApi";
 import MemberProfile from "./MemberProfile";
+import NotificationsPanel from "./NotificationsPanel";
+import { isNotificationsView, setNotificationsView } from "../navigation";
 import type { Bet } from "../types";
 import { formatPrice, useI18n } from "../lib/i18n";
 
@@ -54,11 +58,24 @@ interface AdminDashboardProps {
   viewerRole: "user" | "admin" | "founder" | "botuser" | undefined;
   currency: string;
   isDark: boolean;
+  /** Query string atual: `?view=notifications` abre a página de notificações. */
+  locationSearch?: string;
+  /** O alerta de bot parado leva ao painel do bot, onde se resolve. */
+  onOpenBot?: () => void;
 }
 
-export default function AdminDashboard({ onAccessChanged, viewerRole, currency, isDark }: AdminDashboardProps) {
+export default function AdminDashboard({
+  onAccessChanged,
+  viewerRole,
+  currency,
+  isDark,
+  locationSearch,
+  onOpenBot,
+}: AdminDashboardProps) {
   const { t, lang, formatNumber, formatDate } = useI18n();
   const panel = useAdminPanel(onAccessChanged);
+  // A página de notificações e o contador do sino leem a mesma lista.
+  const notifications = useNotifications();
   const [granting, setGranting] = useState<AdminUser | null>(null);
   const [trialing, setTrialing] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
@@ -109,6 +126,20 @@ export default function AdminDashboard({ onAccessChanged, viewerRole, currency, 
     );
   }
 
+  // ====================================================
+  // VISTA: notificações (/admin?view=notifications)
+  // ====================================================
+  if (isNotificationsView(locationSearch)) {
+    return (
+      <NotificationsPanel
+        mode="desktop"
+        state={notifications}
+        onBack={() => setNotificationsView(false)}
+        onOpenBot={onOpenBot}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5" id="admin-tab">
       <div className="flex items-end justify-between gap-3 flex-wrap">
@@ -118,9 +149,26 @@ export default function AdminDashboard({ onAccessChanged, viewerRole, currency, 
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{t("admin.subtitle")}</p>
         </div>
-        <button onClick={() => void panel.reload()} disabled={panel.loading} className={`${GHOST_BUTTON} text-xs`}>
-          <RefreshCw size={13} className={panel.loading ? "animate-spin" : ""} /> {t("admin.retry")}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setNotificationsView(true)} className={`${GHOST_BUTTON} text-xs`}>
+            <Bell size={13} /> {t("notif.title")}
+            {notifications.unread > 0 && (
+              <span className="min-w-[1.25rem] px-1 rounded-sm bg-amber-500 text-white text-[10px] font-bold font-mono text-center">
+                {notifications.unread}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              void panel.reload();
+              void notifications.reload();
+            }}
+            disabled={panel.loading}
+            className={`${GHOST_BUTTON} text-xs`}
+          >
+            <RefreshCw size={13} className={panel.loading ? "animate-spin" : ""} /> {t("admin.retry")}
+          </button>
+        </div>
       </div>
 
       {panel.error && (
