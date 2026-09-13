@@ -21,11 +21,21 @@ export const PUSH_RECEIVED_EVENT = "bettrackr:push-received";
 
 export type PushPermission = "granted" | "denied" | "prompt" | "unavailable";
 
-/** O plugin, só quando este APK o traz. */
+/**
+ * O plugin, só quando este APK o traz.
+ *
+ * A pergunta faz-se ao @capacitor/core, importado aqui, e NÃO ao window.Capacitor:
+ * o core não vem no bundle principal, e até ser carregado o window.Capacitor é o
+ * da ponte nativa, cujo isPluginAvailable só conhece os plugins já importados -
+ * respondia sempre que não. Foi assim que o APK 1.0.4 nunca pediu licença nem
+ * registou o telemóvel (13/09/2026). O do core consulta os PluginHeaders que o
+ * Android injeta, por isso num APK sem o plugin nativo continua a dizer que não.
+ */
 async function loadPlugin() {
   if (!isNativeApp()) return null;
   try {
-    if (!(window as any).Capacitor?.isPluginAvailable?.("PushNotifications")) return null;
+    const { Capacitor } = await import("@capacitor/core");
+    if (!Capacitor.isPluginAvailable("PushNotifications")) return null;
     const { PushNotifications } = await import("@capacitor/push-notifications");
     return PushNotifications;
   } catch {
