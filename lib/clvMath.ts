@@ -13,6 +13,9 @@
 // src/lib/clv.ts, que é onde se lê a matemática toda de uma vez.
 
 export interface ClvSelection {
+    event?: unknown;
+    choice?: unknown;
+    sourceRef?: unknown;
     odd?: unknown;
     originalOdd?: unknown;
     closingOdd?: unknown;
@@ -184,4 +187,54 @@ export function needsClosingOdd(bet: ClvBet, now: Date = new Date()): boolean {
     // a da aposta e por isso pode chegar aqui antes de o jogo sequer começar.
     const start = toTimestamp(kickoffOf(bet) ?? bet.dateTime);
     return start > 0 && start <= now.getTime();
+}
+
+/** Texto reduzido ao que identifica: sem maiúsculas nem espaços a mais. */
+function normaliza(value: unknown): string {
+    return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * O que identifica UMA perna. O id da seleção na casa quando o há - é o que a
+ * Betclic manda, e não muda com o texto; o texto quando não, com o dia do
+ * apito, para o mesmo "Benfica - Porto" de outra época não passar por cópia.
+ */
+function legIdentity(selection: ClvSelection): string {
+    const ref = selection?.sourceRef as { matchId?: unknown; selectionId?: unknown } | undefined;
+    const selectionId = ref?.selectionId == null ? "" : String(ref.selectionId);
+    if (selectionId !== "") return `id:${String(ref?.matchId ?? "")}:${selectionId}`;
+
+    const dia = typeof selection?.startsAt === "string" ? selection.startsAt.slice(0, 10) : "";
+    return `txt:${normaliza(selection?.event)}|${normaliza(selection?.market)}|${normaliza(selection?.choice)}|${dia}`;
+}
+
+/**
+ * A chave que junta as CÓPIAS de uma mesma medição do CLV: a mesma escolha
+ * apostada mais de uma vez - tipicamente em duas contas da mesma casa - à mesma
+ * odd e com o mesmo fecho. null quando a aposta não tem CLV (não há nada a
+ * juntar) ou não traz pernas por onde se reconhecer.
+ *
+ * Porque se junta: o CLV mede a DECISÃO, e decidir uma vez e carregar em
+ * "apostar" em duas contas é uma decisão só. Contada duas vezes, pesava a dobrar
+ * na média e na taxa de bater a linha. Caso real de 11/09/2026: Sevilha -
+ * Valência, "Acima de 2,5" @2.05 com fecho 1.92, na "My Account" e na
+ * "Matilde's Account".
+ *
+ * Porque só se juntam medições IGUAIS: a mesma seleção apanhada a preços
+ * diferentes são duas decisões, cada uma com o seu CLV. A casa entra na chave
+ * porque cada casa tem a sua linha de fecho.
+ *
+ * O que fazer com o dinheiro não é a chave que decide. O painel e o retrato da
+ * IA contam a medição UMA vez nas percentagens e nas contagens, e SOMAM as
+ * stakes de todas as cópias no CLV em dinheiro - esse foi mesmo posto duas vezes.
+ */
+export function clvDuplicateKey(bet: ClvBet): string | null {
+    const odd = oddForClv(bet);
+    const close = validOdd(bet.closingOdd);
+    if (odd === null || close === null) return null;
+
+    const legs = (bet.selections || []).map(legIdentity).sort();
+    if (legs.length === 0) return null;
+
+    return [normaliza(bet.bookmaker), odd.toFixed(2), close.toFixed(3), ...legs].join("\n");
 }

@@ -24,8 +24,16 @@ function bet(over: Partial<Bet> = {}): Bet {
   } as Bet;
 }
 
-/** N apostas iguais, para chegar à amostra mínima sem repetir código. */
-const varias = (n: number, over: Partial<Bet> = {}) => Array.from({ length: n }, () => bet(over));
+/**
+ * N apostas, para chegar à amostra mínima sem repetir código. Cada uma num jogo
+ * seu: N cópias da MESMA aposta são, para o CLV, uma medição só (ver
+ * clvDuplicateKey), e o retrato não chegava à amostra.
+ */
+const varias = (n: number, over: Partial<Bet> = {}) =>
+  Array.from({ length: n }, (_, i) => {
+    const b = bet(over);
+    return { ...b, selections: b.selections.map((s) => ({ ...s, event: `${s.event} #${i + 1}` })) };
+  });
 
 describe("marketFamily", () => {
   test("as linhas de Acima/Abaixo caem todas na mesma família", () => {
@@ -149,6 +157,28 @@ describe("buildClvProfile", () => {
     expect(retrato.bets).toBe(5);
     // Sem dinheiro real não há volume sobre o qual ponderar.
     expect(retrato.weightedClvPct).toBeNull();
+  });
+
+  test("a mesma aposta em duas contas pesa uma vez, como no painel", () => {
+    // Uma decisão só não pode dizer à IA mais do que diz ao painel. O peso (a
+    // stake) conta as duas: o dinheiro foi posto nas duas contas.
+    const repetida = bet({ odd: 1.5, closingOdd: 1.6, stake: 10, accountId: "minha" });
+    const bets = [
+      ...varias(5, { odd: 2, closingOdd: 1.8 }),
+      repetida,
+      { ...repetida, id: "copia", accountId: "matilde" },
+    ];
+
+    const retrato = buildClvProfile(bets)!;
+    const painel = calculateClv(bets);
+
+    expect(retrato.bets).toBe(6);
+    expect(retrato.bets).toBe(painel.ratedBets);
+    expect(retrato.avgClvPct).toBe(painel.avgClvPct);
+    expect(retrato.beatCloseRate).toBe(painel.beatCloseRate);
+    // 5 x 10€ a +11.11% e 20€ a -6.25%: (555.5 - 125) / 70 = +6.15%
+    expect(retrato.weightedClvPct!).toBeCloseTo(6.15, 1);
+    expect(retrato.weightedClvPct!).toBeCloseTo(painel.weightedClvPct!, 1);
   });
 });
 

@@ -67,6 +67,13 @@
 //    aproximadamente a margem da casa (tipicamente 2 a 5 pontos percentuais).
 //    Por isso o que interessa é a tendência e a comparação entre casas, não o
 //    zero absoluto. A UI diz isto ao utilizador (chave i18n "clv.help").
+//
+//  * A MESMA aposta feita em mais de uma conta - a mesma escolha, à mesma odd e
+//    com o mesmo fecho - conta UMA vez nas médias, na taxa de bater a linha e
+//    nas contagens: é uma decisão só, e o CLV mede decisões. Mas o dinheiro foi
+//    posto em todas as contas, por isso o CLV em dinheiro (e a média ponderada
+//    pela stake) soma as stakes de todas as cópias. A cobertura continua a
+//    contar apostas. Ver clvDuplicateKey em lib/clvMath.ts.
 
 import { Bet } from "../types";
 import { combineClosingOdds } from "../../lib/clvClosingOdds";
@@ -77,6 +84,7 @@ import {
   betClv,
   betClvAtTakenPrice,
   betClvNoVig,
+  clvDuplicateKey,
   isClvEligible,
   isPromoBet,
   needsClosingOdd,
@@ -200,7 +208,17 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
   }
   const events: ClvEvent[] = [];
 
-  const byBookmaker = new Map<string, { bets: number; sumPct: number; money: number }>();
+  interface BookmakerAcc {
+    bets: number;
+    sumPct: number;
+    money: number;
+  }
+  const byBookmaker = new Map<string, BookmakerAcc>();
+
+  // As medições já contadas (ver clvDuplicateKey), com o ponto da série e a
+  // linha da casa da primeira cópia: as seguintes só lhes somam o dinheiro.
+  // As promocionais têm a sua própria conta, por isso a chave leva o grupo.
+  const counted = new Map<string, { event?: ClvEvent; row?: BookmakerAcc }>();
 
   for (const bet of bets) {
     if (!isClvEligible(bet)) continue;
@@ -212,7 +230,18 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
       continue;
     }
 
+    // A cobertura conta APOSTAS, cópias incluídas: é sobre dados preenchidos,
+    // e cada cópia tem a sua odd de fecho para preencher.
     trackedBets++;
+
+    const promo = isPromoBet(bet);
+    const duplicateKey = clvDuplicateKey(bet);
+    const countKey = duplicateKey === null ? null : `${promo ? "promo" : "rated"}\n${duplicateKey}`;
+    // A mesma medição apostada em mais de uma conta conta UMA vez em tudo o
+    // que é percentagem e contagem, e soma no dinheiro, que foi posto em todas.
+    const first = countKey === null ? undefined : counted.get(countKey);
+    const isCopy = first !== undefined;
+    if (countKey !== null && !first) counted.set(countKey, {});
 
     // Promocional: conta-se à parte e não entra em mais nada. Uma aposta
     // turbinada é boa aposta POR CAUSA do boost - o CLV dela, positivo ou
@@ -222,32 +251,38 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
     // E conta-se pelo preço que a casa deu, não pelo original: esta linha
     // responde a "quanto valeram as promoções". O CLV da escolha, medido pelo
     // preço original, está no detalhe da aposta.
-    if (isPromoBet(bet)) {
+    if (promo) {
       const aoPrecoDaCasa = betClvAtTakenPrice(bet);
       if (aoPrecoDaCasa) {
-        promoBets++;
-        promoSumClvPct += aoPrecoDaCasa.clvPct;
+        if (!isCopy) {
+          promoBets++;
+          promoSumClvPct += aoPrecoDaCasa.clvPct;
+        }
         promoMoneyClv += aoPrecoDaCasa.moneyClv;
       }
       continue;
     }
 
-    ratedBets++;
-    sumClvPct += clv.clvPct;
-    if (clv.beatClose) beatCount++;
+    if (!isCopy) {
+      ratedBets++;
+      sumClvPct += clv.clvPct;
+      if (clv.beatClose) beatCount++;
+    }
 
     const semVig = betClvNoVig(bet);
     if (semVig) {
-      noVigBets++;
-      noVigSumClvPct += semVig.clvPct;
-      if (!bet.isFreebet) noVigMoneyClv += semVig.moneyClv;
-      for (const selection of bet.selections || []) {
-        const margem = selection?.closingOddMargin;
-        if (typeof margem === "number" && Number.isFinite(margem)) {
-          marginSum += margem;
-          marginCount++;
+      if (!isCopy) {
+        noVigBets++;
+        noVigSumClvPct += semVig.clvPct;
+        for (const selection of bet.selections || []) {
+          const margem = selection?.closingOddMargin;
+          if (typeof margem === "number" && Number.isFinite(margem)) {
+            marginSum += margem;
+            marginCount++;
+          }
         }
       }
+      if (!bet.isFreebet) noVigMoneyClv += semVig.moneyClv;
     }
 
     // Só o dinheiro real entra no CLV em euros - e, para a média ponderada
@@ -257,12 +292,26 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
       clvStake += safeNum(bet.stake);
     }
 
-    events.push({
-      ts: toTimestamp(bet.dateTime),
+    const ts = toTimestamp(bet.dateTime);
+    if (first?.event && first.row) {
+      // Um ponto por medição, com o dinheiro de todas as cópias, no dia da
+      // primeira que foi feita.
+      first.event.moneyClv += clv.moneyClv;
+      if (ts < first.event.ts) {
+        first.event.ts = ts;
+        first.event.at = dayOf(bet.dateTime);
+      }
+      first.row.money += clv.moneyClv;
+      continue;
+    }
+
+    const event: ClvEvent = {
+      ts,
       at: dayOf(bet.dateTime),
       moneyClv: clv.moneyClv,
       clvPct: clv.clvPct,
-    });
+    };
+    events.push(event);
 
     const name = bet.bookmaker || "";
     const row = byBookmaker.get(name) ?? { bets: 0, sumPct: 0, money: 0 };
@@ -270,6 +319,8 @@ export function calculateClv(bets: Bet[], now: Date = new Date()): ClvSummary {
     row.sumPct += clv.clvPct;
     row.money += clv.moneyClv;
     byBookmaker.set(name, row);
+
+    if (countKey !== null) counted.set(countKey, { event, row });
   }
 
   // Uma passagem única sobre os eventos por ordem cronológica constrói a série.

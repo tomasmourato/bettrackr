@@ -660,3 +660,134 @@ describe("odd original (antes do boost)", () => {
     expect(betClvNoVig(b)!.clvPct).toBe(-7.2);
   });
 });
+
+// ------------------------------------------------------------
+// A mesma aposta em várias contas
+//
+// O caso real de 11/09/2026: Sevilha - Valência, "Acima de 2,5" @2.05 com
+// fecho 1.92, na "My Account" e na "Matilde's Account". É UMA decisão: não pode
+// pesar a dobrar na média nem na taxa de bater a linha. Mas o dinheiro foi posto
+// nas duas contas, por isso o CLV em dinheiro soma as duas stakes.
+// ------------------------------------------------------------
+
+function sevilha(over: Partial<Bet> = {}, leg: Partial<Bet["selections"][number]> = {}): Bet {
+  return bet({
+    bookmaker: "Betclic",
+    status: "PERDIDA",
+    stake: 5,
+    odd: 2.05,
+    closingOdd: 1.92,
+    dateTime: "2026-02-11 11:52",
+    selections: [
+      {
+        id: "s",
+        event: "Sevilha - Valência",
+        market: "Total de golos - acima/abaixo",
+        choice: "Acima de 2,5",
+        odd: 2.05,
+        closingOdd: 1.92,
+        startsAt: "2026-02-11 20:00",
+        sourceRef: { matchId: "1211917145247750", marketId: "1211918770528285", selectionId: "1211918771560585" },
+        ...leg,
+      },
+    ],
+    ...over,
+  });
+}
+
+describe("a mesma aposta em várias contas", () => {
+  const outra = () => bet({ odd: 1.9, closingOdd: 2, stake: 10, dateTime: "2026-02-12 18:00" }); // -5%
+
+  test("conta uma vez na média, na taxa de bater a linha e nas apostas medidas", () => {
+    const soNuma = calculateClv([sevilha({ accountId: "minha" }), outra()], NOW);
+    const nasDuas = calculateClv(
+      [sevilha({ accountId: "minha" }), sevilha({ accountId: "matilde", dateTime: "2026-02-11 11:38" }), outra()],
+      NOW,
+    );
+    expect(nasDuas.ratedBets).toBe(2);
+    expect(nasDuas.avgClvPct).toBe(soNuma.avgClvPct);
+    expect(nasDuas.beatCloseRate).toBe(50);
+  });
+
+  test("o CLV em dinheiro soma as stakes das duas contas", () => {
+    const r = calculateClv([sevilha({ accountId: "minha" }), sevilha({ accountId: "matilde" })], NOW);
+    // 5 x (2.05 / 1.92 - 1) = +0.34 em cada conta
+    expect(r.moneyClv).toBe(0.68);
+    expect(r.clvStake).toBe(10);
+    expect(r.avgClvPct).toBe(6.77);
+    expect(r.weightedClvPct).toBe(6.8);
+  });
+
+  test("a cobertura continua a contar apostas", () => {
+    // Cada cópia tem a sua odd de fecho para preencher.
+    const r = calculateClv([sevilha({ accountId: "minha" }), sevilha({ accountId: "matilde" })], NOW);
+    expect(r.trackedBets).toBe(2);
+    expect(r.eligibleBets).toBe(2);
+    expect(r.coveragePct).toBe(100);
+  });
+
+  test("um ponto só na série e uma aposta só na linha da casa", () => {
+    const r = calculateClv(
+      [sevilha({ accountId: "minha" }), sevilha({ accountId: "matilde", dateTime: "2026-02-10 23:00" })],
+      NOW,
+    );
+    expect(r.series).toHaveLength(1);
+    expect(r.series[0].at).toBe("2026-02-10"); // o dia da primeira que se fez
+    expect(r.series[0].cumulative).toBe(0.68);
+    expect(r.byBookmaker).toEqual([{ bookmaker: "Betclic", bets: 1, avgClvPct: 6.77, moneyClv: 0.68 }]);
+  });
+
+  test("a mesma seleção a outra odd é outra decisão", () => {
+    const r = calculateClv([sevilha(), sevilha({ odd: 2 }, { odd: 2 })], NOW);
+    expect(r.ratedBets).toBe(2);
+  });
+
+  test("a múltipla que leva a mesma perna é outra aposta", () => {
+    const multipla = bet({
+      type: "MULTIPLA",
+      bookmaker: "Betclic",
+      odd: 3.1,
+      closingOdd: 2.9,
+      selections: [
+        sevilha().selections[0],
+        { id: "t", event: "Irene Burillo Escorihuela - Elizara Yaneva", market: "Vencedor do encontro", choice: "Elizara Yaneva", odd: 1.51, closingOdd: 1.51 },
+      ],
+    });
+    expect(calculateClv([sevilha(), multipla], NOW).ratedBets).toBe(2);
+  });
+
+  test("em casas diferentes não se juntam: cada casa tem a sua linha", () => {
+    expect(calculateClv([sevilha(), sevilha({ bookmaker: "Betano" })], NOW).ratedBets).toBe(2);
+  });
+
+  test("sem ids da casa, reconhece a cópia pelo texto", () => {
+    // Apostas à mão ou de CSV não trazem sourceRef. Maiúsculas e espaços a mais
+    // não fazem de uma cópia outra aposta.
+    const semIds = (over: Partial<Bet> = {}, leg: Partial<Bet["selections"][number]> = {}) =>
+      sevilha(over, { sourceRef: undefined, ...leg });
+    const r = calculateClv(
+      [semIds(), semIds({ accountId: "matilde" }, { event: "sevilha  -  valência", choice: "ACIMA DE 2,5" })],
+      NOW,
+    );
+    expect(r.ratedBets).toBe(1);
+
+    // O mesmo jogo noutro dia (outra época) já não é cópia.
+    expect(calculateClv([semIds(), semIds({}, { startsAt: "2027-02-11 20:00" })], NOW).ratedBets).toBe(2);
+  });
+
+  test("uma freebet numa das contas não conta a dobrar e vale zero euros", () => {
+    const r = calculateClv([sevilha({ accountId: "minha" }), sevilha({ accountId: "matilde", isFreebet: true })], NOW);
+    expect(r.ratedBets).toBe(1);
+    expect(r.moneyClv).toBe(0.34);
+    expect(r.clvStake).toBe(5);
+  });
+
+  test("uma promocional repetida também conta uma vez na sua linha", () => {
+    const boost = (over: Partial<Bet> = {}) => sevilha({ odd: 3, ...over }, { odd: 3, market: "Boost (10€ máx.)" });
+    const r = calculateClv([boost({ accountId: "minha" }), boost({ accountId: "matilde" })], NOW);
+    expect(r.promoBets).toBe(1);
+    // 3 / 1.92 - 1 = +56.25%; 5 x 0.5625 = 2.81 em cada conta
+    expect(r.promoAvgClvPct).toBe(56.25);
+    expect(r.promoMoneyClv).toBe(5.62);
+  });
+});

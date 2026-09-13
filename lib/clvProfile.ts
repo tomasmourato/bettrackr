@@ -14,6 +14,7 @@
 
 import {
     betClv,
+    clvDuplicateKey,
     isClvEligible,
     isPromoBet,
     round2,
@@ -162,21 +163,31 @@ export function buildClvProfile(bets: ClvBet[], amostraMinima = AMOSTRA_MINIMA):
     const porFamilia = new Map<string, Acumulador>();
     const porDesporto = new Map<string, Acumulador>();
     const porCasa = new Map<string, Acumulador>();
+    const contadas = new Set<string>();
 
     for (const bet of bets) {
         if (!isClvEligible(bet) || isPromoBet(bet)) continue;
         const clv = betClv(bet);
         if (!clv) continue;
 
-        medidas++;
-        sumPct += clv.clvPct;
-        if (clv.beatClose) beat++;
-
+        // O peso soma a stake de todas as cópias: o dinheiro foi posto em todas.
         if (!bet.isFreebet) {
             const stake = safeNum(bet.stake);
             stakeTotal += stake;
             sumPctPorStake += clv.clvPct * stake;
         }
+
+        // A mesma medição apostada em mais de uma conta é uma decisão só: conta
+        // uma vez nas médias e nas linhas, a mesma regra do painel.
+        const chave = clvDuplicateKey(bet);
+        if (chave !== null) {
+            if (contadas.has(chave)) continue;
+            contadas.add(chave);
+        }
+
+        medidas++;
+        sumPct += clv.clvPct;
+        if (clv.beatClose) beat++;
 
         for (const family of familiesOf(bet)) acumula(porFamilia, family, clv.clvPct, clv.beatClose);
         acumula(porDesporto, sportOf(bet), clv.clvPct, clv.beatClose);
