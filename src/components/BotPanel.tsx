@@ -6,12 +6,13 @@
 //     cola-se à mão. O token vai cifrado para o servidor (routes/botRoutes.ts)
 //     e o bot no telemóvel puxa-o no arranque frio (bot/src/index.ts).
 //  2. ESTADO - só MOSTRA o que o bot local reporta (última passagem, importadas,
-//     falhas). Não controla o bot; o bot corre em casa (bot/README.md).
+//     falhas). Não controla o bot; o bot corre em casa (bot/README.md). Ao staff
+//     mostra também as passagens do agente de CLV (agent/clv-agent.ts).
 //
 // Partilhado pelas duas shells: a desktop passa mode="desktop", a mobile
 // mode="mobile" (src/mobile/screens/MobileBot.tsx).
 
-import { useEffect, useState, useCallback } from "react";
+import { Fragment, useEffect, useState, useCallback, type ReactNode } from "react";
 import {
   Loader2,
   RefreshCw,
@@ -34,6 +35,7 @@ import {
   deactivateBot,
   type BotStatus,
   type BotRun,
+  type ClvAgentRun,
   type BotAccountActivation,
   type BotActivationSource,
 } from "../lib/botApi";
@@ -98,24 +100,50 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RunRow({ run }: { run: BotRun }) {
+// Duração curta para o resumo; data + hora completas e milissegundos para o
+// detalhe (o resumo mostra só a data + hora curta).
+function useRunFormat() {
+  const { formatDate } = useI18n();
+  return {
+    seconds: (ms: number | null) => (ms != null ? `${(ms / 1000).toFixed(1)}s` : "—"),
+    exactMs: (ms: number | null) => (ms != null ? `${ms} ms` : "—"),
+    stamp: (v: string) =>
+      formatDate(v, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+  };
+}
+
+// O cartão de UMA passagem, do bot ou do agente de CLV: quem o usa dá o resumo,
+// as falhas e os detalhes; o aspeto (estado, data, erro, «Detalhes») é um só.
+function RunCard({
+  ok,
+  startedAt,
+  tag,
+  summary,
+  failures,
+  error,
+  details,
+}: {
+  ok: boolean;
+  startedAt: string;
+  tag?: string;
+  summary: string;
+  failures?: string | null;
+  error: string | null;
+  details: Array<[label: string, value: string]>;
+}) {
   const { t, formatDate, formatTime } = useI18n();
   const [open, setOpen] = useState(false);
-  const seconds = run.duration_ms != null ? `${(run.duration_ms / 1000).toFixed(1)}s` : "—";
-  // Data + hora completas para o detalhe (o resumo mostra só a data + hora curta).
-  const stamp = (v: string) =>
-    formatDate(v, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
   return (
     <div className={`${CARD} px-4 py-3 flex items-start gap-3`}>
       <div className="mt-0.5 shrink-0">
-        {run.ok ? (
+        {ok ? (
           <CheckCircle2 size={16} className="text-emerald-500" />
         ) : (
           <XCircle size={16} className="text-red-500" />
@@ -124,18 +152,28 @@ function RunRow({ run }: { run: BotRun }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {run.ok ? t("bot.ok") : t("bot.failed")}
+            {ok ? t("bot.ok") : t("bot.failed")}
           </span>
+          {tag && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-sm px-1.5 py-px">
+              {tag}
+            </span>
+          )}
           <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">
-            {formatDate(run.started_at)} {formatTime(run.started_at)}
+            {formatDate(startedAt)} {formatTime(startedAt)}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
-          {run.read_count} {t("bot.read")} · {run.imported} {t("bot.imported")} · {t("bot.duration")} {seconds}
-        </p>
-        {run.error && (
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400 break-words font-mono">{run.error}</p>
+        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">{summary}</p>
+        {/* As falhas de uma passagem que correu na mesma (ex.: jogos recusados
+            pela Betclic). Podem ser muitas: duas linhas fechado, tudo aberto. */}
+        {failures && (
+          <p
+            className={`mt-1 text-xs text-amber-600 dark:text-amber-400 break-words font-mono ${open ? "" : "line-clamp-2"}`}
+          >
+            {failures}
+          </p>
         )}
+        {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400 break-words font-mono">{error}</p>}
 
         <button
           type="button"
@@ -149,18 +187,70 @@ function RunRow({ run }: { run: BotRun }) {
 
         {open && (
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
-            <DetailRow label={t("bot.runStarted")} value={stamp(run.started_at)} />
-            <DetailRow
-              label={t("bot.runDurationExact")}
-              value={run.duration_ms != null ? `${run.duration_ms} ms` : "—"}
-            />
-            <DetailRow label={t("bot.runReadImported")} value={`${run.read_count} / ${run.imported}`} />
-            <DetailRow label={t("bot.runRegistered")} value={stamp(run.created_at)} />
-            <DetailRow label={t("bot.runId")} value={run.id.slice(0, 8)} />
+            {details.map(([label, value]) => (
+              <DetailRow key={label} label={label} value={value} />
+            ))}
           </dl>
         )}
       </div>
     </div>
+  );
+}
+
+function RunRow({ run }: { run: BotRun }) {
+  const { t } = useI18n();
+  const { seconds, exactMs, stamp } = useRunFormat();
+  return (
+    <RunCard
+      ok={run.ok}
+      startedAt={run.started_at}
+      summary={`${run.read_count} ${t("bot.read")} · ${run.imported} ${t("bot.imported")} · ${t("bot.duration")} ${seconds(run.duration_ms)}`}
+      error={run.error}
+      details={[
+        [t("bot.runStarted"), stamp(run.started_at)],
+        [t("bot.runDurationExact"), exactMs(run.duration_ms)],
+        [t("bot.runReadImported"), `${run.read_count} / ${run.imported}`],
+        [t("bot.runRegistered"), stamp(run.created_at)],
+        [t("bot.runId"), run.id.slice(0, 8)],
+      ]}
+    />
+  );
+}
+
+// Uma passagem do agente de CLV. A de 5 em 5 minutos (odd de fecho) e a de
+// madrugada (odds do dia) contam coisas diferentes, por isso o resumo muda. Uma
+// captura sem jogos na janela é o caso normal: diz só quantas apostas esperam.
+function ClvRunRow({ run }: { run: ClvAgentRun }) {
+  const { t } = useI18n();
+  const { seconds, exactMs, stamp } = useRunFormat();
+  const daily = run.kind === "daily";
+  const counts = daily
+    ? `${run.matches} ${t("bot.clv.found")} · ${run.read_count} ${t("bot.clv.withMarket")} · ${run.written} ${t("bot.clv.saved")}`
+    : run.ok && run.matches === 0
+      ? t("bot.clv.nothingToRead", { n: run.candidates ?? 0 })
+      : `${run.matches} ${t("bot.clv.matches")} · ${run.read_count} ${t("bot.clv.read")} · ${run.written} ${t("bot.clv.written")}`;
+
+  const details: Array<[string, string]> = [
+    [t("bot.runStarted"), stamp(run.started_at)],
+    [t("bot.runDurationExact"), exactMs(run.duration_ms)],
+  ];
+  if (!daily) details.push([t("bot.clv.pending"), run.candidates != null ? String(run.candidates) : "—"]);
+  details.push(
+    [daily ? t("bot.clv.dailyCounts") : t("bot.clv.captureCounts"), `${run.matches} / ${run.read_count} / ${run.written}`],
+    [t("bot.runRegistered"), stamp(run.created_at)],
+    [t("bot.runId"), run.id.slice(0, 8)],
+  );
+
+  return (
+    <RunCard
+      ok={run.ok}
+      startedAt={run.started_at}
+      tag={daily ? t("bot.clv.daily") : undefined}
+      summary={`${counts} · ${t("bot.duration")} ${seconds(run.duration_ms)}`}
+      failures={run.failures}
+      error={run.error}
+      details={details}
+    />
   );
 }
 
@@ -379,6 +469,57 @@ function isBetclic(account: BookieAccount): boolean {
 // Quantas passagens mostrar antes do «Ver mais».
 const INITIAL_RUNS = 5;
 
+// Uma lista de passagens com «Ver mais» - a do bot e a do agente de CLV.
+function RunList<T extends { id: string }>({
+  title,
+  runs,
+  empty,
+  emptyWarning = false,
+  renderRun,
+}: {
+  title: string;
+  runs: T[];
+  empty: string;
+  emptyWarning?: boolean;
+  renderRun: (run: T) => ReactNode;
+}) {
+  const { t } = useI18n();
+  const [showAll, setShowAll] = useState(false);
+  return (
+    <div className="space-y-2">
+      <h2 className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500 font-mono">
+        {title}
+      </h2>
+      {runs.length === 0 ? (
+        <div
+          className={`${CARD} px-4 py-6 text-sm text-center ${
+            emptyWarning ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"
+          }`}
+        >
+          {empty}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {(showAll ? runs : runs.slice(0, INITIAL_RUNS)).map((run) => (
+            <Fragment key={run.id}>{renderRun(run)}</Fragment>
+          ))}
+          {runs.length > INITIAL_RUNS && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="w-full inline-flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              aria-expanded={showAll}
+            >
+              {showAll ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {showAll ? t("bot.showLess") : t("bot.showMore", { n: runs.length - INITIAL_RUNS })}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const { t, formatDate } = useI18n();
   const [status, setStatus] = useState<BotStatus | null>(null);
@@ -387,7 +528,6 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(() => loadHiddenAccounts());
   const [showHidden, setShowHidden] = useState(false);
-  const [showAllRuns, setShowAllRuns] = useState(false);
   // O alerta de "bot parado" (lib/botWatch.ts) aparece no topo: é neste painel
   // que se resolve, reativando as contas. Sem a migração 025 a lista não carrega
   // e o aviso simplesmente não aparece.
@@ -530,35 +670,22 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
             <Metric label={t("bot.failures30d")} value={String(status.failures30d)} />
           </div>
 
-          <div className="space-y-2">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500 font-mono">
-              {t("bot.recentRuns")}
-            </h2>
-            {status.runs.length === 0 ? (
-              <div className={`${CARD} px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400 text-center`}>
-                {t("bot.empty")}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(showAllRuns ? status.runs : status.runs.slice(0, INITIAL_RUNS)).map((run) => (
-                  <RunRow key={run.id} run={run} />
-                ))}
-                {status.runs.length > INITIAL_RUNS && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllRuns((v) => !v)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
-                    aria-expanded={showAllRuns}
-                  >
-                    {showAllRuns ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    {showAllRuns
-                      ? t("bot.showLess")
-                      : t("bot.showMore", { n: status.runs.length - INITIAL_RUNS })}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          <RunList
+            title={t("bot.recentRuns")}
+            runs={status.runs}
+            empty={t("bot.empty")}
+            renderRun={(run) => <RunRow run={run} />}
+          />
+
+          {status.clvAgent && (
+            <RunList
+              title={t("bot.clv.title")}
+              runs={status.clvAgent.runs}
+              empty={status.clvAgent.missingTable ? t("bot.clv.missingTable") : t("bot.clv.empty")}
+              emptyWarning={status.clvAgent.missingTable}
+              renderRun={(run) => <ClvRunRow run={run} />}
+            />
+          )}
         </>
       )}
     </div>

@@ -645,6 +645,108 @@ router.post("/daily-odds", async (req, res) => {
     }
 });
 
+// ============================================================
+// POST /api/clv/heartbeat -> o agente conta como correu a passagem
+//
+// O mesmo papel do POST /api/bot/heartbeat do bot da Betclic: uma linha por
+// passagem (clv_agent_runs, migracao 026), que o painel do bot mostra ao staff
+// ao lado das do bot. Chega de TODAS as passagens - incluindo as que nao tinham
+// nada a ler e as que a Betclic recusou por inteiro, que nunca passam pelo
+// /submit e das quais o servidor nem sabia. So telemetria: nao toca em apostas.
+// ============================================================
+
+/** Coage a inteiro >= 0: o corpo vem de uma maquina em casa. */
+function contagem(v: unknown): number {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+}
+
+export interface PassagemDoAgente {
+    kind: "capture" | "daily";
+    startedAt: string;
+    durationMs: number | null;
+    ok: boolean;
+    candidates: number | null;
+    matches: number;
+    read: number;
+    written: number;
+    failures: string | null;
+    error: string | null;
+}
+
+/**
+ * O corpo do heartbeat validado e aparado, pronto para a tabela. Sem base de
+ * dados pelo meio, para se testar. Uma string e o motivo da recusa.
+ */
+export function passagemDoAgente(body: unknown, now = Date.now()): PassagemDoAgente | string {
+    const b: any = body ?? {};
+    if (typeof b.ok !== "boolean") return "Campo 'ok' (boolean) obrigatorio.";
+    const started = b.startedAt ? new Date(b.startedAt) : new Date(now);
+    if (Number.isNaN(started.getTime())) return "startedAt invalido.";
+
+    const falhas = (Array.isArray(b.failures) ? b.failures.map(String).join(" | ") : "").slice(0, 1000);
+    const erro = !b.ok && typeof b.error === "string" ? b.error.slice(0, 1000) : "";
+    const opcional = (v: unknown) => (v === undefined || v === null ? null : contagem(v));
+
+    return {
+        kind: b.kind === "daily" ? "daily" : "capture",
+        startedAt: started.toISOString(),
+        durationMs: opcional(b.durationMs),
+        ok: b.ok,
+        candidates: opcional(b.candidates),
+        matches: contagem(b.matches),
+        read: contagem(b.read),
+        written: contagem(b.written),
+        failures: falhas || null,
+        error: erro || null,
+    };
+}
+
+router.post("/heartbeat", async (req, res) => {
+    if (!autorizado(req, "CLV_AGENT_SECRET")) {
+        res.status(401).json({ error: "Nao autorizado." });
+        return;
+    }
+    const run = passagemDoAgente(req.body);
+    if (typeof run === "string") {
+        res.status(400).json({ error: run });
+        return;
+    }
+    try {
+        await pool.query(
+            `INSERT INTO clv_agent_runs
+               (kind, started_at, duration_ms, ok, candidates, matches, read_count, written, failures, error)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [
+                run.kind,
+                run.startedAt,
+                run.durationMs,
+                run.ok,
+                run.candidates,
+                run.matches,
+                run.read,
+                run.written,
+                run.failures,
+                run.error,
+            ],
+        );
+        // Poda na mesma ida. O agente passa de 5 em 5 minutos, por isso guarda-se
+        // uma semana (~2000 linhas) e nao os 30 dias do bot_runs.
+        await pool.query("DELETE FROM clv_agent_runs WHERE started_at < NOW() - INTERVAL '7 days'");
+        res.status(201).json({ ok: true });
+    } catch (error: any) {
+        console.error("[clv] /heartbeat falhou:", error);
+        // A tabela vem da migracao 026, aplicada a mao.
+        const emFalta = error?.code === "42P01";
+        res.status(emFalta ? 503 : 500).json({
+            ok: false,
+            error: emFalta
+                ? "A tabela clv_agent_runs nao existe - falta aplicar db/migrations/026_clv_agent_runs.sql."
+                : error?.message,
+        });
+    }
+});
+
 router.get("/capture", async (req, res) => {
     if (!autorizado(req, "CRON_SECRET")) {
         res.status(401).json({ error: "Não autorizado." });

@@ -6,6 +6,7 @@
 //
 //   POST   /api/bot/heartbeat       -> o bot reporta uma passagem
 //   GET    /api/bot/status          -> o painel lê as passagens + ativações por conta
+//                                      (+ as passagens do agente de CLV, só para staff)
 //   POST   /api/bot/context-token   -> ativa UMA conta: entrega um token de contexto (cifrado)
 //   GET    /api/bot/context-token   -> o bot no telemóvel puxa as ativações no arranque frio
 //   DELETE /api/bot/context-token   -> desativa UMA conta
@@ -25,7 +26,8 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddleware.js";
-import { requireBotAccess } from "../middleware/accessMiddleware.js";
+import { requireBotAccess, AccessRequest } from "../middleware/accessMiddleware.js";
+import { isStaff } from "../lib/entitlements.js";
 import { activationConfigured, encryptToken, decryptToken } from "../lib/botCrypto.js";
 import { resolveBotAlert, runBotWatch } from "../lib/botWatch.js";
 import { signToken } from "./authRoutes.js";
@@ -66,6 +68,26 @@ router.use(requireBotAccess);
 const RUN_COLUMNS = `
   id, started_at, duration_ms, ok, read_count, imported, error, created_at
 `;
+
+const CLV_RUN_COLUMNS = `
+  id, kind, started_at, duration_ms, ok, candidates, matches, read_count, written, failures, error, created_at
+`;
+
+// As passagens do agente de CLV (agent/clv-agent.ts, gravadas pelo POST
+// /api/clv/heartbeat). A tabela vem da migração 026, aplicada à mão: sem ela o
+// resto do estado do bot tem de carregar na mesma, e o painel só avisa do que
+// falta. Qualquer outro erro sobe - aí não é a tabela que falta, é a BD.
+async function clvAgentRuns(): Promise<{ runs: unknown[]; missingTable: boolean }> {
+  try {
+    const r = await pool.query(
+      `SELECT ${CLV_RUN_COLUMNS} FROM clv_agent_runs ORDER BY started_at DESC LIMIT 20`,
+    );
+    return { runs: r.rows, missingTable: false };
+  } catch (err: any) {
+    if (err?.code !== "42P01") throw err;
+    return { runs: [], missingTable: true };
+  }
+}
 
 // Coage um valor a inteiro >= 0 (o corpo vem do bot, mas validamos na mesma).
 function toCount(v: unknown): number {
@@ -150,7 +172,7 @@ router.post("/heartbeat", async (req: AuthenticatedRequest, res) => {
 // ------------------------------------------------------------
 // GET /status - as passagens recentes + um resumo para o painel.
 // ------------------------------------------------------------
-router.get("/status", async (req: AuthenticatedRequest, res) => {
+router.get("/status", async (req: AccessRequest, res) => {
   try {
     const runs = await pool.query(
       `SELECT ${RUN_COLUMNS} FROM bot_runs WHERE user_id = $1 ORDER BY started_at DESC LIMIT 20`,
@@ -192,6 +214,10 @@ router.get("/status", async (req: AuthenticatedRequest, res) => {
         updatedAt: row.updated_at ?? null,
       };
     });
+    // O agente de CLV é um só para o serviço todo e os números dele somam as
+    // apostas de todas as contas - só o staff os recebe. Ao botuser vai null e o
+    // painel nem mostra a secção.
+    const clvAgent = isStaff(req.access?.role) ? await clvAgentRuns() : null;
     res.json({
       runs: runs.rows,
       lastSuccess: lastOk.rows[0] ?? null,
@@ -199,6 +225,7 @@ router.get("/status", async (req: AuthenticatedRequest, res) => {
       failures30d: totals.rows[0].failures_30d,
       configured: activationConfigured(),
       activations,
+      clvAgent,
     });
   } catch (err) {
     console.error("Erro ao ler o estado do bot:", err);

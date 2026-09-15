@@ -15,6 +15,11 @@
 // decide nada e por isso não precisa de ser atualizado quando essas regras
 // mudarem.
 //
+// No fim de cada passagem - corra bem, mal, ou sem nada a ler - conta ao
+// BetTrackr como correu (/api/clv/heartbeat). É isso que o painel do bot mostra
+// nas passagens do agente de CLV; sem isto o servidor só sabia do agente quando
+// havia leituras para entregar.
+//
 // COMO CORRE
 // Um ficheiro só, sem dependências, com o Node que a máquina já tiver:
 //   BETTRACKR_AGENT_SECRET=... node clv-agent.js
@@ -46,6 +51,23 @@ const MAX_JOGOS = 25;
 interface Trabalho {
     matchId: string;
     path: string;
+}
+
+type Tipo = "capture" | "daily";
+
+/**
+ * O que se conta ao BetTrackr no fim da passagem. Vai sendo preenchido pelo
+ * caminho, para uma passagem que rebente a meio ainda dizer até onde chegou.
+ */
+interface Relatorio {
+    ok: boolean;
+    /** Apostas por liquidar que o servidor considerou (só na captura). */
+    candidatas: number | null;
+    jogos: number;
+    leituras: number;
+    escritas: number;
+    falhas: string[];
+    erro?: string;
 }
 
 /** O mesmo caminho que o servidor constroi. A Betclic canoniza pelo id. */
@@ -126,15 +148,11 @@ async function lerJogo(t: Trabalho) {
     };
 }
 
-async function passagem() {
-    if (!SECRET) {
-        log("ERRO: falta BETTRACKR_AGENT_SECRET.");
-        process.exitCode = 1;
-        return;
-    }
-
+async function passagem(rel: Relatorio) {
     const trabalho = await bettrackr("/api/clv/work");
     const jogos: Trabalho[] = (trabalho.jogos ?? []).slice(0, MAX_JOGOS);
+    rel.candidatas = Number(trabalho.candidatas) || 0;
+    rel.jogos = jogos.length;
 
     if (jogos.length === 0) {
         // O caso normal: só há trabalho quando alguma perna está entre os 30 e
@@ -144,21 +162,22 @@ async function passagem() {
     }
 
     const leituras = [];
-    const falhas: string[] = [];
     for (const jogo of jogos) {
         try {
             const r = await lerJogo(jogo);
             if (r.leitura) leituras.push(r.leitura);
-            else falhas.push(`${jogo.matchId}:${r.erro}`);
+            else rel.falhas.push(`${jogo.matchId}:${r.erro}`);
         } catch (e: any) {
-            falhas.push(`${jogo.matchId}:${e?.name || "erro"}`);
+            rel.falhas.push(`${jogo.matchId}:${e?.name || "erro"}`);
         }
     }
+    rel.leituras = leituras.length;
 
-    if (falhas.length) log("falhas:", falhas.join(" | "));
+    if (rel.falhas.length) log("falhas:", rel.falhas.join(" | "));
     if (leituras.length === 0) {
-        log("nenhuma leitura conseguida - nada enviado");
-        process.exitCode = 1;
+        rel.ok = false;
+        rel.erro = "nenhuma leitura conseguida - nada enviado";
+        log(rel.erro);
         return;
     }
 
@@ -166,6 +185,7 @@ async function passagem() {
         method: "POST",
         body: JSON.stringify({ leituras }),
     });
+    rel.escritas = Number(r.apostasEscritas) || 0;
     log(
         `enviadas ${leituras.length} leitura(s) -> ` +
             `${r.apostasEscritas} aposta(s) escrita(s), ${r.comDeVig} perna(s) sem margem`,
@@ -258,15 +278,10 @@ async function descobrirJogos(dia: string) {
     return [...jogos.values()].slice(0, MAX_JOGOS_DIA);
 }
 
-async function passagemDiaria() {
-    if (!SECRET) {
-        log("ERRO: falta BETTRACKR_AGENT_SECRET.");
-        process.exitCode = 1;
-        return;
-    }
-
+async function passagemDiaria(rel: Relatorio) {
     const dia = hojeEmLisboa();
     const encontrados = await descobrirJogos(dia);
+    rel.jogos = encontrados.length;
     log(`${dia}: ${encontrados.length} jogo(s) nas listagens`);
     if (encontrados.length === 0) return;
 
@@ -284,16 +299,19 @@ async function passagemDiaria() {
                 // Entregar o que ja se leu vale mais do que perder a passagem
                 // toda por causa do bloqueio.
                 log(`recusado pela casa (${e.message}) ao fim de ${jogos.length} jogo(s) - a parar`);
+                rel.falhas.push(`recusado-pela-casa:${e.message}`);
                 break;
             }
             semMercado++;
         }
         await dorme(PAUSA_MS);
     }
+    rel.leituras = jogos.length;
 
     if (jogos.length === 0) {
-        log("nenhum jogo com mercado completo - nada enviado");
-        process.exitCode = 1;
+        rel.ok = false;
+        rel.erro = "nenhum jogo com mercado completo - nada enviado";
+        log(rel.erro);
         return;
     }
 
@@ -301,14 +319,60 @@ async function passagemDiaria() {
         method: "POST",
         body: JSON.stringify({ dia, jogos }),
     });
+    rel.escritas = Number(r.gravados) || 0;
     log(
         `entregues ${jogos.length} jogo(s) (${semMercado} sem mercado util) -> ` +
             `${r.gravados} gravado(s), ${r.recusados} recusado(s)`,
     );
 }
 
-const diario = process.argv.includes("--daily");
-(diario ? passagemDiaria() : passagem()).catch((e) => {
-    log("passagem falhou:", e?.message || e);
-    process.exitCode = 1;
-});
+/**
+ * Conta a passagem ao BetTrackr, que a guarda para o painel do bot. Nunca estraga
+ * a passagem: um servidor sem a rota, ou sem a tabela (migracao 026, aplicada a
+ * mao), fica so numa linha do log.
+ */
+async function reportar(tipo: Tipo, inicio: number, rel: Relatorio) {
+    try {
+        await bettrackr("/api/clv/heartbeat", {
+            method: "POST",
+            body: JSON.stringify({
+                kind: tipo,
+                ok: rel.ok,
+                startedAt: new Date(inicio).toISOString(),
+                durationMs: Date.now() - inicio,
+                candidates: rel.candidatas,
+                matches: rel.jogos,
+                read: rel.leituras,
+                written: rel.escritas,
+                failures: rel.falhas,
+                error: rel.erro,
+            }),
+        });
+    } catch (e: any) {
+        log("passagem nao contada ao BetTrackr:", e?.message || e);
+    }
+}
+
+/** Uma passagem, contada ao BetTrackr corra ela como correr. */
+async function correr(tipo: Tipo) {
+    if (!SECRET) {
+        // Sem segredo nem a passagem se consegue contar: fica so no log do cron.
+        log("ERRO: falta BETTRACKR_AGENT_SECRET.");
+        process.exitCode = 1;
+        return;
+    }
+
+    const inicio = Date.now();
+    const rel: Relatorio = { ok: true, candidatas: null, jogos: 0, leituras: 0, escritas: 0, falhas: [] };
+    try {
+        await (tipo === "daily" ? passagemDiaria(rel) : passagem(rel));
+    } catch (e: any) {
+        rel.ok = false;
+        rel.erro = String(e?.message || e);
+        log("passagem falhou:", rel.erro);
+    }
+    if (!rel.ok) process.exitCode = 1;
+    await reportar(tipo, inicio, rel);
+}
+
+void correr(process.argv.includes("--daily") ? "daily" : "capture");

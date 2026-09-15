@@ -32,6 +32,25 @@ export interface BotAccountActivation {
   updatedAt: string | null;
 }
 
+// Uma passagem do agente de CLV (agent/clv-agent.ts, migração 026). Ao contrário
+// do BotRun não é de ninguém: há um agente para o serviço todo. "capture" é a
+// odd de fecho (de 5 em 5 minutos), "daily" as odds do dia (de madrugada), e as
+// contagens querem dizer coisas diferentes em cada uma.
+export interface ClvAgentRun {
+  id: string;
+  kind: "capture" | "daily";
+  started_at: string;
+  duration_ms: number | null;
+  ok: boolean;
+  candidates: number | null; // apostas por liquidar que o servidor considerou (só "capture")
+  matches: number; // jogos a ler / jogos encontrados nas listagens
+  read_count: number; // páginas lidas com preços / jogos com mercado completo
+  written: number; // apostas escritas / jogos gravados
+  failures: string | null; // "matchId:motivo | ..." quando alguma leitura falhou
+  error: string | null;
+  created_at: string;
+}
+
 export interface BotStatus {
   runs: BotRun[];
   lastSuccess: { started_at: string; imported: number } | null;
@@ -39,6 +58,8 @@ export interface BotStatus {
   failures30d: number;
   configured: boolean; // o servidor sabe cifrar (BOT_CTX_KEY/JWT_SECRET presente)?
   activations: BotAccountActivation[];
+  // Só para staff (null para o botuser). missingTable: falta aplicar a migração 026.
+  clvAgent: { runs: ClvAgentRun[]; missingTable: boolean } | null;
 }
 
 export async function fetchBotStatus(): Promise<BotStatus> {
