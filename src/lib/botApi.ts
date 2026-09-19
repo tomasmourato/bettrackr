@@ -17,7 +17,7 @@ export interface BotRun {
   created_at: string;
 }
 
-export type BotActivationSource = "manual" | "extension";
+export type BotActivationSource = "manual" | "extension" | "bot";
 
 // Estado de ativação de UMA conta Betclic (ver migração 024). Uma por
 // bookie_account do dono; o painel mostra uma linha por conta.

@@ -31,7 +31,7 @@ import { loadVault, vaultToCredential, saveVault, credentialToVault, saveSession
 import { syncOnce } from "./sync.js";
 import { isUsable } from "./jwt.js";
 import { enrolPasskey } from "./enrol.js";
-import { BettrackrConfig, heartbeat, fetchActivations, fetchFreshToken, deleteContextToken } from "./bettrackr.js";
+import { BettrackrConfig, heartbeat, fetchActivations, fetchFreshToken, deleteContextToken, pushContextToken } from "./bettrackr.js";
 
 interface Config {
   botDir: string; // pasta onde vivem os cofres/sessoes por conta
@@ -216,6 +216,12 @@ async function processAccount(
         } catch {
           // persistencia e conveniencia, nao critica
         }
+      }
+      // Mantem a ativacao no servidor viva com o token acabado de renovar: o
+      // painel deixa de dizer "expirado" enquanto o bot corre, e um arranque
+      // frio tem um token valido com que se re-registar.
+      if (cfg.bettrackr && !r.dryRun && isUsable(r.accessToken)) {
+        await pushContextToken(cfg.bettrackr, accountId, r.accessToken);
       }
       log(
         `[${tag}] OK: lidas=${r.lidasBetclic} novas=${r.novas} enviadas=${r.enviadas} atualizadas=${r.atualizadas}` +

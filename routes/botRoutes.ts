@@ -236,7 +236,7 @@ router.get("/status", async (req: AccessRequest, res) => {
 // ------------------------------------------------------------
 // POST /context-token - ativa UMA conta Betclic: entrega um token de contexto
 // (o Bearer que a página usa contra a begmedia). Guardado CIFRADO, por conta.
-// Corpo: { token, accountId, source?: "manual" | "extension" }
+// Corpo: { token, accountId, source?: "manual" | "extension" | "bot" }
 // ------------------------------------------------------------
 router.post("/context-token", async (req: AuthenticatedRequest, res) => {
   if (!activationConfigured()) {
@@ -244,7 +244,8 @@ router.post("/context-token", async (req: AuthenticatedRequest, res) => {
     return;
   }
   const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
-  const source = req.body?.source === "extension" ? "extension" : "manual";
+  // "bot" = o proprio bot a devolver o token que renovou (bot/src/index.ts).
+  const source = req.body?.source === "extension" || req.body?.source === "bot" ? req.body.source : "manual";
   const accountId = typeof req.body?.accountId === "string" ? req.body.accountId.trim() : "";
   if (!token) {
     res.status(400).json({ error: "Token em falta." });

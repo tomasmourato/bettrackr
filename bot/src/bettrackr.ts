@@ -174,6 +174,23 @@ export async function deleteContextToken(cfg: BettrackrConfig, accountId: string
   }
 }
 
+// Devolve ao BetTrackr o token de contexto que o bot acabou de renovar (o
+// access_token do ultimo login por passkey) para UMA conta. Sem isto o servidor
+// so conhecia o token entregue na ativacao, que morre em ~2h: o painel mostrava
+// "expirado" com o bot a importar sem problemas, e um arranque frio (bot
+// reinstalado, cofre perdido) nao tinha com que se re-registar. Best-effort.
+export async function pushContextToken(cfg: BettrackrConfig, accountId: string, token: string): Promise<void> {
+  try {
+    await fetch(`${cfg.base}/api/bot/context-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.token}` },
+      body: JSON.stringify({ token, accountId, source: "bot" }),
+    });
+  } catch {
+    // silencioso de proposito
+  }
+}
+
 // Uma ativacao ativada na app, por conta: o token de contexto da Betclic + a
 // conta (bookie_account) a que pertence.
 export interface Activation {
