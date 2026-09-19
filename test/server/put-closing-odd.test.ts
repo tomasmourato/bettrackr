@@ -138,6 +138,34 @@ describe("withStoredClosingOdds", () => {
     expect(merged.metadata.importKey).toBe("betclic:9");
   });
 
+  test("a odd sem margem viaja com a odd de fecho", () => {
+    // Foi o que falhou até 19/09/2026: a crua voltava e a justa não, por isso
+    // nenhuma aposta liquidada tinha CLV sem margem.
+    const stored = storedRow({
+      selections: [
+        { ...storedRow().selections[0], closingOddNoVig: 1.95, closingOddMargin: 5.1 },
+      ],
+    });
+    const perna = withStoredClosingOdds(importPayload(), stored).selections[0];
+    expect(perna.closingOdd).toBe(1.85);
+    expect(perna.closingOddNoVig).toBe(1.95);
+    expect(perna.closingOddMargin).toBe(5.1);
+  });
+
+  test("uma odd de fecho nova não fica com a justa de outra", () => {
+    // Uma justa ao lado de uma crua a que não diz respeito é uma margem falsa.
+    const stored = storedRow({
+      selections: [
+        { ...storedRow().selections[0], closingOddNoVig: 1.95, closingOddMargin: 5.1 },
+      ],
+    });
+    const body = importPayload();
+    body.selections[0] = { ...body.selections[0], closingOdd: 1.6 } as never;
+    const perna = withStoredClosingOdds(body, stored).selections[0];
+    expect(perna.closingOdd).toBe(1.6);
+    expect(perna.closingOddNoVig).toBeUndefined();
+  });
+
   test("aguenta selections em texto, que é como o pg às vezes as devolve", () => {
     const stored = { selections: JSON.stringify(storedRow().selections), metadata: {} };
     expect(withStoredClosingOdds(importPayload(), stored).selections[0].closingOdd).toBe(1.85);

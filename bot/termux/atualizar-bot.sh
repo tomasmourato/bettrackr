@@ -35,9 +35,9 @@ esac
 AGENTE_URL="${AGENTE_URL:-https://bettrackr.dev/clv-agent.mjs}"
 # O que prova que o ficheiro é a versão nova e não uma cópia antiga esquecida nas
 # Transferências. Bot: devolve ao servidor o token renovado (desde 19/09/2026).
-# Agente: conta cada passagem ao painel (desde 15/09/2026).
+# Agente: vai às categorias de mercados que a página não traz (desde 19/09/2026).
 MARCA_BOT='source: "bot"'
-MARCA_AGENTE='api/clv/heartbeat'
+MARCA_AGENTE='GetMatchWithNotification'
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -94,6 +94,7 @@ trocar() {
   local novo="$1" alvo="$2" nome="$3" marca="$4"
   if ! grep -qF "$marca" "$novo"; then
     erro "$nome: o ficheiro novo não é a versão nova (falta «$marca»)."
+    [ "$nome" = "Agente" ] && diz "   O bettrackr.dev ainda serve o antigo: espera que o deploy acabe e repete."
     return 1
   fi
   if ! node --check "$novo" >/dev/null 2>&1; then
@@ -144,18 +145,11 @@ else
   FONTES="$(ficheiros_de "$BOT_CMD" '(^|/)src/index\.ts$' | sort -u)"
   if [ -n "$BUNDLES" ]; then
     ORIGEM="${1:-}"
-    if [ -z "$ORIGEM" ]; then
-      # O mais recente das Transferências. Um browser que já lá tenha um bot.mjs
-      # grava o novo como "bot (1).mjs", daí o padrão largo.
-      ORIGEM="$(ls -t "$HOME"/storage/downloads/bot*.mjs 2>/dev/null | head -n 1)"
-      if [ -z "$ORIGEM" ]; then
-        erro "Não há nenhum bot*.mjs nas Transferências."
-        diz "   Põe lá o dist/bot.mjs do PC (npm run build:bot) ou passa um endereço:"
-        diz "   bash atualizar-bot.sh http://IP-DO-PC:8765/bot.mjs"
-        diz "   (se o Termux não vir as Transferências: termux-setup-storage)"
-        FALHOU=1
-      fi
-    fi
+    # O mais recente das Transferências. Um browser que já lá tenha um bot.mjs
+    # grava o novo como "bot (1).mjs", daí o padrão largo.
+    [ -z "$ORIGEM" ] && ORIGEM="$(ls -t "$HOME"/storage/downloads/bot*.mjs 2>/dev/null | head -n 1)"
+    JA_NOVO=1
+    while IFS= read -r b; do grep -qF "$MARCA_BOT" "$b" 2>/dev/null || JA_NOVO=0; done <<< "$BUNDLES"
     if [ -n "$ORIGEM" ]; then
       diz "   novo: $ORIGEM"
       if buscar "$ORIGEM" "$TMP/bot.mjs"; then
@@ -166,6 +160,15 @@ else
         erro "Não consegui ir buscar o bot novo a $ORIGEM."
         FALHOU=1
       fi
+    elif [ "$JA_NOVO" -eq 1 ]; then
+      # Sem bot novo à mão e o instalado já é o novo: só há o agente a atualizar.
+      verde "O bot já está na versão nova - fica como está."
+    else
+      erro "Não há nenhum bot*.mjs nas Transferências."
+      diz "   Põe lá o dist/bot.mjs do PC (npm run build:bot) ou passa um endereço:"
+      diz "   bash atualizar-bot.sh http://IP-DO-PC:8765/bot.mjs"
+      diz "   (se o Termux não vir as Transferências: termux-setup-storage)"
+      FALHOU=1
     fi
   elif [ -n "$FONTES" ]; then
     RAIZ="$(git -C "$(dirname "$(printf '%s\n' "$FONTES" | head -n 1)")" rev-parse --show-toplevel 2>/dev/null)"

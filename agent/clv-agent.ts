@@ -32,6 +32,16 @@ import {
     readMatchSnapshot,
     type Market,
 } from "../lib/betclicOdds.js";
+import {
+    GRPC_HEADERS,
+    GRPC_MATCH_URL,
+    cabecalhosDaPagina,
+    categoriasDaPagina,
+    pedidoDeCategoria,
+    primeiraMoldura,
+    selecoesDaResposta,
+    type SelecaoGrpc,
+} from "../lib/betclicGrpc.js";
 
 const BASE = process.env.BETTRACKR_BASE || "https://bettrackr.dev";
 const SECRET = process.env.BETTRACKR_AGENT_SECRET || "";
@@ -51,7 +61,18 @@ const MAX_JOGOS = 25;
 interface Trabalho {
     matchId: string;
     path: string;
+    /** As seleções que o servidor procura neste jogo (servidores de 19/09 em diante). */
+    selectionIds?: string[];
 }
+
+// As outras categorias do jogo (ver lib/betclicGrpc.ts). Pede-se uma de cada
+// vez, com pausa, e pára-se mal apareçam as seleções procuradas - o normal é
+// bastarem uma ou duas.
+const MAX_CATEGORIAS = 8;
+const PAUSA_GRPC_MS = 1000;
+// Uma recusa (403, 429, grpc-status de erro) desliga as categorias até ao fim
+// da passagem: insistir só prolongava um bloqueio.
+let grpcRecusado = false;
 
 type Tipo = "capture" | "daily";
 
@@ -138,14 +159,139 @@ async function lerJogo(t: Trabalho) {
         markets.push({ ids: [id], odds: market.odds });
     }
 
+    const odds: Record<string, number> = Object.fromEntries(page.odds);
+    const avisos: string[] = [];
+
+    // A página só traz o separador principal. O que se procura e não está lá
+    // vive noutra categoria do jogo, e vai-se buscar como o browser faz.
+    const faltam = (t.selectionIds ?? []).filter((id) => !page.odds.has(id));
+    if (faltam.length > 0) {
+        const extra = await lerCategorias(t.matchId, html, faltam);
+        // Só vão os mercados onde está uma seleção procurada, e esses inteiros:
+        // o servidor precisa do mercado completo para tirar a margem. As
+        // categorias trazem centenas de preços por jogo (131KB num Roma - Inter)
+        // e mandá-los todos era gastar dados móveis a quem tem o agente.
+        const procuradas = new Set(faltam);
+        const mercadosPrecisos = new Set(
+            extra.selecoes.filter((s) => procuradas.has(s.id)).map((s) => s.marketId),
+        );
+        const uteis = extra.selecoes.filter((s) => mercadosPrecisos.has(s.marketId));
+        for (const s of uteis) if (!(s.id in odds)) odds[s.id] = s.odds;
+        // Um mercado inteiro de cada vez, agrupado pelo id da casa, para o
+        // servidor poder tirar a margem com o mesmo crivo da página.
+        const grupos = new Map<string, { ids: string[]; odds: number[] }>();
+        for (const s of uteis) {
+            if (page.odds.has(s.id)) continue;
+            const g = grupos.get(s.marketId);
+            if (g) {
+                g.ids.push(s.id);
+                g.odds.push(s.odds);
+            } else grupos.set(s.marketId, { ids: [s.id], odds: [s.odds] });
+        }
+        markets.push(...grupos.values());
+        if (extra.erro) avisos.push(`${t.matchId}:categorias-${extra.erro}`);
+        const porAchar = faltam.filter((id) => !(id in odds)).length;
+        if (porAchar > 0) avisos.push(`${t.matchId}:sem-seleccao(${porAchar}/${faltam.length})`);
+    }
+
     return {
+        avisos,
         leitura: {
             matchId: t.matchId,
-            odds: Object.fromEntries(page.odds),
+            odds,
             markets,
             kickoffUtc: page.kickoffUtc,
         },
     };
+}
+
+/**
+ * Vai às categorias do jogo que a página não trouxe, uma a uma, até aparecerem
+ * as seleções procuradas. A primeira categoria é a que a página já mostra.
+ */
+async function lerCategorias(matchId: string, html: string, faltam: string[]) {
+    const selecoes: SelecaoGrpc[] = [];
+    if (grpcRecusado) return { selecoes, erro: "desligadas" };
+
+    const state = parseNgState(html);
+    const categorias = categoriasDaPagina(state, matchId).slice(1, 1 + MAX_CATEGORIAS);
+    if (categorias.length === 0) return { selecoes, erro: "sem-lista" };
+    const headers = { ...GRPC_HEADERS, ...cabecalhosDaPagina(state) };
+
+    const porAchar = new Set(faltam);
+    for (const categoria of categorias) {
+        const r = await lerCategoria(matchId, categoria, headers);
+        if ("erro" in r) {
+            // Uma recusa da casa desliga isto até à próxima passagem.
+            if (r.recusa) grpcRecusado = true;
+            return { selecoes, erro: r.erro };
+        }
+        for (const s of r.selecoes) {
+            selecoes.push(s);
+            porAchar.delete(s.id);
+        }
+        if (porAchar.size === 0) break;
+        await dorme(PAUSA_GRPC_MS);
+    }
+    return { selecoes };
+}
+
+/**
+ * Uma categoria pelo gRPC-web da Betclic. A chamada é um stream (depois do jogo
+ * vêm as atualizações de preço, sem fim), por isso lê-se a primeira mensagem e
+ * fecha-se a ligação.
+ */
+async function lerCategoria(
+    matchId: string,
+    categoria: string,
+    headers: Record<string, string>,
+): Promise<{ selecoes: SelecaoGrpc[] } | { erro: string; recusa: boolean }> {
+    const ctl = new AbortController();
+    const prazo = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    try {
+        const res = await fetch(GRPC_MATCH_URL, {
+            method: "POST",
+            headers: {
+                ...headers,
+                "User-Agent": UA,
+                Origin: BETCLIC,
+                Referer: `${BETCLIC}/`,
+            },
+            body: pedidoDeCategoria(matchId, categoria),
+            signal: ctl.signal,
+        });
+        if (!res.ok) {
+            return { erro: `http-${res.status}`, recusa: res.status === 403 || res.status === 429 };
+        }
+        // Sem dados, o grpc-status vem logo nos cabeçalhos (é assim que chega
+        // um "método não existe").
+        const status = res.headers.get("grpc-status");
+        if (status && status !== "0") return { erro: `grpc-${status}`, recusa: true };
+        if (!res.body) return { erro: "sem-corpo", recusa: false };
+
+        const reader = res.body.getReader();
+        let buf = new Uint8Array(0);
+        for (;;) {
+            const { value, done } = await reader.read();
+            if (done) return { erro: "fechou-sem-dados", recusa: false };
+            const junto = new Uint8Array(buf.length + value.length);
+            junto.set(buf);
+            junto.set(value, buf.length);
+            buf = junto;
+            const moldura = primeiraMoldura(buf);
+            if (!moldura) continue;
+            if ("trailer" in moldura) {
+                const codigo = /grpc-status:\s*(\d+)/i.exec(moldura.trailer)?.[1] ?? "?";
+                return { erro: `grpc-${codigo}`, recusa: codigo !== "0" };
+            }
+            return { selecoes: selecoesDaResposta(moldura.dados) };
+        }
+    } catch (e: any) {
+        return { erro: e?.name === "AbortError" ? "timeout" : "pedido-falhou", recusa: false };
+    } finally {
+        clearTimeout(prazo);
+        ctl.abort();
+    }
 }
 
 async function passagem(rel: Relatorio) {
@@ -167,6 +313,9 @@ async function passagem(rel: Relatorio) {
             const r = await lerJogo(jogo);
             if (r.leitura) leituras.push(r.leitura);
             else rel.falhas.push(`${jogo.matchId}:${r.erro}`);
+            // Leitura feita, mas incompleta: fica no painel para se perceber
+            // que pernas ficaram sem odd de fecho, e porquê.
+            if (r.avisos?.length) rel.falhas.push(...r.avisos);
         } catch (e: any) {
             rel.falhas.push(`${jogo.matchId}:${e?.name || "erro"}`);
         }

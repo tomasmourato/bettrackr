@@ -233,12 +233,19 @@ async function trabalho(now: number) {
     //
     // O filtro e o MESMO ENTITLED_SQL que o painel de gestao usa, para nao haver
     // duas respostas diferentes a pergunta "esta conta tem acesso?".
-    const { rows } = await pool.query<BetRow>(
-        `SELECT b.id, b.selections, b.metadata
+    //
+    // Uma aposta ja liquidada tambem entra enquanto for recente. Uma multipla
+    // cuja primeira perna perde fica PERDIDA logo ali, e as pernas seguintes -
+    // que ainda nem comecaram - deixavam de ser lidas: a aposta ficava para
+    // sempre sem odd de fecho. O CLV mede o preco apanhado, nao o resultado,
+    // por isso essas pernas contam na mesma. Quem filtra o que ainda vale a
+    // pena ler e a janela do legsToRead; os 10 dias so poupam a leitura.
+    const { rows } = await pool.query<BetRow & { status: string }>(
+        `SELECT b.id, b.selections, b.metadata, b.status
            FROM bets b
            JOIN users u ON u.id = b.user_id
            LEFT JOIN subscriptions s ON s.user_id = u.id
-          WHERE b.status = 'POR_LIQUIDAR'
+          WHERE (b.status = 'POR_LIQUIDAR' OR b.date_time > NOW() - INTERVAL '10 days')
             AND b.is_ignored = false
             AND lower(b.bookmaker) = 'betclic'
             AND jsonb_typeof(b.selections) = 'array'
@@ -264,7 +271,9 @@ async function trabalho(now: number) {
         .sort((a, b) => Math.min(...a[1].map((l) => l.kickoff)) - Math.min(...b[1].map((l) => l.kickoff)))
         .slice(0, MAX_MATCHES_PER_RUN);
 
-    return { candidatas: rows.length, legs, jogos };
+    // "Candidatas" continua a ser o que o painel mostra: as apostas por liquidar.
+    const candidatas = rows.filter((r) => r.status === "POR_LIQUIDAR").length;
+    return { candidatas, legs, jogos };
 }
 
 /** Uma leitura de uma pagina, venha ela de onde vier. */
@@ -468,6 +477,10 @@ router.get("/work", async (req, res) => {
                 // O caminho vai daqui para o agente nao ter de saber construi-lo:
                 // se a rota da Betclic mudar, muda num sitio so.
                 path: betclicMatchPath(matchId, grupo[0].event),
+                // As seleccoes que se procuram neste jogo. A pagina so traz os
+                // mercados do separador principal; com isto o agente sabe quando
+                // tem de ir as outras categorias, e quando pode parar.
+                selectionIds: [...new Set(grupo.map((l) => l.selectionId))],
             })),
         });
     } catch (error: any) {

@@ -105,12 +105,25 @@ export function withStoredClosingOdds(body: any, stored: any): any {
     const incoming = asSelections(body?.selections);
     const previous = asSelections(stored?.selections);
 
-    const byKey = new Map<string, number>();
+    // A odd de fecho viaja com a justa e a margem que a acompanham: a casa não
+    // manda nenhuma das três. Até 19/09/2026 só a crua era trazida de volta, e a
+    // reimportação que liquida a aposta apagava a justa de TODAS as pernas - o
+    // CLV sem margem desaparecia no momento em que a aposta fechava.
+    const byKey = new Map<string, Record<string, number>>();
     const originalByKey = new Map<string, number>();
     previous.forEach((selection, index) => {
         const key = legKey(selection, index);
         const odd = Number(selection?.closingOdd);
-        if (Number.isFinite(odd) && odd > 1) byKey.set(key, odd);
+        if (Number.isFinite(odd) && odd > 1) {
+            const fecho: Record<string, number> = { closingOdd: odd };
+            const justa = Number(selection?.closingOddNoVig);
+            const margem = Number(selection?.closingOddMargin);
+            if (Number.isFinite(justa) && justa > 1 && Number.isFinite(margem)) {
+                fecho.closingOddNoVig = justa;
+                fecho.closingOddMargin = margem;
+            }
+            byKey.set(key, fecho);
+        }
         const original = Number(selection?.originalOdd);
         if (Number.isFinite(original) && original > 1) originalByKey.set(key, original);
     });
@@ -120,8 +133,8 @@ export function withStoredClosingOdds(body: any, stored: any): any {
         let merged = selection;
 
         if (merged?.closingOdd === undefined || merged?.closingOdd === null) {
-            const odd = byKey.get(key);
-            if (odd !== undefined) merged = { ...merged, closingOdd: odd };
+            const fecho = byKey.get(key);
+            if (fecho !== undefined) merged = { ...merged, ...fecho };
         }
 
         if (merged?.originalOdd === undefined || merged?.originalOdd === null) {

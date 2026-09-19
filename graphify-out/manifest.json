@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "routes/betsRoutes.ts": {
-    "mtime": 1788720625.1529922,
-    "seen": 1788727803.8399756,
-    "ast_hash": "88bb1518749d5c485bc3bcccafb52d36",
+    "mtime": 1789816978.9961188,
+    "seen": 1789817479.3035529,
+    "ast_hash": "7d6b990963e1356e66c0993e128bfab5",
     "semantic_hash": ""
   },
   "scripts/zip-extension.mjs": {
@@ -1536,15 +1536,15 @@
     "semantic_hash": ""
   },
   "routes/clvRoutes.ts": {
-    "mtime": 1789498451.8012671,
-    "seen": 1789812773.9067135,
-    "ast_hash": "e09268f46898150064b734e00a8e18ca",
+    "mtime": 1789817006.2958236,
+    "seen": 1789817479.3035567,
+    "ast_hash": "298756560a5c0ac0b50683e089177799",
     "semantic_hash": ""
   },
   "agent/clv-agent.ts": {
-    "mtime": 1789498451.7671905,
-    "seen": 1789812773.906486,
-    "ast_hash": "e28834a8c8e34a68e8d89ffca7567100",
+    "mtime": 1789817261.5713475,
+    "seen": 1789817479.3034112,
+    "ast_hash": "dc0abf374ab2f9de32ce83649aae2fac",
     "semantic_hash": ""
   },
   "lib/clvCapture.ts": {
@@ -1704,9 +1704,9 @@
     "semantic_hash": ""
   },
   "test/server/put-closing-odd.test.ts": {
-    "mtime": 1788720755.4675322,
-    "seen": 1788727803.8401048,
-    "ast_hash": "6919f6fab0a5abc873e8b3db6c704275",
+    "mtime": 1789816991.2608793,
+    "seen": 1789817479.303757,
+    "ast_hash": "d13588c485c52d83a66dc3bb30fc81fb",
     "semantic_hash": ""
   },
   "docs/PLAN.md": {
@@ -2070,9 +2070,21 @@
     "semantic_hash": ""
   },
   "bot/termux/atualizar-bot.sh": {
-    "mtime": 1789815807.1316464,
-    "seen": 1789815962.9511104,
-    "ast_hash": "bb537eacbf780919b46c4d59fbb76e26",
+    "mtime": 1789817442.987438,
+    "seen": 1789817479.30345,
+    "ast_hash": "626ce1455a0abe952430c68350a8c436",
+    "semantic_hash": ""
+  },
+  "lib/betclicGrpc.ts": {
+    "mtime": 1789817082.3778508,
+    "seen": 1789817479.3035269,
+    "ast_hash": "776edd16f51c24b6dbf1c7b6c6178874",
+    "semantic_hash": ""
+  },
+  "test/server/betclic-grpc.test.ts": {
+    "mtime": 1789817307.8099854,
+    "seen": 1789817479.3037431,
+    "ast_hash": "46e3de6b51d4ac15f05bf07458d70585",
     "semantic_hash": ""
   }
 }
