@@ -97,9 +97,9 @@ tambem `bot/marco0-key.json`.
 ## Depois do Marco 0
 
 Se o teste passar, o resto do plano ganha corpo: cofre cifrado (`vault.ts`),
-ciclo de importacao (`sync.ts`), o servico com timer horario (`index.ts`), o
-painel de estado no BetTrackr e a unidade systemd para o Pi. Nada disso se
-constroi antes de o Marco 0 dar verde.
+ciclo de importacao (`sync.ts`), o servico com timer horario (`index.ts`) e o
+painel de estado no BetTrackr. Nada disso se constroi antes de o Marco 0 dar
+verde.
 
 ## O que ja esta feito e testado
 
@@ -252,9 +252,9 @@ pg_cron do Supabase (`db/cron/bot-watch.sql`, aplicado a mao), a migracao
 `db/migrations/025_notificacoes.sql` (tambem a mao), e `FCM_SERVICE_ACCOUNT` na
 Vercel + `google-services.json` no APK para o push (`lib/push.ts`, `src/lib/push.ts`).
 
-**Alternativa (Raspberry Pi / PC sempre ligado):** o daemon continuo, com a
-unidade systemd em [betclic-bot.service](betclic-bot.service) (intervalo default
-1800s = 30 min). Os segredos vao no mesmo tipo de ficheiro de ambiente.
+**Alternativa (PC sempre ligado):** o modo continuo, `npm start`, que corre uma
+passagem a cada `BOT_INTERVAL_SEC` (default 1800s = 30 min). Os segredos vao no
+mesmo tipo de ficheiro de ambiente.
 
 ### Variaveis de ambiente
 

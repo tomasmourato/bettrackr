@@ -246,9 +246,9 @@
     "semantic_hash": ""
   },
   "src/lib/bookmakers.ts": {
-    "mtime": 1788653034.1742487,
-    "seen": 1788654488.0132835,
-    "ast_hash": "7de0ae942c726d50deccf645fa8a421a",
+    "mtime": 1789820935.3137028,
+    "seen": 1789821040.7633486,
+    "ast_hash": "6191aebe55367465459f6f6b92147208",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -294,9 +294,9 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1788904054.2837646,
-    "seen": 1788907131.0564728,
-    "ast_hash": "0fd3e288abfd4d79a182e1c425ad209c",
+    "mtime": 1789820987.26256,
+    "seen": 1789821040.7634609,
+    "ast_hash": "cac96fb2812449cbd1fa1b99ffd90877",
     "semantic_hash": ""
   },
   "extension/README.md": {
@@ -989,12 +989,6 @@
     "ast_hash": "3f14a7ca81c956f4a960d90497d3601a",
     "semantic_hash": ""
   },
-  "scripts/migrate.mjs": {
-    "mtime": 1787446545.7087874,
-    "seen": 1787526519.1625054,
-    "ast_hash": "184498452f7cd9d295aa87e367b57630",
-    "semantic_hash": ""
-  },
   "src/DesktopApp.tsx": {
     "mtime": 1789484333.4710846,
     "seen": 1789497207.4868817,
@@ -1553,12 +1547,6 @@
     "ast_hash": "9a328709d42bb42d3331c252fe2fb82c",
     "semantic_hash": ""
   },
-  ".github/workflows/teste-acesso-betclic.yml": {
-    "mtime": 1788653034.1314173,
-    "seen": 1788654488.0133522,
-    "ast_hash": "3ab5d3c366581959104a4ac140ad6264",
-    "semantic_hash": ""
-  },
   "db/migrations/020_daily_odds.sql": {
     "mtime": 1788653034.1355362,
     "seen": 1788654488.0131874,
@@ -1707,12 +1695,6 @@
     "mtime": 1789816991.2608793,
     "seen": 1789817479.303757,
     "ast_hash": "d13588c485c52d83a66dc3bb30fc81fb",
-    "semantic_hash": ""
-  },
-  "docs/PLAN.md": {
-    "mtime": 1788653034.1365366,
-    "seen": 1788654488.0133567,
-    "ast_hash": "1d9f044756bd4718cf71f3e3a5c6e88b",
     "semantic_hash": ""
   },
   "src/lib/betFormSelections.ts": {
@@ -1890,9 +1872,9 @@
     "semantic_hash": ""
   },
   "bot/README.md": {
-    "mtime": 1789815947.8315203,
-    "seen": 1789815962.951485,
-    "ast_hash": "0ece5f42e64c93985390f70de1477e29",
+    "mtime": 1789820920.243744,
+    "seen": 1789821040.7634618,
+    "ast_hash": "571dd3753f00bb61d6b1e962f1c70d12",
     "semantic_hash": ""
   },
   "bot/src/enrol.ts": {
@@ -2049,12 +2031,6 @@
     "mtime": 1789484333.502546,
     "seen": 1789497207.4873078,
     "ast_hash": "1e199cac5b05ac4bc6df1dacd2d85e21",
-    "semantic_hash": ""
-  },
-  "bot/betano-probe.ts": {
-    "mtime": 1789485974.4454596,
-    "seen": 1789497207.4866624,
-    "ast_hash": "19f01f372ccce354899a21bc084e1bcb",
     "semantic_hash": ""
   },
   "db/migrations/026_clv_agent_runs.sql": {

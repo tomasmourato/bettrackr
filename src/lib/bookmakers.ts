@@ -1,11 +1,20 @@
 // src/lib/bookmakers.ts
 // Registo de casas de apostas com os seus defaults de freebet.
 //
-// IMPORTANTE (ver docs/PLAN.md §F3): os tipos de freebet por casa são DEFAULTS,
-// não verdades absolutas - vieram de fontes de afiliados pouco fiáveis e
-// misturadas PT/BR. SNR (Stake Not Returned) é o padrão da indústria e o
-// fallback seguro; a Betclic, a Betano e a Solverde são SR por decisão/dados
-// reais. O utilizador pode sempre corrigir o tipo em cada aposta.
+// IMPORTANTE: os tipos de freebet por casa são DEFAULTS, não verdades absolutas.
+// Vieram de uma pesquisa de julho de 2026 em sites de afiliados, pouco fiáveis e
+// misturados PT/BR. As únicas fontes com autoridade são os T&C de cada casa e o
+// pagamento real de uma freebet já liquidada.
+//
+//   SNR (Stake Not Returned): na vitória só se recebe o lucro. 10€ @ 3.0 -> 20€.
+//       É o padrão da indústria e o fallback seguro para uma casa desconhecida.
+//   SR (Stake Returned): paga como dinheiro, stake incluída. 10€ @ 3.0 -> 30€.
+//
+// A Betclic, a Betano e a Solverde são SR por decisão/dados reais. As apostas
+// importadas e liquidadas nem dependem disto: valem pelo que a casa pagou de
+// facto. O tipo serve a entrada manual e o retorno potencial das pendentes, e o
+// utilizador pode sempre corrigi-lo em cada aposta. "Aposta sem risco" não é um
+// tipo de pagamento: é uma aposta a dinheiro reembolsada em freebet.
 
 import { FreebetType } from "../types";
 
