@@ -222,6 +222,23 @@ Para levar o script ao telemovel: `git pull` se o repositorio estiver clonado no
 Termux, ou manda o ficheiro para as Transferencias e
 `cp ~/storage/downloads/religar-bot.sh ~/` (precisa de `termux-setup-storage` uma vez).
 
+#### Atualizar o bot e o agente do CLV: `termux/atualizar-bot.sh`
+
+Nenhum dos dois vem no deploy da Vercel. Depois de mudar código do bot, corre
+`npm run build:bot` no PC (gera `dist/bot.mjs`), leva esse ficheiro e o
+[termux/atualizar-bot.sh](termux/atualizar-bot.sh) para as Transferências do
+telemóvel e, no Termux:
+
+```bash
+bash ~/storage/downloads/atualizar-bot.sh
+```
+
+Encontra o bot e o agente pelo crontab, troca o `bot.mjs` pelo mais recente das
+Transferências (ou por um caminho/URL passado como argumento), descarrega o agente
+de `https://bettrackr.dev/clv-agent.mjs`, e corre uma passagem de cada. Recusa um
+ficheiro que não seja a versão nova e deixa o anterior em `.anterior`. Se o bot
+correr do repositório clonado (`src/index.ts`), faz `git pull` em vez disso.
+
 #### Alerta quando o bot para
 
 O servidor avisa quando nao ha nenhuma passagem COM SUCESSO ha mais de 1 hora - nao

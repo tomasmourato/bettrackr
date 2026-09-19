@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   "bot/README.md": {
-    "mtime": 1789484333.3958056,
-    "seen": 1789497207.4873464,
-    "ast_hash": "22b1115db647c4c2238ca26f66593484",
+    "mtime": 1789815947.8315203,
+    "seen": 1789815962.951485,
+    "ast_hash": "0ece5f42e64c93985390f70de1477e29",
     "semantic_hash": ""
   },
   "bot/src/enrol.ts": {
@@ -2067,6 +2067,12 @@
     "mtime": 1789498451.8063807,
     "seen": 1789812773.9070396,
     "ast_hash": "0545d9571d87d44b9c77b0d341cc7b94",
+    "semantic_hash": ""
+  },
+  "bot/termux/atualizar-bot.sh": {
+    "mtime": 1789815807.1316464,
+    "seen": 1789815962.9511104,
+    "ast_hash": "bb537eacbf780919b46c4d59fbb76e26",
     "semantic_hash": ""
   }
 }
