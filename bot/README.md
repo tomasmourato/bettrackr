@@ -203,16 +203,22 @@ Termux:
 bash religar-bot.sh
 ```
 
-Segura o wake lock (o Android deixa de adormecer o Termux), garante o `crond` e a
-linha do bot no crontab (le a que ja la esta), instala um arranque para o
-Termux:Boot e corre uma passagem logo, com diagnostico. Quando o problema nao e o
-telemovel, diz o que falta:
+Segura o wake lock (o Android deixa de adormecer o Termux), garante o `crond` e as
+linhas do bot e do agente do CLV no crontab (le as que ja la estao), instala um
+arranque para o Termux:Boot e corre uma passagem de cada logo, com diagnostico.
+Quando o problema nao e o telemovel, diz o que falta:
 
 - `sem token de contexto valido` - a sessao da Betclic expirou (o bot esteve mais
   de ~2h sem conseguir entrar). Reativa cada conta no painel /bot e volta a correr
   o script.
 - `Sessao BetTrackr expirada (401)` - o `BETTRACKR_TOKEN` do `bot.env` ja nao serve.
 - `fetch failed` - sem rede.
+
+E do agente do CLV: segredo em falta ou diferente do `CLV_AGENT_SECRET` da Vercel
+(401), Node partido depois de um `pkg upgrade` a meio, `BETTRACKR_BASE` a apontar
+para outro sitio, ou a Betclic a recusar o IP de casa (403). A linha do agente
+nunca e impressa: costuma levar o segredo. Se o agente nao estiver no crontab,
+acrescenta-se com `AGENTE_CMD="..." bash religar-bot.sh` (de 5 em 5 minutos).
 
 Caso real (11/09/2026): o telemovel adormeceu ~1h30 (Doze), a sessao da Betclic
 caducou, e o bot continuou a correr de 30 em 30 minutos a falhar sem recuperar. O
@@ -251,6 +257,14 @@ Pecas: `lib/botWatch.ts` (o vigia), `GET /api/bot/watch` chamado de 10 em 10 min
 pg_cron do Supabase (`db/cron/bot-watch.sql`, aplicado a mao), a migracao
 `db/migrations/025_notificacoes.sql` (tambem a mao), e `FCM_SERVICE_ACCOUNT` na
 Vercel + `google-services.json` no APK para o push (`lib/push.ts`, `src/lib/push.ts`).
+
+O mesmo vigia olha tambem para o **agente do CLV**: sem passagens de captura ha mais
+de 30 minutos (corre de 5 em 5), abre um alerta "O agente de CLV parou" ao staff,
+com push, que fecha sozinho na primeira passagem com sucesso. Independente disso,
+o painel /bot mostra o aviso no topo sempre que a ultima passagem do agente tem
+mais de 30 minutos (`lib/clvAgentHealth.ts`). Caso real que o motivou: a 11/10/2026
+o agente parou as 03:35 e esteve uma semana calado, com o painel a mostrar a ultima
+passagem a verde.
 
 **Alternativa (PC sempre ligado):** o modo continuo, `npm start`, que corre uma
 passagem a cada `BOT_INTERVAL_SEC` (default 1800s = 30 min). Os segredos vao no

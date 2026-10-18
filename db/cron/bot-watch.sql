@@ -13,6 +13,9 @@
 -- De 10 em 10 minutos: com o limite de 1 hora (lib/botWatch.ts), o push sai
 -- entre 60 e 70 minutos depois da última passagem com sucesso.
 --
+-- A mesma chamada vigia também o agente do CLV (limite de 30 minutos, alerta ao
+-- staff). Não é preciso voltar a correr nada: o trabalho agendado já chama a rota.
+--
 -- Pré-requisito: a migração db/migrations/025_notificacoes.sql aplicada. Sem
 -- ela o endpoint responde 503 e não faz nada.
 --
