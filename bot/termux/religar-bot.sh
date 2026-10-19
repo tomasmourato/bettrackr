@@ -2,8 +2,17 @@
 # religar-bot.sh - volta a pôr o bot da Betclic e o agente do CLV a correr no
 # Termux e diz porque é que tinham parado.
 #
-#   bash religar-bot.sh                 religa, corre uma passagem de cada e lê o resultado
-#   bash religar-bot.sh --sem-passagem  só religa (wake lock + cron), sem correr agora
+#   bash religar-bot.sh                    religa, corre uma passagem de cada e lê o resultado
+#   bash religar-bot.sh --sem-passagem     só religa (wake lock + cron), sem correr agora
+#   bash religar-bot.sh --instalar-agente  põe o agente do CLV a correr neste telemóvel:
+#                                          descarrega-o, pede o segredo e trata do crontab
+#   bash religar-bot.sh --repor-bot        volta a pôr no crontab a última linha do bot
+#                                          que este script lá viu
+#
+# Os comandos de crontab ficam todos aqui dentro, de propósito: a 19/10/2026 um
+# '(crontab -1; echo ...) | crontab -' escrito à mão (um 1 em vez do l) deixou o
+# crontab só com a linha do agente, e a do bot perdeu-se. Antes de cada escrita
+# fica uma cópia em ~/.religar-bot/crontab.anterior.
 #
 # Tudo o que faz é idempotente - pode correr-se as vezes que for:
 #   1. termux-wake-lock, para o Android não adormecer o Termux (Doze). Foi um
@@ -40,12 +49,27 @@ erro() { printf '\033[31m✘\033[0m %s\n' "$*"; }
 diz() { printf '%s\n' "$*"; }
 
 CORRER_AGORA=1
-[ "${1:-}" = "--sem-passagem" ] && CORRER_AGORA=0
+INSTALAR_AGENTE=0
+REPOR_BOT=0
+for opcao in "$@"; do
+  case "$opcao" in
+    --sem-passagem) CORRER_AGORA=0 ;;
+    --instalar-agente) INSTALAR_AGENTE=1 ;;
+    --repor-bot) REPOR_BOT=1 ;;
+    # Escrito à mão num telemóvel, uma opção trocada calava-se e o script fazia
+    # outra coisa sem ninguém perceber.
+    *) erro "Não conheço a opção «$opcao» (há --sem-passagem, --instalar-agente e --repor-bot)."; exit 1 ;;
+  esac
+done
 
 case "${PREFIX:-}" in
   *com.termux*) ;;
   *) erro "Isto é para correr dentro do Termux."; exit 1 ;;
 esac
+
+# Muda a cada versão: é por aqui que se vê, no ecrã, se o ficheiro que correu é
+# o novo ou uma cópia antiga esquecida em ~ ou nas Transferências.
+diz "religar-bot.sh, versão de 19/10/2026"
 
 # É pelo nome do ficheiro que este script e o atualizar-bot.sh encontram o agente
 # no crontab. Uma linha sem ele seria acrescentada de novo a cada vez que isto
@@ -80,9 +104,76 @@ if ! command -v crond >/dev/null 2>&1; then
 fi
 
 # ------------------------------------------------------------------
-# 3. As linhas do bot e do agente no crontab
+# 3. O agente do CLV neste telemóvel (só com --instalar-agente)
 # ------------------------------------------------------------------
+# O segredo fica num ficheiro só do Termux, fora do crontab; a linha do crontab
+# carrega-o. A linha entra no passo seguinte, com as outras.
+PASTA_AGENTE="$HOME/clv"
+AGENTE_URL="${AGENTE_URL:-https://bettrackr.dev/clv-agent.mjs}"
+LINHA_AGENTE_PADRAO='cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1'
+if [ "$INSTALAR_AGENTE" -eq 1 ]; then
+  mkdir -p "$PASTA_AGENTE"
+  if [ -s "$PASTA_AGENTE/clv-agent.mjs" ]; then
+    verde "O agente já está em ~/clv/clv-agent.mjs (atualiza-se com o atualizar-bot.sh)."
+  else
+    diz "A descarregar o agente do CLV de $AGENTE_URL..."
+    if curl -fsSL --max-time 90 -o "$PASTA_AGENTE/clv-agent.novo.mjs" "$AGENTE_URL" \
+      && node --check "$PASTA_AGENTE/clv-agent.novo.mjs" >/dev/null 2>&1; then
+      mv "$PASTA_AGENTE/clv-agent.novo.mjs" "$PASTA_AGENTE/clv-agent.mjs"
+      verde "Agente descarregado para ~/clv/clv-agent.mjs."
+    else
+      rm -f "$PASTA_AGENTE/clv-agent.novo.mjs"
+      erro "Não consegui descarregar o agente: sem rede, ou falta o Node ('pkg install nodejs')."
+      exit 1
+    fi
+  fi
+  if [ -s "$PASTA_AGENTE/agente.env" ]; then
+    verde "O segredo do agente já está em ~/clv/agente.env (para o trocar: rm ~/clv/agente.env e repete)."
+  else
+    diz "Cola o segredo do agente - o CLV_AGENT_SECRET da Vercel (Settings > Environment Variables) -"
+    diz "e carrega Enter. Não aparece no ecrã."
+    SEGREDO=""
+    read -rsp 'Segredo do agente: ' SEGREDO
+    echo
+    SEGREDO="${SEGREDO//$'\r'/}"
+    if [ -z "$SEGREDO" ]; then
+      erro "Não recebi segredo nenhum - nada mudou. Repete e cola-o."
+      exit 1
+    fi
+    # Entre plicas, com as do próprio valor escapadas: é o shell do cron que o lê.
+    ( umask 077
+      printf "export BETTRACKR_AGENT_SECRET='%s'\n" "$(printf '%s' "$SEGREDO" | sed "s/'/'\\\\''/g")" \
+        > "$PASTA_AGENTE/agente.env" )
+    unset SEGREDO
+    verde "Segredo guardado em ~/clv/agente.env (fora do crontab, só o Termux o lê)."
+  fi
+  AGENTE_CMD="${AGENTE_CMD:-$LINHA_AGENTE_PADRAO}"
+fi
+
+# ------------------------------------------------------------------
+# 4. As linhas do bot e do agente no crontab
+# ------------------------------------------------------------------
+MEMORIA="$HOME/.religar-bot"
+LINHA_BOT_GUARDADA="$MEMORIA/linha-do-bot"
+mkdir -p "$MEMORIA"
+SCRIPT="$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")"
 CRONTAB_ATUAL="$(crontab -l 2>/dev/null || true)"
+
+# Todas as escritas no crontab passam por aqui, com o crontab novo inteiro em $1.
+# Antes, fica uma cópia do que lá estava.
+escrever_crontab() {
+  ( umask 077; printf '%s\n' "$CRONTAB_ATUAL" > "$MEMORIA/crontab.anterior" )
+  printf '%s\n' "$1" | sed '/^$/d' | crontab -
+  CRONTAB_ATUAL="$(crontab -l 2>/dev/null || true)"
+}
+
+# A mesma linha do agente duas vezes são duas passagens à Betclic de cada vez (é
+# o que dá acrescentá-la duas vezes). As cópias exatas saem; fica a primeira.
+if [ -n "$(printf '%s\n' "$CRONTAB_ATUAL" | grep -v '^[[:space:]]*#' | grep 'clv-agent' | sort | uniq -d)" ]; then
+  escrever_crontab "$(printf '%s\n' "$CRONTAB_ATUAL" \
+    | awk '/clv-agent/ && !/^[[:space:]]*#/ { if (visto[$0]++) next } { print }')"
+  verde "Tirei do crontab as linhas do agente do CLV que estavam repetidas."
+fi
 LINHAS_ATIVAS="$(printf '%s\n' "$CRONTAB_ATUAL" | grep -v '^[[:space:]]*#')"
 # A linha do bot: a que chama o bot.mjs, o run.sh do bot ou o src/index.ts.
 # Nunca a do agente do CLV, nem comentários.
@@ -95,32 +186,67 @@ LINHAS_AGENTE="$(printf '%s\n' "$LINHAS_ATIVAS" | grep 'clv-agent')"
 # sem a captura nenhuma aposta recebe odd de fecho.
 LINHAS_CAPTURA="$(printf '%s\n' "$LINHAS_AGENTE" | grep -v -- '--daily')"
 
+# Para o --repor-bot, se a linha do bot alguma vez desaparecer do crontab.
+sugerir_repor_bot() {
+  [ -s "$LINHA_BOT_GUARDADA" ] || return 0
+  diz "   Se devia estar: a última linha dele que vi aqui foi"
+  diz "   $(cat "$LINHA_BOT_GUARDADA")"
+  diz "   Repõe-na com: bash '$SCRIPT' --repor-bot"
+}
+
 if [ -n "$LINHA_BOT" ]; then
   BOT_CMD="${BOT_CMD:-$(printf '%s\n' "$LINHA_BOT" | sem_horario)}"
   verde "Linha do bot no crontab: $LINHA_BOT"
+  ( umask 077; printf '%s\n' "$LINHA_BOT" > "$LINHA_BOT_GUARDADA" )
 elif [ -n "${BOT_CMD:-}" ]; then
-  printf '%s\n*/30 * * * * %s\n' "$CRONTAB_ATUAL" "$BOT_CMD" | sed '/^$/d' | crontab -
+  escrever_crontab "$(printf '%s\n*/30 * * * * %s\n' "$CRONTAB_ATUAL" "$BOT_CMD")"
   verde "Linha do bot acrescentada ao crontab: */30 * * * * $BOT_CMD"
+elif [ "$REPOR_BOT" -eq 1 ]; then
+  if [ ! -s "$LINHA_BOT_GUARDADA" ]; then
+    erro "Não tenho nenhuma linha do bot guardada: só se guarda quando este script a vê no crontab."
+    diz "   Diz qual é e repete, por exemplo:"
+    diz "   BOT_CMD=\"bash ~/bettrackr/bot/run.sh\" bash religar-bot.sh"
+    exit 1
+  fi
+  LINHA_BOT="$(cat "$LINHA_BOT_GUARDADA")"
+  escrever_crontab "$(printf '%s\n%s\n' "$CRONTAB_ATUAL" "$LINHA_BOT")"
+  BOT_CMD="$(printf '%s\n' "$LINHA_BOT" | sem_horario)"
+  verde "Linha do bot reposta no crontab: $LINHA_BOT"
 elif [ -n "$LINHAS_AGENTE" ] || [ -n "${AGENTE_CMD:-}" ]; then
-  # Um telemóvel só com o agente: não há bot a religar, mas o agente sim.
+  # Um telemóvel só com o agente: não há bot a religar, mas o agente sim. Não se
+  # repõe sozinho: dois bots com as mesmas contas estragavam a sessão um ao outro.
   BOT_CMD=""
   aviso "O bot não está no crontab deste telemóvel - sigo só com o agente do CLV."
+  sugerir_repor_bot
 else
   erro "Não encontrei o bot no crontab."
-  diz "   Diz onde ele está e repete, por exemplo:"
-  diz "   BOT_CMD=\"bash ~/bettrackr/bot/run.sh\" bash religar-bot.sh"
+  if [ -s "$LINHA_BOT_GUARDADA" ]; then
+    sugerir_repor_bot
+  else
+    diz "   Diz onde ele está e repete, por exemplo:"
+    diz "   BOT_CMD=\"bash ~/bettrackr/bot/run.sh\" bash religar-bot.sh"
+  fi
   exit 1
 fi
 
 if [ -n "$LINHAS_CAPTURA" ]; then
-  AGENTE_CMD="${AGENTE_CMD:-$(printf '%s\n' "$LINHAS_CAPTURA" | head -n 1 | sem_horario)}"
+  CMD_CRON="$(printf '%s\n' "$LINHAS_CAPTURA" | head -n 1 | sem_horario)"
+  # A passagem de teste é sempre a que o cron corre: outra dava aqui um «a
+  # correr» com o cron a falhar, e fechava à mesma o alerta. Comparado depois
+  # do mesmo awk, que junta os espaços.
+  if [ -n "${AGENTE_CMD:-}" ] && [ "$(printf '* * * * * %s\n' "$AGENTE_CMD" | sem_horario)" != "$CMD_CRON" ]; then
+    aviso "Já há uma linha do agente no crontab, diferente do AGENTE_CMD: fica a do crontab, que é a que o cron corre."
+    diz "   Para a trocar, apaga-a com 'crontab -e' e repete."
+  fi
+  AGENTE_CMD="$CMD_CRON"
   verde "O agente do CLV está no crontab - volta com o mesmo cron."
+  N_CAPTURA="$(printf '%s\n' "$LINHAS_CAPTURA" | grep -c .)"
+  if [ "$N_CAPTURA" -gt 1 ]; then
+    aviso "Há $N_CAPTURA linhas diferentes do agente (a de 5 em 5 minutos) no crontab: cada uma é mais uma passagem à Betclic. Deixa só uma, com 'crontab -e'."
+  fi
 elif [ -n "${AGENTE_CMD:-}" ]; then
-  # Relido, porque o passo do bot pode ter acabado de lhe acrescentar uma linha -
-  # e relido ANTES da pipeline: dentro dela o 'crontab -' podia esvaziá-lo
-  # enquanto o 'crontab -l' ainda o lia, e perdia-se a linha do bot.
-  CRONTAB_ATUAL="$(crontab -l 2>/dev/null || true)"
-  printf '%s\n*/5 * * * * %s\n' "$CRONTAB_ATUAL" "$AGENTE_CMD" | sed '/^$/d' | crontab -
+  # O CRONTAB_ATUAL já traz a linha que o passo do bot possa ter acabado de pôr.
+  escrever_crontab "$(printf '%s\n*/5 * * * * %s\n' "$CRONTAB_ATUAL" "$AGENTE_CMD")"
   verde "Linha do agente do CLV acrescentada ao crontab (de 5 em 5 minutos)."
 else
   AGENTE_CMD=""
@@ -130,19 +256,14 @@ else
     aviso "O agente do CLV não está no crontab deste telemóvel (procurei uma linha com «clv-agent»). Sem ele nenhuma aposta recebe odd de fecho."
     diz "   Se corre noutra máquina, ignora."
   fi
-  # Os mesmos passos do bot/README.md. O segredo fica num ficheiro só do Termux,
-  # fora do crontab.
-  cat <<'EOF'
-   Para o pôr a correr aqui (bot/README.md, «Instalar o agente do CLV»):
-     mkdir -p ~/clv && curl -fsSL https://bettrackr.dev/clv-agent.mjs -o ~/clv/clv-agent.mjs
-     read -rsp 'Segredo do agente: ' S; echo; printf "export BETTRACKR_AGENT_SECRET='%s'\n" "$S" > ~/clv/agente.env; chmod 600 ~/clv/agente.env; unset S
-     AGENTE_CMD='cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1' bash religar-bot.sh
-   O segredo é o valor do CLV_AGENT_SECRET na Vercel (Settings > Environment Variables).
-EOF
+  # Este mesmo ficheiro, pelo caminho inteiro, e não um religar-bot.sh antigo
+  # que ande por ~ ou pelas Transferências.
+  diz "   Para o pôr a correr aqui (pede o segredo, o CLV_AGENT_SECRET da Vercel, e trata do resto):"
+  diz "     bash '$SCRIPT' --instalar-agente"
 fi
 
 # ------------------------------------------------------------------
-# 4. crond a correr
+# 5. crond a correr
 # ------------------------------------------------------------------
 # Com o termux-services o crond é um serviço do runit; sem ele, arranca-se direto.
 if [ -d "$PREFIX/var/service/crond" ] && command -v sv >/dev/null 2>&1; then
@@ -163,7 +284,7 @@ else
 fi
 
 # ------------------------------------------------------------------
-# 5. Termux:Boot
+# 6. Termux:Boot
 # ------------------------------------------------------------------
 ARRANQUE="$HOME/.termux/boot/10-bettrackr-bot"
 mkdir -p "$HOME/.termux/boot"
@@ -185,7 +306,7 @@ if [ "$CORRER_AGORA" -eq 0 ]; then
 fi
 
 # ------------------------------------------------------------------
-# 6. Uma passagem já, e o que ela diz
+# 7. Uma passagem já, e o que ela diz
 # ------------------------------------------------------------------
 # O log é o ficheiro do '>>': no comando do crontab ou dentro do script que ele
 # chama. Sem '>>' em lado nenhum, a saída vem para o ecrã e lê-se de lá.
@@ -328,11 +449,14 @@ if [ -n "$AGENTE_CMD" ]; then
   # que não conseguiu ser contada.
   if grep -q 'falta BETTRACKR_AGENT_SECRET' "$SAIDA"; then
     aviso "O agente arranca sem o segredo (BETTRACKR_AGENT_SECRET)."
-    diz "   Tem de estar na linha do crontab, ou num ficheiro que ela carregue, com o"
-    diz "   mesmo valor do CLV_AGENT_SECRET na Vercel."
+    diz "   Tem de estar num ficheiro que a linha do crontab carregue, ou na própria linha,"
+    diz "   com o mesmo valor do CLV_AGENT_SECRET na Vercel. Para o guardar em ~/clv/agente.env:"
+    diz "     rm -f ~/clv/agente.env; bash '$SCRIPT' --instalar-agente"
   elif grep -qE 'respondeu 401' "$SAIDA"; then
     aviso "O BetTrackr recusa o segredo do agente (401)."
     diz "   O BETTRACKR_AGENT_SECRET do telemóvel tem de ser igual ao CLV_AGENT_SECRET da Vercel."
+    diz "   Se está em ~/clv/agente.env, troca-o com:"
+    diz "     rm -f ~/clv/agente.env; bash '$SCRIPT' --instalar-agente"
   elif grep -qE 'respondeu 403' "$SAIDA"; then
     aviso "O BetTrackr (ou a firewall da Vercel) recusou o pedido do agente (403)."
   elif grep -qE 'CANNOT LINK EXECUTABLE|command not found|node: not found|Cannot find module|ERR_MODULE_NOT_FOUND|SyntaxError' "$SAIDA"; then
@@ -341,7 +465,9 @@ if [ -n "$AGENTE_CMD" ]; then
     diz "   2. bash atualizar-bot.sh   (volta a pôr o agente)"
   elif grep -q 'No such file or directory' "$SAIDA"; then
     aviso "A linha do agente no crontab aponta para uma pasta ou ficheiro que já não existe (lê a linha acima)."
-    diz "   Corrige-a com 'crontab -e', ou volta a pô-la com AGENTE_CMD=\"...\" depois de a apagar."
+    diz "   Se o agente devia estar em ~/clv, isto descarrega-o e guarda o segredo:"
+    diz "     bash '$SCRIPT' --instalar-agente"
+    diz "   Se está noutro sítio, corrige a linha com 'crontab -e'."
   elif grep -qE 'respondeu 404|sem JSON' "$SAIDA"; then
     aviso "O endereço do BetTrackr que o agente usa não é o BetTrackr (404 ou uma página que não é a API)."
     diz "   Se a linha do crontab define BETTRACKR_BASE, tem de ser https://bettrackr.dev (ou apaga-a: é o valor por omissão)."

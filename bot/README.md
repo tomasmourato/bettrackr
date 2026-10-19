@@ -218,7 +218,8 @@ E do agente do CLV: segredo em falta ou diferente do `CLV_AGENT_SECRET` da Verce
 (401), Node partido depois de um `pkg upgrade` a meio, `BETTRACKR_BASE` a apontar
 para outro sitio, ou a Betclic a recusar o IP de casa (403). A linha do agente
 nunca e impressa: costuma levar o segredo. Se o agente nao estiver no crontab, o
-script mostra os passos para o instalar (a seccao seguinte).
+script diz como o instalar: `bash ~/religar-bot.sh --instalar-agente` (a seccao
+seguinte).
 
 Caso real (11/09/2026): o telemovel adormeceu ~1h30 (Doze), a sessao da Betclic
 caducou, e o bot continuou a correr de 30 em 30 minutos a falhar sem recuperar. O
@@ -243,20 +244,39 @@ a pena desligar no Termux).
 
 Precisa do Node no Termux (`pkg install nodejs`; o bot ja o usa) e do segredo do
 agente, que e o valor do `CLV_AGENT_SECRET` na Vercel (Settings > Environment
-Variables). O segredo fica num ficheiro so do Termux, fora do crontab:
+Variables). Com o `religar-bot.sh` em `~` (acima):
 
 ```bash
-mkdir -p ~/clv && curl -fsSL https://bettrackr.dev/clv-agent.mjs -o ~/clv/clv-agent.mjs
-read -rsp 'Segredo do agente: ' S; echo; printf "export BETTRACKR_AGENT_SECRET='%s'\n" "$S" > ~/clv/agente.env; chmod 600 ~/clv/agente.env; unset S
-AGENTE_CMD='cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1' bash ~/religar-bot.sh
+bash ~/religar-bot.sh --instalar-agente
 ```
 
-O ultimo passo acrescenta a linha de 5 em 5 minutos ao crontab e corre uma passagem
-com diagnostico: tem de acabar em "Agente do CLV a correr". A passagem de madrugada
-(odds do dia para as dicas de IA) e uma linha a parte:
+Descarrega o agente para `~/clv/clv-agent.mjs`, pede o segredo (cola-se e Enter; nao
+aparece no ecra) e guarda-o em `~/clv/agente.env` (modo 600, fora do crontab), poe no
+crontab a linha de 5 em 5 minutos
+
+```
+*/5 * * * * cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1
+```
+
+e corre uma passagem com diagnostico, que tem de acabar em "Agente do CLV a correr".
+O que ja estiver feito (agente descarregado, segredo guardado, linha no crontab)
+fica como esta; para trocar o segredo, `rm ~/clv/agente.env` e repete-se. A
+primeira linha que o script mostra e a versao (`religar-bot.sh, versão de
+19/10/2026`) - sem ela, e uma copia antiga.
+
+Os comandos de crontab ficam dentro do script de proposito: a 19/10/2026 um
+`(crontab -l; echo ...) | crontab -` escrito a mao com um `1` no lugar do `l` deixou
+o crontab so com a linha nova, e a do bot perdeu-se. O script guarda a ultima linha
+do bot que viu (`~/.religar-bot/linha-do-bot`) e repoe-na com
+`bash ~/religar-bot.sh --repor-bot`; antes de cada escrita fica uma copia do crontab
+em `~/.religar-bot/crontab.anterior`.
+
+A passagem de madrugada (odds do dia para as dicas de IA) e opcional. Para a juntar
+a mao, assim - com os `&&`, um primeiro comando mal escrito para tudo em vez de
+deixar o crontab so com a linha nova:
 
 ```bash
-(crontab -l; echo '15 6 * * * cd ~/clv && . ./agente.env && node clv-agent.mjs --daily >> agente.log 2>&1') | crontab -
+crontab -l > ~/crontab.txt && echo '15 6 * * * cd ~/clv && . ./agente.env && node clv-agent.mjs --daily >> agente.log 2>&1' >> ~/crontab.txt && crontab ~/crontab.txt
 ```
 
 So um agente de cada vez: ao mudar de telemovel, tira as linhas do `clv-agent` do
