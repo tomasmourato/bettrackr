@@ -1956,9 +1956,9 @@
     "semantic_hash": ""
   },
   "bot/termux/religar-bot.sh": {
-    "mtime": 1792424941.1985211,
-    "seen": 1792424992.3988364,
-    "ast_hash": "5d16c866288d9a54c268a5ed144a3cbe",
+    "mtime": 1792427478.7730865,
+    "seen": 1792427504.6898704,
+    "ast_hash": "122d4d916237f44472af5d1ecc6f25dd",
     "semantic_hash": ""
   },
   "db/cron/bot-watch.sql": {

@@ -1,7 +1,7 @@
 # Graph Report - bettrackr  (2026-10-19)
 
 ## Corpus Check
-- 282 files · ~317,090 words
+- 282 files · ~317,139 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 26 file(s) not represented in the graph (top: .xml 12, (none) 4, .properties 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f3baec7c`
+- Built from commit: `b2f59a82`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

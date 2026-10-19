@@ -127,9 +127,13 @@ if [ "$INSTALAR_AGENTE" -eq 1 ]; then
       exit 1
     fi
   fi
-  if [ -s "$PASTA_AGENTE/agente.env" ]; then
+  # Conta o valor, não o ficheiro: a 19/10/2026 um 'read' escrito à mão deixou lá
+  # um export com o segredo vazio, e o agente arrancava sem ele.
+  if ( unset BETTRACKR_AGENT_SECRET; . "$PASTA_AGENTE/agente.env" >/dev/null 2>&1
+       [ -n "${BETTRACKR_AGENT_SECRET:-}" ] ); then
     verde "O segredo do agente já está em ~/clv/agente.env (para o trocar: rm ~/clv/agente.env e repete)."
   else
+    [ -e "$PASTA_AGENTE/agente.env" ] && aviso "O ~/clv/agente.env não tem segredo nenhum - vou pedi-lo."
     diz "Cola o segredo do agente - o CLV_AGENT_SECRET da Vercel (Settings > Environment Variables) -"
     diz "e carrega Enter. Não aparece no ecrã."
     SEGREDO=""
@@ -451,7 +455,7 @@ if [ -n "$AGENTE_CMD" ]; then
     aviso "O agente arranca sem o segredo (BETTRACKR_AGENT_SECRET)."
     diz "   Tem de estar num ficheiro que a linha do crontab carregue, ou na própria linha,"
     diz "   com o mesmo valor do CLV_AGENT_SECRET na Vercel. Para o guardar em ~/clv/agente.env:"
-    diz "     rm -f ~/clv/agente.env; bash '$SCRIPT' --instalar-agente"
+    diz "     bash '$SCRIPT' --instalar-agente"
   elif grep -qE 'respondeu 401' "$SAIDA"; then
     aviso "O BetTrackr recusa o segredo do agente (401)."
     diz "   O BETTRACKR_AGENT_SECRET do telemóvel tem de ser igual ao CLV_AGENT_SECRET da Vercel."

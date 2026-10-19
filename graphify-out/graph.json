@@ -15188,7 +15188,7 @@
       },
       "norm_label": "correr()",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L385"
+      "source_location": "L389"
     },
     {
       "id": "bot_termux_religar_bot_diz",
@@ -15233,7 +15233,7 @@
       },
       "norm_label": "escrever_crontab()",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L164"
+      "source_location": "L168"
     },
     {
       "id": "bot_termux_religar_bot_expande",
@@ -15248,7 +15248,7 @@
       },
       "norm_label": "expande()",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L313"
+      "source_location": "L317"
     },
     {
       "id": "bot_termux_religar_bot_log_de",
@@ -15263,7 +15263,7 @@
       },
       "norm_label": "log_de()",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L323"
+      "source_location": "L327"
     },
     {
       "id": "bot_termux_religar_bot_log_em",
@@ -15278,7 +15278,7 @@
       },
       "norm_label": "log_em()",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L320"
+      "source_location": "L324"
     },
     {
       "id": "bot_termux_religar_bot_sem_horario",
@@ -15323,7 +15323,7 @@
       },
       "norm_label": "sugerir_repor_bot()",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L190"
+      "source_location": "L194"
     },
     {
       "id": "bot_termux_religar_bot_verde",
@@ -25991,7 +25991,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L387",
+      "source_location": "L391",
       "weight": 1.0
     },
     {
@@ -26003,7 +26003,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L325",
+      "source_location": "L329",
       "weight": 1.0
     },
     {
@@ -26015,7 +26015,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L328",
+      "source_location": "L332",
       "weight": 1.0
     },
     {
@@ -26027,7 +26027,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L173",
+      "source_location": "L177",
       "weight": 1.0
     },
     {
@@ -26039,7 +26039,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L198",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -26051,7 +26051,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L220",
+      "source_location": "L224",
       "weight": 1.0
     },
     {
@@ -26063,7 +26063,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L411",
+      "source_location": "L415",
       "weight": 1.0
     },
     {
@@ -26123,7 +26123,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L192",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -84581,7 +84581,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L164",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -84592,7 +84592,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L190",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -84603,7 +84603,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L313",
+      "source_location": "L317",
       "weight": 1.0
     },
     {
@@ -84614,7 +84614,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L320",
+      "source_location": "L324",
       "weight": 1.0
     },
     {
@@ -84625,7 +84625,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L323",
+      "source_location": "L327",
       "weight": 1.0
     },
     {
@@ -84636,7 +84636,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "bot/termux/religar-bot.sh",
-      "source_location": "L385",
+      "source_location": "L389",
       "weight": 1.0
     },
     {
@@ -86628,5 +86628,5 @@
       "source_file": "public/pwa-512x512.png"
     }
   ],
-  "built_at_commit": "f3baec7cb3bebac0f1a1dc40fce3847b1cb477e4"
+  "built_at_commit": "b2f59a823f683312ec334d8705e341511983720e"
 }
