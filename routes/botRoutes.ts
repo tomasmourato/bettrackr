@@ -29,14 +29,15 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/authMiddl
 import { requireBotAccess, AccessRequest } from "../middleware/accessMiddleware.js";
 import { isStaff } from "../lib/entitlements.js";
 import { activationConfigured, encryptToken, decryptToken } from "../lib/botCrypto.js";
-import { resolveBotAlert, runBotWatch } from "../lib/botWatch.js";
+import { resolveBotAlert, runBotWatch, runClvAgentWatch } from "../lib/botWatch.js";
 import { signToken } from "./authRoutes.js";
 
 const router = Router();
 
 // ------------------------------------------------------------
 // GET /watch - o vigia (lib/botWatch.ts): abre um alerta, com push, a quem está
-// sem passagens com sucesso há mais de 1 hora. Chamado de 10 em 10 minutos pelo
+// sem passagens com sucesso há mais de 1 hora - e ao staff, quando o agente de
+// CLV está calado há mais de meia hora. Chamado de 10 em 10 minutos pelo
 // pg_cron do Supabase (db/cron/bot-watch.sql). Fica ANTES do authenticateToken:
 // não há utilizador neste pedido, a autenticação é o segredo partilhado.
 // ------------------------------------------------------------
@@ -49,8 +50,17 @@ router.get("/watch", async (req, res) => {
   }
   try {
     const summary = await runBotWatch();
-    console.info("[bot-watch] passagem:", JSON.stringify(summary));
-    res.json({ ok: true, ...summary });
+    // O agente de CLV vigia-se na mesma passagem: não há outro cron a chamar.
+    // Uma falha dele não esconde o que o vigia do bot já fez.
+    let clvAgent: unknown;
+    try {
+      clvAgent = await runClvAgentWatch();
+    } catch (error: any) {
+      console.error("[clv-watch] falhou:", error);
+      clvAgent = { error: error?.message };
+    }
+    console.info("[bot-watch] passagem:", JSON.stringify({ ...summary, clvAgent }));
+    res.json({ ok: true, ...summary, clvAgent });
   } catch (error: any) {
     console.error("[bot-watch] falhou:", error);
     // A tabela das notificações vem da migração 025, aplicada à mão.

@@ -118,11 +118,17 @@ async function bettrackr(caminho: string, init: RequestInit = {}) {
         },
         signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    const corpo = await res.json().catch(() => ({}));
+    const corpo = await res.json().catch(() => null);
     if (!res.ok) {
         throw new Error(
             `${caminho} respondeu ${res.status}${corpo?.error ? `: ${corpo.error}` : ""}`,
         );
+    }
+    // Um 200 que não é JSON não é o BetTrackr: é um endereço errado no
+    // BETTRACKR_BASE (uma página qualquer, um domínio estacionado). Sem isto o
+    // /work dava "nada a ler" e o agente parecia saudável sem nunca ler nada.
+    if (corpo === null || typeof corpo !== "object") {
+        throw new Error(`${caminho} respondeu ${res.status} sem JSON - o BETTRACKR_BASE aponta para outro sitio`);
     }
     return corpo;
 }

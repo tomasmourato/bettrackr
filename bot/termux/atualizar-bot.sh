@@ -35,9 +35,9 @@ esac
 AGENTE_URL="${AGENTE_URL:-https://bettrackr.dev/clv-agent.mjs}"
 # O que prova que o ficheiro é a versão nova e não uma cópia antiga esquecida nas
 # Transferências. Bot: devolve ao servidor o token renovado (desde 19/09/2026).
-# Agente: vai às categorias de mercados que a página não traz (desde 19/09/2026).
+# Agente: recusa um BETTRACKR_BASE que não responde JSON (desde 18/10/2026).
 MARCA_BOT='source: "bot"'
-MARCA_AGENTE='GetMatchWithNotification'
+MARCA_AGENTE='sem JSON - o BETTRACKR_BASE'
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

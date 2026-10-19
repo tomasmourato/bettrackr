@@ -23,7 +23,7 @@ import type { AppNotification, BotStalledData } from "../lib/notificationsApi";
 import type { NotificationsState } from "../hooks/useNotifications";
 import { getPushPermission, type PushPermission } from "../lib/push";
 import { isNativeApp } from "../lib/apiBase";
-import { useI18n } from "../lib/i18n";
+import { useI18n, type TKey } from "../lib/i18n";
 
 export type NotificationsMode = "desktop" | "mobile";
 
@@ -39,23 +39,71 @@ export function openBotAlert(items: AppNotification[]): AppNotification | undefi
   return items.find((item) => item.kind === "bot_stalled" && !item.resolvedAt);
 }
 
+/**
+ * Os textos de cada tipo de alerta de "parou". O do bot e o do agente de CLV
+ * (lib/botWatch.ts) guardam os mesmos dados e contam-se da mesma maneira; só as
+ * frases mudam.
+ */
+interface StallKeys {
+  title: TKey;
+  silent: TKey;
+  failing: TKey;
+  failingNever: TKey;
+  hintSilent: TKey;
+  hintFailing: TKey;
+}
+
+const BOT_STALL_KEYS: StallKeys = {
+  title: "notif.botStalled.title",
+  silent: "notif.botStalled.silent",
+  failing: "notif.botStalled.failing",
+  failingNever: "notif.botStalled.failingNever",
+  hintSilent: "notif.botStalled.hintSilent",
+  hintFailing: "notif.botStalled.hintFailing",
+};
+
+// Um Map e não um objeto: um tipo desconhecido não pode cair no que o objeto
+// herda (um "constructor" daria uma função).
+const STALL_KEYS = new Map<string, StallKeys>([
+  ["bot_stalled", BOT_STALL_KEYS],
+  [
+    "clv_agent_stalled",
+    {
+      title: "notif.clvStalled.title",
+      silent: "notif.clvStalled.silent",
+      failing: "notif.clvStalled.failing",
+      failingNever: "notif.clvStalled.failingNever",
+      hintSilent: "notif.clvStalled.hintSilent",
+      hintFailing: "notif.clvStalled.hintFailing",
+    },
+  ],
+]);
+
 /** Data e hora curtas, como nas passagens do bot. */
 function useStamp() {
   const { formatDate, formatTime } = useI18n();
   return (value: string) => `${formatDate(value)} ${formatTime(value)}`;
 }
 
-/** O texto de um alerta de bot parado, formado no idioma de quem lê. */
-function BotStalledBody({ data, showHint }: { data: Partial<BotStalledData>; showHint: boolean }) {
+/** O texto de um alerta de "parou" (bot ou agente de CLV), formado no idioma de quem lê. */
+function StalledBody({
+  keys,
+  data,
+  showHint,
+}: {
+  keys: StallKeys;
+  data: Partial<BotStalledData>;
+  showHint: boolean;
+}) {
   const { t } = useI18n();
   const stamp = useStamp();
   const silent = data.state === "silent";
 
   const line = silent
-    ? t("notif.botStalled.silent", { date: data.lastRunAt ? stamp(data.lastRunAt) : "—" })
+    ? t(keys.silent, { date: data.lastRunAt ? stamp(data.lastRunAt) : "—" })
     : data.lastSuccessAt
-      ? t("notif.botStalled.failing", { date: stamp(data.lastSuccessAt) })
-      : t("notif.botStalled.failingNever");
+      ? t(keys.failing, { date: stamp(data.lastSuccessAt) })
+      : t(keys.failingNever);
 
   return (
     <div className="space-y-1">
@@ -68,7 +116,7 @@ function BotStalledBody({ data, showHint }: { data: Partial<BotStalledData>; sho
       )}
       {showHint && (
         <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-          {silent ? t("notif.botStalled.hintSilent") : t("notif.botStalled.hintFailing")}
+          {silent ? t(keys.hintSilent) : t(keys.hintFailing)}
         </p>
       )}
     </div>
@@ -87,7 +135,7 @@ export function BotAlertBanner({ notification }: { notification: AppNotification
       <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("notif.botStalled.title")}</p>
-        <BotStalledBody data={notification.data as Partial<BotStalledData>} showHint />
+        <StalledBody keys={BOT_STALL_KEYS} data={notification.data as Partial<BotStalledData>} showHint />
         <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">{stamp(notification.createdAt)}</p>
       </div>
     </div>
@@ -108,7 +156,8 @@ function NotificationItem({
   const { t } = useI18n();
   const stamp = useStamp();
   const open = !notification.resolvedAt;
-  const isBot = notification.kind === "bot_stalled";
+  // O bot e o agente de CLV resolvem-se os dois no painel do bot.
+  const stall = STALL_KEYS.get(notification.kind);
 
   return (
     <div className={`${CARD[mode]} px-4 py-3 flex items-start gap-3`}>
@@ -122,7 +171,7 @@ function NotificationItem({
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {isBot ? t("notif.botStalled.title") : t("notif.unknown")}
+            {stall ? t(stall.title) : t("notif.unknown")}
           </span>
           {isNew && (
             <span className="px-1.5 py-0.5 rounded-sm bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold uppercase tracking-wider font-mono">
@@ -140,11 +189,13 @@ function NotificationItem({
           </span>
         </div>
 
-        {isBot && <BotStalledBody data={notification.data as Partial<BotStalledData>} showHint={open} />}
+        {stall && (
+          <StalledBody keys={stall} data={notification.data as Partial<BotStalledData>} showHint={open} />
+        )}
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">{stamp(notification.createdAt)}</span>
-          {isBot && open && onOpenBot && (
+          {stall && open && onOpenBot && (
             <button
               type="button"
               onClick={onOpenBot}

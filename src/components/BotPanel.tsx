@@ -47,6 +47,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import { BotAlertBanner, openBotAlert } from "./NotificationsPanel";
 import { useI18n } from "../lib/i18n";
 import { messageOf } from "../lib/apiError";
+import { clvAgentSilent, lastCaptureRun } from "../../lib/clvAgentHealth";
 
 export type BotMode = "desktop" | "mobile";
 
@@ -251,6 +252,29 @@ function ClvRunRow({ run }: { run: ClvAgentRun }) {
       error={run.error}
       details={details}
     />
+  );
+}
+
+// O agente de CLV calado há mais de meia hora (lib/clvAgentHealth.ts). Fica no
+// topo do painel e não junto das passagens: a 11/10/2026 o agente parou e a
+// lista continuou a mostrar a última passagem com um «OK» verde durante uma
+// semana, sem nada que dissesse que era velha.
+function ClvAgentStaleBanner({ lastRunAt }: { lastRunAt: string }) {
+  const { t, formatDate, formatTime } = useI18n();
+  return (
+    <div
+      role="alert"
+      className="rounded-sm border border-amber-300 dark:border-amber-900/70 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 flex items-start gap-3"
+    >
+      <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("bot.clv.stale.title")}</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-300">
+          {t("bot.clv.stale.body", { date: `${formatDate(lastRunAt)} ${formatTime(lastRunAt)}` })}
+        </p>
+        <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t("bot.clv.stale.hint")}</p>
+      </div>
+    </div>
   );
 }
 
@@ -523,6 +547,9 @@ function RunList<T extends { id: string }>({
 export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const { t, formatDate } = useI18n();
   const [status, setStatus] = useState<BotStatus | null>(null);
+  // Quando o status chegou: o painel não se atualiza sozinho, e comparar uma
+  // fotografia velha com o relógio de agora acusava um agente que está bem.
+  const [statusAt, setStatusAt] = useState(0);
   const [accounts, setAccounts] = useState<BookieAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -540,6 +567,7 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
     try {
       const [st, accs] = await Promise.all([fetchBotStatus(), fetchAccounts()]);
       setStatus(st);
+      setStatusAt(Date.now());
       setAccounts(accs);
     } catch {
       setError(t("bot.loadError"));
@@ -571,6 +599,10 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const visibleAccounts = betclicAccounts.filter((a) => !hidden.has(a.id));
   const hiddenAccounts = betclicAccounts.filter((a) => hidden.has(a.id));
 
+  // Só o staff recebe as passagens do agente (clvAgent é null ao botuser).
+  const lastCapture = status?.clvAgent ? lastCaptureRun(status.clvAgent.runs) : undefined;
+  const clvAgentStale = lastCapture ? clvAgentSilent(lastCapture.started_at, statusAt) : false;
+
   return (
     <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-5">
       <div className="flex items-start justify-between gap-4">
@@ -596,6 +628,7 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
       </div>
 
       {botAlert && <BotAlertBanner notification={botAlert} />}
+      {clvAgentStale && lastCapture && <ClvAgentStaleBanner lastRunAt={lastCapture.started_at} />}
 
       {error && (
         <div className={`${CARD} px-4 py-3 text-sm text-red-600 dark:text-red-400`}>{error}</div>

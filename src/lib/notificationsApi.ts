@@ -16,6 +16,12 @@ export interface BotStalledData {
   lastError: string | null;
 }
 
+/**
+ * Os dados de uma notificação "clv_agent_stalled" (o agente de CLV parado): a
+ * mesma forma da do bot, com "silent" = o agente nem reporta.
+ */
+export type ClvAgentStalledData = BotStalledData;
+
 export interface AppNotification {
   id: string;
   kind: string;
