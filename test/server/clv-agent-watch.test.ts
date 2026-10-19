@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { CLV_AGENT_STALL_AFTER_MS, clvAgentSilent, lastCaptureRun } from "../../lib/clvAgentHealth";
-import { clvAgentAlertText, stallState, type BotActivity } from "../../lib/botWatch";
+import {
+  CLV_AGENT_FAILING_AFTER_MS,
+  clvAgentAlertText,
+  stallState,
+  type BotActivity,
+} from "../../lib/botWatch";
 
 // O vigia do agente de CLV. O caso que o fez nascer: a 11/10/2026 às 03:35 o
 // agente deixou de reportar e ficou uma semana calado - nenhuma aposta teve odd
@@ -53,24 +58,42 @@ describe("lastCaptureRun", () => {
   });
 });
 
-describe("stallState com o limite do agente", () => {
+describe("stallState com os limites do agente", () => {
+  const clv = (a: BotActivity, now = NOW) =>
+    stallState(a, now, CLV_AGENT_STALL_AFTER_MS, CLV_AGENT_FAILING_AFTER_MS);
+
   test("o caso real dá 'silent': o agente nem reporta", () => {
     const real = activity({
       lastRunAt: new Date("2026-10-11T02:35:01Z"),
       lastOkAt: new Date("2026-10-11T02:35:01Z"),
       firstRunAt: new Date("2026-10-04T02:40:00Z"),
     });
-    expect(stallState(real, NOW, CLV_AGENT_STALL_AFTER_MS)).toBe("silent");
+    expect(clv(real)).toBe("silent");
   });
 
-  test("a correr de 5 em 5 minutos mas a falhar há mais de meia hora dá 'failing'", () => {
-    const aFalhar = activity({ lastRunAt: ago(3), lastOkAt: ago(50), firstRunAt: ago(3000), lastError: "x" });
-    expect(stallState(aFalhar, NOW, CLV_AGENT_STALL_AFTER_MS)).toBe("failing");
+  test("calado há 35 minutos já é 'silent': o limite do silêncio continua meia hora", () => {
+    expect(clv(activity({ lastRunAt: ago(35), lastOkAt: ago(35), firstRunAt: ago(3000) }))).toBe("silent");
   });
 
-  test("com o limite do bot (1 hora) os mesmos 50 minutos ainda passavam", () => {
+  test("a correr de 5 em 5 minutos mas a falhar há mais de uma hora dá 'failing'", () => {
+    const aFalhar = activity({ lastRunAt: ago(3), lastOkAt: ago(65), firstRunAt: ago(3000), lastError: "x" });
+    expect(clv(aFalhar)).toBe("failing");
+  });
+
+  test("um jogo que não se lê faz falhar a janela dele toda (30 min) - não é agente parado", () => {
+    // As passagens boas antes e depois da janela distam meia hora; o vigia pode
+    // olhar mesmo antes de chegar a segunda, e um pouco depois dos 30 minutos.
+    const janela = activity({ lastRunAt: ago(5), lastOkAt: ago(31), firstRunAt: ago(3000), lastError: "x" });
+    expect(clv(janela)).toBeNull();
+  });
+
+  test("os limites por omissão (os do bot) não mudam: uma hora para tudo", () => {
     const aFalhar = activity({ lastRunAt: ago(3), lastOkAt: ago(50), firstRunAt: ago(3000), lastError: "x" });
     expect(stallState(aFalhar, NOW)).toBeNull();
+    expect(stallState({ ...aFalhar, lastOkAt: ago(61) }, NOW)).toBe("failing");
+    expect(stallState(activity({ lastRunAt: ago(61), lastOkAt: ago(61), firstRunAt: ago(3000) }), NOW)).toBe(
+      "silent",
+    );
   });
 });
 

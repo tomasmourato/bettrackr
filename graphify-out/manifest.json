@@ -1524,9 +1524,9 @@
     "semantic_hash": ""
   },
   "routes/clvRoutes.ts": {
-    "mtime": 1792351630.7201743,
-    "seen": 1792365143.3924828,
-    "ast_hash": "b51a29fb268e9952f8a6a66685c7231b",
+    "mtime": 1792423689.36504,
+    "seen": 1792423973.2583618,
+    "ast_hash": "d970afcdc0e173cfed4c089999aa9dc5",
     "semantic_hash": ""
   },
   "agent/clv-agent.ts": {
@@ -1842,9 +1842,9 @@
     "semantic_hash": ""
   },
   "src/components/BotPanel.tsx": {
-    "mtime": 1792351689.7779078,
-    "seen": 1792365143.392558,
-    "ast_hash": "d44b9ca576cfa2f9d0db0a3283008011",
+    "mtime": 1792423693.9130404,
+    "seen": 1792423973.2584252,
+    "ast_hash": "c6b42067691524839fd8b5d58cab113b",
     "semantic_hash": ""
   },
   "src/lib/botApi.ts": {
@@ -1866,9 +1866,9 @@
     "semantic_hash": ""
   },
   "bot/README.md": {
-    "mtime": 1792352125.916163,
-    "seen": 1792365143.393078,
-    "ast_hash": "2bc2c74377a2448ca1bd94953c1097a9",
+    "mtime": 1792423780.7530456,
+    "seen": 1792423973.2588425,
+    "ast_hash": "4906cf9ae037ca0d47f1401864566180",
     "semantic_hash": ""
   },
   "bot/src/enrol.ts": {
@@ -1956,9 +1956,9 @@
     "semantic_hash": ""
   },
   "bot/termux/religar-bot.sh": {
-    "mtime": 1792365063.9682958,
-    "seen": 1792365143.3921943,
-    "ast_hash": "248253d5289bbc58657821265be75b44",
+    "mtime": 1792423749.3812366,
+    "seen": 1792423973.2580898,
+    "ast_hash": "82cfd7f9232f1cc1a922c186a69d9f71",
     "semantic_hash": ""
   },
   "db/cron/bot-watch.sql": {
@@ -1974,9 +1974,9 @@
     "semantic_hash": ""
   },
   "lib/botWatch.ts": {
-    "mtime": 1792351614.3961747,
-    "seen": 1792365143.3923986,
-    "ast_hash": "d2ed1f93ad0a1c855977487cf2f4ef6d",
+    "mtime": 1792423676.5290394,
+    "seen": 1792423973.2582939,
+    "ast_hash": "d6f11e2948a99927943f463d99618ed4",
     "semantic_hash": ""
   },
   "lib/push.ts": {
@@ -2064,9 +2064,9 @@
     "semantic_hash": ""
   },
   "test/server/clv-agent-watch.test.ts": {
-    "mtime": 1792352093.7361636,
-    "seen": 1792365143.3930297,
-    "ast_hash": "b21cbca8e0710c07dd03f61dd34925f6",
+    "mtime": 1792423792.3530464,
+    "seen": 1792423973.2588124,
+    "ast_hash": "22c6cf19bc3cfdf4fbcc11315875e48a",
     "semantic_hash": ""
   }
 }

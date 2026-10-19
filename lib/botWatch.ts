@@ -46,13 +46,23 @@ function semSucessoDesde(activity: BotActivity): Date | null {
   return activity.lastOkAt ?? activity.firstRunAt ?? activity.lastRunAt;
 }
 
-/** O estado do bot, ou null se está bem (ou ainda é cedo para o dizer). */
-export function stallState(activity: BotActivity, now: number, limitMs = STALL_AFTER_MS): StallState | null {
+/**
+ * O estado do bot, ou null se está bem (ou ainda é cedo para o dizer).
+ * failingLimitMs é quanto tempo a falhar, ainda a reportar, conta como parado;
+ * por omissão o mesmo limite do silêncio.
+ */
+export function stallState(
+  activity: BotActivity,
+  now: number,
+  limitMs = STALL_AFTER_MS,
+  failingLimitMs = limitMs,
+): StallState | null {
   const desde = semSucessoDesde(activity);
   if (!activity.lastRunAt || !desde) return null;
+  const semSucesso = now - desde.getTime();
+  if (now - activity.lastRunAt.getTime() > limitMs) return semSucesso > limitMs ? "silent" : null;
   // Um bot acabado de instalar e a falhar há 10 minutos ainda não é um bot parado.
-  if (now - desde.getTime() <= limitMs) return null;
-  return now - activity.lastRunAt.getTime() <= limitMs ? "failing" : "silent";
+  return semSucesso > failingLimitMs ? "failing" : null;
 }
 
 /**
@@ -257,14 +267,23 @@ async function pushToUser(
 // Diferenças em relação ao bot:
 //  - há UM agente para o serviço todo, sem dono (clv_agent_runs não tem
 //    user_id), por isso o alerta vai para o staff - é quem o pode religar;
-//  - corre de 5 em 5 minutos e não de 30 em 30, por isso o limite é meia hora
-//    (CLV_AGENT_STALL_AFTER_MS, partilhado com o painel);
+//  - corre de 5 em 5 minutos e não de 30 em 30, por isso o limite do silêncio
+//    é meia hora (CLV_AGENT_STALL_AFTER_MS, partilhado com o painel), e o de
+//    passagens a falhar é uma hora (CLV_AGENT_FAILING_AFTER_MS);
 //  - só conta a captura: a passagem de madrugada corre uma vez por dia.
 //
 // Sem a migração 026 não há passagens para vigiar e isto não faz nada.
 // ============================================================
 
 export const CLV_ALERT_KIND = "clv_agent_stalled";
+
+/**
+ * A reportar mas sem sucesso há mais do que isto = agente parado. É o dobro do
+ * silêncio porque um jogo cuja página não se lê (adiado, retirado) faz falhar
+ * todas as passagens da janela dele - de 30 a 5 minutos antes do apito, meia
+ * hora certa entre duas passagens boas - sem que o agente tenha nada de errado.
+ */
+export const CLV_AGENT_FAILING_AFTER_MS = 60 * 60 * 1000;
 
 /** O texto do PUSH do agente parado, no idioma de quem o recebe. */
 export function clvAgentAlertText(state: StallState, activity: BotActivity, now: number, lang: Lang) {
@@ -329,14 +348,20 @@ export async function runClvAgentWatch(now = Date.now()): Promise<ClvWatchSummar
   };
   if (!activity.lastRunAt) return summary;
 
-  const state = stallState(activity, now, CLV_AGENT_STALL_AFTER_MS);
+  const state = stallState(activity, now, CLV_AGENT_STALL_AFTER_MS, CLV_AGENT_FAILING_AFTER_MS);
   if (!state) {
     summary.state = "ok";
-    const resolved = await pool.query(
-      "UPDATE notifications SET resolved_at = NOW() WHERE kind = $1 AND resolved_at IS NULL",
-      [CLV_ALERT_KIND],
-    );
-    summary.resolved = resolved.rowCount ?? 0;
+    // Só fecha o alerta uma captura com sucesso posterior a ele. "Ainda é cedo
+    // para o dizer" não chega: um agente que volta a falhar depois de uma
+    // semana calado perdeu na poda a última passagem boa, e parecia acabado de
+    // instalar.
+    if (activity.lastOkAt) {
+      const resolved = await pool.query(
+        "UPDATE notifications SET resolved_at = NOW() WHERE kind = $1 AND resolved_at IS NULL AND created_at < $2",
+        [CLV_ALERT_KIND, activity.lastOkAt],
+      );
+      summary.resolved = resolved.rowCount ?? 0;
+    }
     return summary;
   }
   summary.state = state;

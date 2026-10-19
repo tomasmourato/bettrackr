@@ -547,6 +547,9 @@ function RunList<T extends { id: string }>({
 export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
   const { t, formatDate } = useI18n();
   const [status, setStatus] = useState<BotStatus | null>(null);
+  // Quando o status chegou: o painel não se atualiza sozinho, e comparar uma
+  // fotografia velha com o relógio de agora acusava um agente que está bem.
+  const [statusAt, setStatusAt] = useState(0);
   const [accounts, setAccounts] = useState<BookieAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -564,6 +567,7 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
     try {
       const [st, accs] = await Promise.all([fetchBotStatus(), fetchAccounts()]);
       setStatus(st);
+      setStatusAt(Date.now());
       setAccounts(accs);
     } catch {
       setError(t("bot.loadError"));
@@ -597,7 +601,7 @@ export default function BotPanel({ mode = "desktop" }: { mode?: BotMode }) {
 
   // Só o staff recebe as passagens do agente (clvAgent é null ao botuser).
   const lastCapture = status?.clvAgent ? lastCaptureRun(status.clvAgent.runs) : undefined;
-  const clvAgentStale = lastCapture ? clvAgentSilent(lastCapture.started_at, Date.now()) : false;
+  const clvAgentStale = lastCapture ? clvAgentSilent(lastCapture.started_at, statusAt) : false;
 
   return (
     <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-5">

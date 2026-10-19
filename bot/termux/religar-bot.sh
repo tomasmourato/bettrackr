@@ -24,8 +24,9 @@
 #
 # Onde estão: lido do crontab. Se lá não houver linha, diz-se à mão:
 #   BOT_CMD="bash ~/bettrackr/bot/run.sh" bash religar-bot.sh
-#   AGENTE_CMD="cd ~/clv && node clv-agent.mjs >> agente.log 2>&1" bash religar-bot.sh
-# (o bot corre de 30 em 30 minutos, o agente de 5 em 5)
+#   AGENTE_CMD='cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1' bash religar-bot.sh
+# (o bot corre de 30 em 30 minutos, o agente de 5 em 5; o agente.env tem o
+# export BETTRACKR_AGENT_SECRET=..., e instalar o agente está no bot/README.md)
 #
 # Só mexe no Termux (wake lock, cron, ~/.termux/boot). Não toca nos cofres
 # (passkey-*.enc, session-*.enc) nem no bot.env. A linha do agente nunca é
@@ -45,6 +46,14 @@ case "${PREFIX:-}" in
   *com.termux*) ;;
   *) erro "Isto é para correr dentro do Termux."; exit 1 ;;
 esac
+
+# É pelo nome do ficheiro que este script e o atualizar-bot.sh encontram o agente
+# no crontab. Uma linha sem ele seria acrescentada de novo a cada vez que isto
+# corresse - e cada cópia é mais uma passagem à Betclic de 5 em 5 minutos.
+if [ -n "${AGENTE_CMD:-}" ] && ! printf '%s' "$AGENTE_CMD" | grep -q 'clv-agent'; then
+  erro "O AGENTE_CMD tem de chamar o ficheiro do agente pelo nome (clv-agent.mjs)."
+  exit 1
+fi
 
 # Tira os 5 campos do horário de uma linha do crontab e fica o comando.
 sem_horario() { awk '{ $1=$2=$3=$4=$5=""; sub(/^ +/, ""); print }'; }
@@ -82,6 +91,9 @@ LINHA_BOT="$(printf '%s\n' "$LINHAS_ATIVAS" \
   | grep -E 'bot\.mjs|bot/run\.sh|src/index\.ts' \
   | head -n 1)"
 LINHAS_AGENTE="$(printf '%s\n' "$LINHAS_ATIVAS" | grep 'clv-agent')"
+# A de 5 em 5 minutos (a captura). A de madrugada (--daily) sozinha não conta:
+# sem a captura nenhuma aposta recebe odd de fecho.
+LINHAS_CAPTURA="$(printf '%s\n' "$LINHAS_AGENTE" | grep -v -- '--daily')"
 
 if [ -n "$LINHA_BOT" ]; then
   BOT_CMD="${BOT_CMD:-$(printf '%s\n' "$LINHA_BOT" | sem_horario)}"
@@ -100,9 +112,8 @@ else
   exit 1
 fi
 
-if [ -n "$LINHAS_AGENTE" ]; then
-  # A de 5 em 5 minutos (a captura), não a de madrugada (--daily).
-  AGENTE_CMD="${AGENTE_CMD:-$(printf '%s\n' "$LINHAS_AGENTE" | grep -v -- '--daily' | head -n 1 | sem_horario)}"
+if [ -n "$LINHAS_CAPTURA" ]; then
+  AGENTE_CMD="${AGENTE_CMD:-$(printf '%s\n' "$LINHAS_CAPTURA" | head -n 1 | sem_horario)}"
   verde "O agente do CLV está no crontab - volta com o mesmo cron."
 elif [ -n "${AGENTE_CMD:-}" ]; then
   # Relido, porque o passo do bot pode ter acabado de lhe acrescentar uma linha -
@@ -113,9 +124,21 @@ elif [ -n "${AGENTE_CMD:-}" ]; then
   verde "Linha do agente do CLV acrescentada ao crontab (de 5 em 5 minutos)."
 else
   AGENTE_CMD=""
-  aviso "O agente do CLV não está no crontab deste telemóvel (procurei uma linha com «clv-agent»). Sem ele nenhuma aposta recebe odd de fecho."
-  diz "   Se corre noutra máquina, ignora. Se devia correr aqui, diz onde ele está e repete:"
-  diz "   AGENTE_CMD=\"cd ~/clv && node clv-agent.mjs >> agente.log 2>&1\" bash religar-bot.sh"
+  if [ -n "$LINHAS_AGENTE" ]; then
+    aviso "Do agente do CLV só está no crontab a passagem de madrugada (--daily). Falta a de 5 em 5 minutos, a que lê a odd de fecho."
+  else
+    aviso "O agente do CLV não está no crontab deste telemóvel (procurei uma linha com «clv-agent»). Sem ele nenhuma aposta recebe odd de fecho."
+    diz "   Se corre noutra máquina, ignora."
+  fi
+  # Os mesmos passos do bot/README.md. O segredo fica num ficheiro só do Termux,
+  # fora do crontab.
+  cat <<'EOF'
+   Para o pôr a correr aqui (bot/README.md, «Instalar o agente do CLV»):
+     mkdir -p ~/clv && curl -fsSL https://bettrackr.dev/clv-agent.mjs -o ~/clv/clv-agent.mjs
+     read -rsp 'Segredo do agente: ' S; echo; printf "export BETTRACKR_AGENT_SECRET='%s'\n" "$S" > ~/clv/agente.env; chmod 600 ~/clv/agente.env; unset S
+     AGENTE_CMD='cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1' bash religar-bot.sh
+   O segredo é o valor do CLV_AGENT_SECRET na Vercel (Settings > Environment Variables).
+EOF
 fi
 
 # ------------------------------------------------------------------
@@ -228,6 +251,12 @@ VARS_CRON="$(printf '%s\n' "$CRONTAB_ATUAL" \
       printf "export %s='%s'\n" "$nome" "$(printf '%s' "$valor" | sed "s/'/'\\\\''/g")"
     done)"
 
+# E só elas: o cronie começa cada comando com o ambiente vazio. Um segredo que
+# este shell (ou o ~/.bashrc) exporte daria aqui uma passagem boa que no cron
+# falha - e essa passagem fechava à mesma o alerta de agente parado.
+AMBIENTE_CRON="unset BETTRACKR_AGENT_SECRET BETTRACKR_BASE CLV_PAUSA_MS BETTRACKR_TOKEN BETCLIC_BOT_KEY BETCLIC_CONTEXT_TOKEN BOT_DIR BOT_INTERVAL_SEC BOT_KEYFILE BOT_VAULT
+$VARS_CRON"
+
 # Corre um comando do crontab e deixa em $2 a saída desta passagem. Com $3 = 1
 # também a mostra à medida (o bot); o agente só se mostra depois, filtrado.
 # O que o próprio shell queixar (um 'cd' para uma pasta que já não existe, um
@@ -238,16 +267,16 @@ correr() {
   if [ -n "$log" ]; then
     queixas="$(mktemp)"
     [ -f "$log" ] && antes=$(wc -l < "$log")
-    bash -c "$VARS_CRON
+    bash -c "$AMBIENTE_CRON
 $cmd" 2>"$queixas"
     tail -n +"$((antes + 1))" "$log" > "$saida" 2>/dev/null
     cat "$queixas" >> "$saida"
     rm -f "$queixas"
   elif [ "$eco" -eq 1 ]; then
-    bash -c "$VARS_CRON
+    bash -c "$AMBIENTE_CRON
 $cmd" 2>&1 | tee "$saida"
   else
-    bash -c "$VARS_CRON
+    bash -c "$AMBIENTE_CRON
 $cmd" > "$saida" 2>&1
   fi
 }

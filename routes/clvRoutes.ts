@@ -745,8 +745,17 @@ router.post("/heartbeat", async (req, res) => {
             ],
         );
         // Poda na mesma ida. O agente passa de 5 em 5 minutos, por isso guarda-se
-        // uma semana (~2000 linhas) e nao os 30 dias do bot_runs.
-        await pool.query("DELETE FROM clv_agent_runs WHERE started_at < NOW() - INTERVAL '7 days'");
+        // uma semana (~2000 linhas) e nao os 30 dias do bot_runs. Fica sempre a
+        // ultima captura com sucesso, por mais velha que seja: e por ela que o
+        // vigia e o painel sabem ha quanto tempo o agente esta parado.
+        await pool.query(
+            `DELETE FROM clv_agent_runs
+              WHERE started_at < NOW() - INTERVAL '7 days'
+                AND id IS DISTINCT FROM (
+                  SELECT id FROM clv_agent_runs
+                   WHERE kind = 'capture' AND ok
+                   ORDER BY started_at DESC LIMIT 1)`,
+        );
         // Uma captura com sucesso fecha o alerta de "agente parado" que houver em
         // aberto (lib/botWatch.ts). Nunca atira: sem a migracao 025 segue na mesma.
         if (run.ok && run.kind === "capture") await resolveClvAgentAlert();

@@ -217,16 +217,51 @@ Quando o problema nao e o telemovel, diz o que falta:
 E do agente do CLV: segredo em falta ou diferente do `CLV_AGENT_SECRET` da Vercel
 (401), Node partido depois de um `pkg upgrade` a meio, `BETTRACKR_BASE` a apontar
 para outro sitio, ou a Betclic a recusar o IP de casa (403). A linha do agente
-nunca e impressa: costuma levar o segredo. Se o agente nao estiver no crontab,
-acrescenta-se com `AGENTE_CMD="..." bash religar-bot.sh` (de 5 em 5 minutos).
+nunca e impressa: costuma levar o segredo. Se o agente nao estiver no crontab, o
+script mostra os passos para o instalar (a seccao seguinte).
 
 Caso real (11/09/2026): o telemovel adormeceu ~1h30 (Doze), a sessao da Betclic
 caducou, e o bot continuou a correr de 30 em 30 minutos a falhar sem recuperar. O
 cron estava vivo; faltava o wake lock e reativar as contas.
 
-Para levar o script ao telemovel: `git pull` se o repositorio estiver clonado no
-Termux, ou manda o ficheiro para as Transferencias e
-`cp ~/storage/downloads/religar-bot.sh ~/` (precisa de `termux-setup-storage` uma vez).
+Para levar o script ao telemovel, o mais simples e descarrega-lo direto para o
+Termux (o repositorio e publico, e assim nao depende do acesso as Transferencias):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tomasmourato/bettrackr/main/bot/termux/religar-bot.sh -o ~/religar-bot.sh
+bash ~/religar-bot.sh
+```
+
+Ou `git pull` se o repositorio estiver clonado no Termux, ou manda o ficheiro para
+as Transferencias e `bash ~/storage/downloads/religar-bot.sh`. Um `Permission denied`
+aqui e o Termux sem acesso ao armazenamento: `termux-setup-storage`, ou em
+Definicoes > Apps > Termux > Permissoes. O Android tira essa permissao sozinho a
+apps que nao se abrem ha meses ("Remover permissoes se a app nao for usada" - vale
+a pena desligar no Termux).
+
+#### Instalar o agente do CLV (ou muda-lo de telemovel)
+
+Precisa do Node no Termux (`pkg install nodejs`; o bot ja o usa) e do segredo do
+agente, que e o valor do `CLV_AGENT_SECRET` na Vercel (Settings > Environment
+Variables). O segredo fica num ficheiro so do Termux, fora do crontab:
+
+```bash
+mkdir -p ~/clv && curl -fsSL https://bettrackr.dev/clv-agent.mjs -o ~/clv/clv-agent.mjs
+read -rsp 'Segredo do agente: ' S; echo; printf "export BETTRACKR_AGENT_SECRET='%s'\n" "$S" > ~/clv/agente.env; chmod 600 ~/clv/agente.env; unset S
+AGENTE_CMD='cd ~/clv && . ./agente.env && node clv-agent.mjs >> agente.log 2>&1' bash ~/religar-bot.sh
+```
+
+O ultimo passo acrescenta a linha de 5 em 5 minutos ao crontab e corre uma passagem
+com diagnostico: tem de acabar em "Agente do CLV a correr". A passagem de madrugada
+(odds do dia para as dicas de IA) e uma linha a parte:
+
+```bash
+(crontab -l; echo '15 6 * * * cd ~/clv && . ./agente.env && node clv-agent.mjs --daily >> agente.log 2>&1') | crontab -
+```
+
+So um agente de cada vez: ao mudar de telemovel, tira as linhas do `clv-agent` do
+antigo (`crontab -e`). Dois a correr duplicam os pedidos a Betclic, e foi a pressa
+que ja levou a Betclic a bloquear um IP de casa.
 
 #### Atualizar o bot e o agente do CLV: `termux/atualizar-bot.sh`
 
@@ -259,8 +294,12 @@ pg_cron do Supabase (`db/cron/bot-watch.sql`, aplicado a mao), a migracao
 Vercel + `google-services.json` no APK para o push (`lib/push.ts`, `src/lib/push.ts`).
 
 O mesmo vigia olha tambem para o **agente do CLV**: sem passagens de captura ha mais
-de 30 minutos (corre de 5 em 5), abre um alerta "O agente de CLV parou" ao staff,
-com push, que fecha sozinho na primeira passagem com sucesso. Independente disso,
+de 30 minutos (corre de 5 em 5), ou a falhar todas ha mais de 1 hora, abre um alerta
+"O agente de CLV parou" ao staff, com push, que fecha sozinho na primeira passagem
+com sucesso. A hora e de proposito: um jogo cuja pagina nao se le faz falhar as
+passagens da janela dele (de 30 a 5 minutos antes do apito) sem o agente ter nada.
+A poda de 7 dias das passagens guarda sempre a ultima captura com sucesso, para o
+vigia e o painel saberem ha quanto tempo o agente esta parado. Independente disso,
 o painel /bot mostra o aviso no topo sempre que a ultima passagem do agente tem
 mais de 30 minutos (`lib/clvAgentHealth.ts`). Caso real que o motivou: a 11/10/2026
 o agente parou as 03:35 e esteve uma semana calado, com o painel a mostrar a ultima
