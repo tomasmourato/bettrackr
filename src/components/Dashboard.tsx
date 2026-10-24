@@ -35,6 +35,7 @@ import TimeframeFilter, {
   type TimeframeFilterValue,
 } from "./TimeframeFilter";
 import { EMPTY_BET_FILTERS, readFilters, serializeFilters } from "../lib/filterParams";
+import { hasBetsWithoutSport, listSports, matchesSportFilter, NO_SPORT } from "../lib/sportFilter";
 import { useUrlFilterSync } from "../hooks/useUrlFilterSync";
 import { 
   ResponsiveContainer, 
@@ -153,17 +154,8 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
     () => Array.from(new Set(allBets.map(b => b.bookmaker).filter((b): b is string => !!b))).sort(),
     [allBets]
   );
-  const sportOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          allBets
-            .flatMap(b => (b.selections || []).map(s => s.sport))
-            .filter((s): s is string => !!s)
-        )
-      ).sort(),
-    [allBets]
-  );
+  const sportOptions = useMemo(() => listSports(allBets), [allBets]);
+  const anyWithoutSport = useMemo(() => hasBetsWithoutSport(allBets), [allBets]);
 
   const timeframeRange = useMemo(() => resolveTimeframeRange(timeframeFilter), [timeframeFilter]);
 
@@ -182,7 +174,7 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
         if (filterFreebet === "FREEBET" && !b.isFreebet) return false;
         if (filterFreebet === "RISK_FREE" && !b.isRiskFree) return false;
         if (filterFreebet === "NORMAL" && (b.isFreebet || b.isRiskFree)) return false;
-        if (filterSport !== "ALL" && !(b.selections || []).some(s => s.sport === filterSport)) return false;
+        if (!matchesSportFilter(b, filterSport)) return false;
         if (timeframeRange.start || timeframeRange.end) {
           const betDate = b.dateTime?.slice(0, 10) || "";
           if (!betDate) return false;
@@ -535,7 +527,11 @@ export default function Dashboard({ bets: allBets, currency, isDark, onOpenBets,
           <FilterDropdown
             className="flex-1 min-w-40"
             value={filterSport}
-            options={[{ value: "ALL", label: t("filters.allSports") }, ...sportOptions.map(sport => ({ value: sport, label: sport }))]}
+            options={[
+              { value: "ALL", label: t("filters.allSports") },
+              ...sportOptions.map(sport => ({ value: sport, label: sport })),
+              ...(anyWithoutSport ? [{ value: NO_SPORT, label: t("filters.noSport") }] : [])
+            ]}
             onChange={setFilterSport}
             ariaLabel={t("filters.sportAria")}
           />

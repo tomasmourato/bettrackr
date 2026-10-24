@@ -69,6 +69,7 @@ export const PT = {
   "filters.allAccounts": "Todas as contas",
   "filters.allSports": "Todos os desportos",
   "filters.noAccount": "Sem conta",
+  "filters.noSport": "Sem desporto",
   "filters.anyType": "Qualquer tipo",
   "filters.allStatuses": "Todos os estados",
   "filters.status": "Estado",

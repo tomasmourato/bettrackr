@@ -21,6 +21,7 @@ import {
     safeNum,
     type ClvBet,
 } from "./clvMath.js";
+import { normalizeSport } from "./sport.js";
 
 /** Uma linha do retrato: por família de mercado, por desporto ou por casa. */
 export interface ClvGroupRow {
@@ -95,10 +96,13 @@ export function marketFamily(market: unknown): string {
     return cru.slice(0, 40);
 }
 
-/** O desporto do boletim: o da primeira perna que o traga. */
+/**
+ * O desporto do boletim: o da primeira perna que o traga. Normalizado, senão
+ * "FUTEBOL" e "Futebol" eram duas linhas e nenhuma chegava à amostra.
+ */
 function sportOf(bet: ClvBet): string {
     for (const selection of bet.selections || []) {
-        const sport = String(selection?.sport ?? "").trim();
+        const sport = normalizeSport(selection?.sport);
         if (sport) return sport;
     }
     return "";

@@ -30,6 +30,8 @@ import { useBetForm } from "../../hooks/useBetForm";
 import { betClv, needsClosingOdd, originalOddOf } from "../../lib/clv";
 import { ClvLockInline, ClvLockPanel } from "../../components/ClvLock";
 import { useI18n, type TFn, type TKey } from "../../lib/i18n";
+import { hasBetsWithoutSport, listSports, matchesSportFilter, NO_SPORT } from "../../lib/sportFilter";
+import { normalizeSport } from "../../../lib/sport";
 import { selectionHaptic } from "../../lib/haptics";
 import { createLongPressController } from "../../lib/longPress";
 import {
@@ -266,15 +268,8 @@ export default function MobileBets({
 
   const form = useBetForm(accounts);
 
-  const sportOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          bets.flatMap((bet) => bet.selections.map((s) => s.sport?.trim()).filter((s): s is string => Boolean(s))),
-        ),
-      ).sort((a, b) => a.localeCompare(b, locale)),
-    [bets, locale],
-  );
+  const sportOptions = useMemo(() => listSports(bets), [bets]);
+  const anyWithoutSport = useMemo(() => hasBetsWithoutSport(bets), [bets]);
   const bookmakerOptions = useMemo(
     () =>
       Array.from(new Set([...AVAILABLE_BOOKMAKERS, ...bets.map((b) => b.bookmaker).filter(Boolean)])).sort((a, b) =>
@@ -315,7 +310,7 @@ export default function MobileBets({
       const matchesBookmaker = bookmakerFilter === "ALL" || bet.bookmaker === bookmakerFilter;
       const matchesAccount =
         accountFilter === "ALL" || (accountFilter === "NONE" ? !bet.accountId : bet.accountId === accountFilter);
-      const matchesSport = sportFilter === "ALL" || bet.selections.some((s) => s.sport?.trim() === sportFilter);
+      const matchesSport = matchesSportFilter(bet, sportFilter);
       const day = bet.dateTime?.slice(0, 10) || "";
       const matchesFrom = !dateFrom || Boolean(day && day >= dateFrom);
       const matchesTo = !dateTo || Boolean(day && day <= dateTo);
@@ -572,7 +567,7 @@ export default function MobileBets({
         }
       }
       if (changesSport) {
-        next.selections = next.selections.map((s) => ({ ...s, sport: beSport.trim() }));
+        next.selections = next.selections.map((s) => ({ ...s, sport: normalizeSport(beSport) }));
       }
       if (changesMoney) {
         next.isFreebet = beMoney === "FREEBET";
@@ -950,7 +945,7 @@ label={t("bets.bulk.deleteAria")}
                 <ListItem
                   key={s.id}
                   title={s.event}
-                  subtitle={`${s.market} · ${s.choice}`}
+                  subtitle={[s.competition, s.market, s.choice].filter(Boolean).join(" · ")}
                   trailing={safeNum(s.odd).toFixed(2)}
                 />
               ))}
@@ -1334,7 +1329,11 @@ title={t("bets.filtersSheet.title")}
           {sportOptions.length > 0 && (
             <ChipGroup
               label={t("filters.sport")}
-              options={[{ value: "ALL", label: t("filters.allMasc") }, ...sportOptions.map((s) => ({ value: s, label: s }))]}
+              options={[
+                { value: "ALL", label: t("filters.allMasc") },
+                ...sportOptions.map((s) => ({ value: s, label: s })),
+                ...(anyWithoutSport ? [{ value: NO_SPORT, label: t("filters.noSport") }] : []),
+              ]}
               value={sportFilter}
               onChange={setSportFilter}
             />

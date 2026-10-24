@@ -99,6 +99,8 @@ interface LegUpdate {
     closingOddMargin?: number;
     startsAtUtc?: string;
     leadMinutes?: number;
+    /** A liga do jogo, lida da mesma página. A aposta da Betclic não a traz. */
+    competition?: string;
 }
 
 /**
@@ -121,6 +123,12 @@ export function aplicarNaPerna(
     // aqui so nao se grava o que ja la esta igual.
     if (update.startsAtUtc && update.startsAtUtc !== antes.startsAtUtc) {
         depois.startsAtUtc = update.startsAtUtc;
+        mexeu = true;
+    }
+
+    // A liga vem da mesma pagina e pela mesma regra: quem sabe e a casa.
+    if (update.competition && update.competition !== antes.competition) {
+        depois.competition = update.competition;
         mexeu = true;
     }
 
@@ -196,10 +204,13 @@ async function applyToBet(
             marca.closingOddLeadMinutes = piorLead;
         }
 
+        // COALESCE: uma passagem que so traz a liga ou o apito nao pode apagar
+        // a odd de fecho de uma aposta antiga que a tinha so no boletim, sem
+        // odds por perna - a combinada das pernas dava null e levava-a.
         await client.query(
             `UPDATE bets
                 SET selections = $1::jsonb,
-                    closing_odd = $2,
+                    closing_odd = COALESCE($2, closing_odd),
                     metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
                     updated_at = timezone('utc', now())
               WHERE id = $4`,
@@ -285,6 +296,8 @@ export interface Leitura {
     /** Mercados completos, para o de-vig. O servidor RE-VALIDA a margem. */
     markets?: Array<{ ids: string[]; odds: number[] }>;
     kickoffUtc?: string | null;
+    /** A liga do jogo. Um agente antigo nao a manda. */
+    competition?: string | null;
 }
 
 /**
@@ -327,6 +340,11 @@ async function aplicar(
             // Portugal, e mesmo quando o jogo foi adiado depois de importado.
             const cura = curaDeHorario(apito, leg);
             if (cura) update.startsAtUtc = cura;
+
+            // A liga entra a qualquer leitura, dentro ou fora da janela da odd
+            // de fecho: para um jogo que as odds do dia nao apanharam, e o
+            // unico sitio de onde a aposta da Betclic a pode tirar.
+            if (page.competition) update.competition = page.competition;
 
             const efetivo = apito ?? leg.kickoff;
             const faltam = efetivo - Date.now();
@@ -528,6 +546,10 @@ router.post("/submit", async (req, res) => {
                 odds,
                 markets: markets as MatchPage["markets"],
                 kickoffUtc: typeof l?.kickoffUtc === "string" ? l.kickoffUtc : null,
+                competition:
+                    typeof l?.competition === "string" && l.competition.trim() !== ""
+                        ? l.competition.trim().slice(0, 160)
+                        : null,
             });
         }
 
@@ -557,6 +579,55 @@ const MAX_JOGOS_DIA = 200;
 // estaria a raspar - e o corte e pela ordem de chegada, nao pela margem, por
 // isso truncar aqui deitava fora mercados bons por acaso.
 const MAX_MERCADOS_POR_JOGO = 60;
+
+/**
+ * A liga das pernas que ainda nao a tem, tirada da daily_odds pelo matchId.
+ *
+ * A captura do CLV so le os jogos de quem tem subscricao, e so na janela antes
+ * do apito - uma aposta ao vivo, ou importada depois de o jogo comecar, nunca
+ * passa por ela. As odds do dia nao dependem de nada disso: qualquer aposta num
+ * jogo que o agente apanhou de madrugada fica com a liga. Corre a cada entrega
+ * sobre a ultima semana, e por isso apanha tambem as apostas feitas DEPOIS da
+ * entrega do dia em que foram feitas.
+ *
+ * E a mesma instrucao da migracao 027, que a correu sobre o historico todo. O
+ * SET parte de b.selections para uma gravacao do utilizador a meio ser refeita
+ * sobre a versao nova em vez de pisada.
+ */
+async function preencherCompeticoes(): Promise<number> {
+    const r = await pool.query(
+        `UPDATE bets b
+            SET selections = (
+                  SELECT jsonb_agg(
+                           CASE WHEN liga.competition IS NULL THEN e.leg
+                                ELSE e.leg || jsonb_build_object('competition', liga.competition) END
+                           ORDER BY e.ord)
+                    FROM jsonb_array_elements(b.selections) WITH ORDINALITY AS e(leg, ord)
+                    LEFT JOIN LATERAL (
+                          SELECT o.competition
+                            FROM daily_odds o
+                           WHERE jsonb_typeof(e.leg) = 'object'
+                             AND COALESCE(e.leg->>'competition', '') = ''
+                             AND o.match_id = e.leg->'sourceRef'->>'matchId'
+                             AND o.competition IS NOT NULL
+                           ORDER BY o.captured_at DESC
+                           LIMIT 1
+                         ) liga ON TRUE
+                ),
+                updated_at = timezone('utc', now())
+          WHERE jsonb_typeof(b.selections) = 'array'
+            AND b.date_time > NOW() - INTERVAL '7 days'
+            AND EXISTS (
+                  SELECT 1
+                    FROM jsonb_array_elements(b.selections) l
+                    JOIN daily_odds o ON o.match_id = l->'sourceRef'->>'matchId'
+                   WHERE jsonb_typeof(l) = 'object'
+                     AND COALESCE(l->>'competition', '') = ''
+                     AND o.competition IS NOT NULL
+                )`,
+    );
+    return r.rowCount ?? 0;
+}
 
 router.post("/daily-odds", async (req, res) => {
     if (!autorizado(req, "CLV_AGENT_SECRET")) {
@@ -644,7 +715,18 @@ router.post("/daily-odds", async (req, res) => {
             gravados++;
         }
 
-        console.info(`[clv][dia] ${dia}: ${gravados} jogo(s) gravado(s), ${recusados} recusado(s).`);
+        // As odds ja estao gravadas: uma falha a preencher a liga nao pode
+        // fazer o agente achar que a entrega falhou e repeti-la.
+        let comLiga = 0;
+        try {
+            comLiga = await preencherCompeticoes();
+        } catch (error) {
+            console.error("[clv][dia] falhou a preencher a liga das apostas:", error);
+        }
+
+        console.info(
+            `[clv][dia] ${dia}: ${gravados} jogo(s) gravado(s), ${recusados} recusado(s), ${comLiga} aposta(s) com liga nova.`,
+        );
         res.json({ ok: true, dia, gravados, recusados });
     } catch (error: any) {
         console.error("[clv] /daily-odds falhou:", error);

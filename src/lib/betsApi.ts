@@ -9,6 +9,7 @@ import { Bet, BetStatus, BetType, FreebetType, Selection, SelectionResult } from
 import { safeNum } from "../utils";
 import { normalizeBetStatus, parseBetMetadata } from "./betStatus";
 import { combineClosingOdds } from "../../lib/clvClosingOdds";
+import { normalizeSport } from "../../lib/sport";
 
 // Linha crua devolvida pela API (colunas em snake_case).
 type ApiBetRow = Record<string, any>;
@@ -66,7 +67,14 @@ function normalizeSelections(raw: any, rowId: string): Selection[] {
     originalOdd: s?.originalOdd == null ? undefined : safeNum(s.originalOdd),
     sourceRef:
       s?.sourceRef && typeof s.sourceRef === "object" ? s.sourceRef : undefined,
-    sport: s?.sport,
+    // Normalizado também aqui, e não só ao gravar: as apostas gravadas antes
+    // do normalizador continuam com "FUTEBOL" e "Football" até a migração 027
+    // correr, e o filtro não pode esperar por ela.
+    sport: normalizeSport(s?.sport),
+    competition:
+      typeof s?.competition === "string" && s.competition.trim() !== ""
+        ? s.competition
+        : undefined,
     betType: s?.betType,
     result: VALID_SELECTION_RESULTS.includes(s?.result) ? s.result : undefined,
   }));
