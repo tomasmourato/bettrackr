@@ -22,7 +22,8 @@
 //   - ISOLAMENTO DE FALHAS: um erro (incl. 401/403) numa conta pausa SO essa
 //     conta nesta passagem; o ciclo segue para as outras e o daemon nao sai.
 //   - Backoff exponencial so quando a passagem inteira rebenta (ex.: rede).
-//   - Corre em casa (telemovel/Raspberry Pi/PC), nunca na nuvem - ver README.
+//   - Corre numa maquina do dono em Portugal (telemovel, PC, ou a VPS de
+//     bot/vps/), nunca na Vercel - ver README.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -102,9 +103,11 @@ function recoverBettrackrToken(dir: string, accountIds: string[]): string | null
 
 // Cria a passkey na Betclic com o token de contexto e guarda-a no cofre da conta.
 // O nome do dispositivo leva um pedaco do accountId para distinguir as passkeys
-// em betclic.pt/account/security quando ha varias contas.
+// em betclic.pt/account/security quando ha varias contas. BOT_PASSKEY_NOME muda a
+// primeira parte, para distinguir a passkey de cada maquina quando o bot muda de
+// sitio (a VPS cria a sua; a do telemovel apaga-se depois, e tem de se saber qual).
 async function enrolAndSave(cfg: Config, accountId: string, contextToken: string): Promise<Credential> {
-  const deviceName = `BetTrackr Bot (${accountId.slice(0, 8)})`;
+  const deviceName = `${process.env.BOT_PASSKEY_NOME || "BetTrackr Bot"} (${accountId.slice(0, 8)})`;
   const enrolled = await enrolPasskey(contextToken, deviceName);
   saveVault(vaultPathFor(cfg.botDir, accountId), credentialToVault(enrolled.cred, enrolled.userHandle));
   return enrolled;

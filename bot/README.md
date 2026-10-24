@@ -5,7 +5,9 @@ correr na **tua** maquina (Raspberry Pi, NAS, PC sempre ligado) e nao na nuvem.
 
 Corre em casa de propósito: assim os pedidos saem da tua ligacao em Portugal — a
 tua conta acedida por ti, de onde tu estas — e a chave privada nunca sai deste
-computador. Ver o plano para o raciocinio e os limites.
+computador. Ver o plano para o raciocinio e os limites. Uma VPS tua em Portugal
+tambem serve, porque o que a Betclic olha e o pais (ver
+[5. Numa VPS em Portugal](#5-numa-vps-em-portugal-vpsinstalarsh)).
 
 > **Aviso, sem rodeios.** Os T&C da betclic.pt (Bem Operations, licencas SRIJ
 > 001/004) proibem uso por robos (clausula 1.1.2) e preveem *suspensao da conta
@@ -309,6 +311,72 @@ passagem a verde.
 passagem a cada `BOT_INTERVAL_SEC` (default 1800s = 30 min). Os segredos vao no
 mesmo tipo de ficheiro de ambiente.
 
+### 5. Numa VPS em Portugal: `vps/instalar.sh`
+
+Tira o bot e o agente do CLV do telemóvel (sem o Doze, o wake lock nem o Termux a
+fechar) e põe-nos numa VPS em Portugal, com timers do systemd. O 403 da Betclic é
+geográfico, não por ser datacenter: a 24/10/2026 um datacenter em Viana recebeu
+200, e os de Madrid, Barcelona, Frankfurt e Nuremberga 403. Uma VPS cujo IP
+pareça de outro país não serve, por isso o [vps/instalar.sh](vps/instalar.sh)
+testa o IP antes de instalar o que quer que seja.
+
+No PC, no repositório:
+
+```bash
+npm run build:bot
+scp dist/bot.mjs bot/vps/instalar.sh root@<IP-da-VPS>:
+```
+
+Na VPS (Debian 13 ou Ubuntu 24):
+
+```bash
+bash instalar.sh --teste     # só o teste: a Betclic responde 200 a este IP?
+sudo bash instalar.sh        # teste + instalação
+```
+
+Com 403, ou um redirecionamento para outro país, o script pára sem instalar nada:
+pede-se à PTISP um IP de um datacenter em Portugal, ou cancela-se a VPS. Com 200,
+instala:
+
+- o Node do sistema (o Debian 13 traz o 20) e as atualizações de segurança
+  automáticas;
+- um utilizador `bettrackr` sem shell; os programas em `/opt/bettrackr`; os
+  segredos em `/etc/bettrackr` (root, 600); os cofres em `/var/lib/bettrackr`;
+- `bettrackr-bot.timer` (30 em 30 min), `bettrackr-clv.timer` (5 em 5 min) e
+  `bettrackr-clv-diario.timer` (06:15 de Lisboa). Os serviços correm com o sistema
+  só de leitura. Um que encrave é morto antes da passagem seguinte, e nunca
+  correm duas cópias ao mesmo tempo.
+
+Pede o token do BetTrackr (em bettrackr.dev, F12 > Consola:
+`localStorage.getItem("bettrackr_token")`) e o `CLV_AGENT_SECRET` da Vercel. A
+`BETCLIC_BOT_KEY` gera-a ele. A passkey não vem do telemóvel: a VPS cria a sua,
+«BetTrackr VPS (...)», na primeira passagem. Usa para isso o token que o bot do
+telemóvel deixou no servidor, que vale ~2h depois da última passagem dele. Passado
+esse prazo, reativa-se cada conta no painel /bot antes.
+
+**Só um de cada vez.** Os timers só se ligam depois de responderes `sim` a "o
+telemóvel já não corre nenhum dos dois". Antes disso, no Termux:
+
+```bash
+crontab -l > ~/crontab.antes-da-vps && grep -vE 'clv-agent|bot\.mjs|bot/run\.sh|src/index\.ts' ~/crontab.antes-da-vps | crontab -
+```
+
+Depois de uma passagem do bot com sucesso na VPS, apaga em
+`betclic.pt/account/security` as passkeys «BetTrackr Bot (...)», que eram as do
+telemóvel. No Termux, apaga também os `passkey-*.enc` e `session-*.enc` da pasta
+do bot.
+
+Para atualizar, corre-se o mesmo script com o `bot.mjs` novo
+(`sudo bash instalar.sh bot.mjs`). Troca os programas, descarrega o agente de
+novo e corre uma passagem de cada; os segredos e os cofres ficam. Os logs veem-se
+com `journalctl -u bettrackr-bot -n 50` (ou `bettrackr-clv`), e os timers com
+`systemctl list-timers 'bettrackr-*'`. O alerta de bot parado funciona igual: o
+servidor não sabe onde o bot corre.
+
+O script não mexe no SSH (um erro aí fechava-te fora da VPS), mas deixa-o só com
+chave (`PasswordAuthentication no` no `sshd_config`). A passkey é acesso total à
+conta, e a máquina já não está no teu bolso.
+
 ### Variaveis de ambiente
 
 | Var | Para que serve |
@@ -318,6 +386,7 @@ mesmo tipo de ficheiro de ambiente.
 | `BETTRACKR_BASE` / `BETTRACKR_TOKEN` | destino no BetTrackr. Sem eles => dry-run. Tambem deixam o bot puxar a ativacao da app. O `BETTRACKR_TOKEN` so serve de ARRANQUE: o bot auto-renova-o a cada passagem (GET /api/bot/token) e guarda-o na sessao cifrada, por isso nao ha refresh a mao de 7 em 7 dias enquanto o bot correr dentro da validade. |
 | `BOT_INTERVAL_SEC` | intervalo entre passagens (default 1800 = 30 min). |
 | `BOT_DIR` | pasta onde vivem os cofres e sessoes POR CONTA (default: a pasta `bot/`). Multi-conta guarda aqui `passkey-<accountId>.enc` e `session-<accountId>.enc`, um par por conta Betclic. |
+| `BOT_PASSKEY_NOME` | o nome com que a passkey aparece em betclic.pt/account/security, antes do pedaço do accountId (default `BetTrackr Bot`). A VPS usa `BetTrackr VPS`, para se saber qual apagar ao mudar de máquina. |
 | `BOT_VAULT` / `BOT_KEYFILE` | so o dry-run legado (sem `BETTRACKR_*`): cofre `passkey.enc` / chave em claro `marco0-key.json`, para testar o mapeamento localmente sem multi-conta. |
 
 ### Varias contas Betclic (multi-conta)
