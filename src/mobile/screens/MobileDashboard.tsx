@@ -43,6 +43,7 @@ import type { ClosingOddInput } from "../../lib/betsApi";
 import type { DashboardBetsFilters } from "../../components/Dashboard";
 import { calculateDashboardStats, safeNum } from "../../utils";
 import { useI18n, type TKey } from "../../lib/i18n";
+import { hasBetsWithoutSport, listSports, matchesSportFilter, NO_SPORT } from "../../lib/sportFilter";
 import { SectionHeader, MobileCard, ListGroup, ListItem, BottomSheet, Pressable, ChipGroup } from "../ui";
 
 interface MobileDashboardProps {
@@ -133,13 +134,8 @@ export default function MobileDashboard({
     () => Array.from(new Set(allBets.map((b) => b.bookmaker).filter((b): b is string => !!b))).sort(),
     [allBets],
   );
-  const sportOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(allBets.flatMap((b) => (b.selections || []).map((s) => s.sport)).filter((s): s is string => !!s)),
-      ).sort(),
-    [allBets],
-  );
+  const sportOptions = useMemo(() => listSports(allBets), [allBets]);
+  const anyWithoutSport = useMemo(() => hasBetsWithoutSport(allBets), [allBets]);
 
   const range = useMemo(() => {
     if (filterTimeframe === "ALL") return { start: "", end: "" };
@@ -168,7 +164,7 @@ export default function MobileDashboard({
         if (filterMoney === "FREEBET" && !b.isFreebet) return false;
         if (filterMoney === "RISK_FREE" && !b.isRiskFree) return false;
         if (filterMoney === "NORMAL" && (b.isFreebet || b.isRiskFree)) return false;
-        if (filterSport !== "ALL" && !(b.selections || []).some((s) => s.sport === filterSport)) return false;
+        if (!matchesSportFilter(b, filterSport)) return false;
         if (range.start || range.end) {
           const day = b.dateTime?.slice(0, 10) || "";
           if (!day) return false;
@@ -839,7 +835,11 @@ title={t("common.filters")}
           {sportOptions.length > 0 && (
             <ChipGroup
               label={t("filters.sport")}
-              options={[{ value: "ALL", label: t("filters.allMasc") }, ...sportOptions.map((s) => ({ value: s, label: s }))]}
+              options={[
+                { value: "ALL", label: t("filters.allMasc") },
+                ...sportOptions.map((s) => ({ value: s, label: s })),
+                ...(anyWithoutSport ? [{ value: NO_SPORT, label: t("filters.noSport") }] : []),
+              ]}
               value={filterSport}
               onChange={setFilterSport}
             />

@@ -17,6 +17,7 @@ import { requireSubscription } from "../middleware/accessMiddleware.js";
 import { getGeminiClient, extractJson } from "../lib/gemini.js";
 import { buildClvProfile, marketFamily, type ClvGroupRow, type ClvProfile } from "../lib/clvProfile.js";
 import type { ClvBet } from "../lib/clvMath.js";
+import { normalizeSport } from "../lib/sport.js";
 
 const router = Router();
 
@@ -611,10 +612,11 @@ export function clvForPick(pick: Pick, profile: ClvProfile | null): PickClv | nu
     return { bets: porMercado.bets, avgClvPct: porMercado.avgClvPct, beatCloseRate: porMercado.beatCloseRate, scope: "market" };
   }
 
-  // Sem histórico naquele mercado, o desporto ainda diz alguma coisa.
-  const porDesporto = profile.bySport.find(
-    (l) => l.label.toLowerCase() === String(pick.sport ?? "").toLowerCase(),
-  );
+  // Sem histórico naquele mercado, o desporto ainda diz alguma coisa. Pelo
+  // normalizador e não pela caixa: em inglês o modelo escreve "Football", e o
+  // retrato diz "Futebol".
+  const desporto = normalizeSport(pick.sport);
+  const porDesporto = desporto ? profile.bySport.find((l) => l.label === desporto) : undefined;
   if (porDesporto) {
     return { bets: porDesporto.bets, avgClvPct: porDesporto.avgClvPct, beatCloseRate: porDesporto.beatCloseRate, scope: "sport" };
   }

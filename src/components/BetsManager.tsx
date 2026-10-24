@@ -40,6 +40,8 @@ import TimeframeFilter, {
   type TimeframeFilterValue,
 } from "./TimeframeFilter";
 import { readFilters, serializeFilters } from "../lib/filterParams";
+import { hasBetsWithoutSport, listSports, matchesSportFilter, NO_SPORT } from "../lib/sportFilter";
+import { normalizeSport } from "../../lib/sport";
 import { useI18n, type TKey } from "../lib/i18n";
 import { useUrlFilterSync } from "../hooks/useUrlFilterSync";
 import { createLongPressController } from "../lib/longPress";
@@ -295,12 +297,8 @@ export default function BetsManager({
     return calcs;
   }, [formStake, calculatedOdd, formStatus, formIsFreebet, formIsRiskFree, formSettledReturn, formCashoutReturn, formFreebetType]);
 
-  const sportOptions = useMemo(
-    () => Array.from(new Set(
-      bets.flatMap(bet => bet.selections.map(selection => selection.sport?.trim()).filter((sport): sport is string => Boolean(sport)))
-    )).sort((a, b) => a.localeCompare(b, locale)),
-    [bets, locale]
-  );
+  const sportOptions = useMemo(() => listSports(bets), [bets]);
+  const anyWithoutSport = useMemo(() => hasBetsWithoutSport(bets), [bets]);
   const bookmakerOptions = useMemo(
     () => Array.from(new Set([...AVAILABLE_BOOKMAKERS, ...bets.map(bet => bet.bookmaker).filter(Boolean)]))
       .sort((a, b) => a.localeCompare(b, locale)),
@@ -343,7 +341,7 @@ export default function BetsManager({
       const matchesAccount =
         accountFilter === "ALL" ||
         (accountFilter === "NONE" ? !bet.accountId : bet.accountId === accountFilter);
-      const matchesSport = sportFilter === "ALL" || bet.selections.some(selection => selection.sport?.trim() === sportFilter);
+      const matchesSport = matchesSportFilter(bet, sportFilter);
       const betDate = bet.dateTime?.slice(0, 10) || "";
       const matchesDateFrom = !timeframeRange.start || Boolean(betDate && betDate >= timeframeRange.start);
       const matchesDateTo = !timeframeRange.end || Boolean(betDate && betDate <= timeframeRange.end);
@@ -527,7 +525,7 @@ export default function BetsManager({
         }
       }
       if (changesSport) {
-        next.selections = next.selections.map(s => ({ ...s, sport: bulkSport.trim() }));
+        next.selections = next.selections.map(s => ({ ...s, sport: normalizeSport(bulkSport) }));
       }
       if (changesMoney) {
         next.isFreebet = bulkMoney === "FREEBET";
@@ -1095,7 +1093,11 @@ export default function BetsManager({
           <FilterDropdown
             className="flex-1 min-w-40"
             value={sportFilter}
-            options={[{ value: "ALL", label: t("filters.allSports") }, ...sportOptions.map(sport => ({ value: sport, label: sport }))]}
+            options={[
+              { value: "ALL", label: t("filters.allSports") },
+              ...sportOptions.map(sport => ({ value: sport, label: sport })),
+              ...(anyWithoutSport ? [{ value: NO_SPORT, label: t("filters.noSport") }] : [])
+            ]}
             onChange={setSportFilter}
             ariaLabel={t("filters.sportAria")}
           />
@@ -1844,7 +1846,11 @@ aria-label={t("bets.details.close")}
                         <div className="min-w-0">
                           <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{t("bets.details.selectionN", { n: index + 1 })}</p>
                           <h4 className={`mt-1 text-sm font-bold ${betTitleClass(detailBet.status)}`}>{selection.event || t("bets.details.noEvent")}</h4>
-                          {selection.sport && <p className="mt-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">{selection.sport}</p>}
+                          {(selection.sport || selection.competition) && (
+                            <p className="mt-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">
+                              {[selection.sport, selection.competition].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
                         </div>
                         {getSelectionResultBadge(displayResult)}
                       </div>

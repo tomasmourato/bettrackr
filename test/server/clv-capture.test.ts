@@ -275,4 +275,19 @@ describe("aplicarNaPerna", () => {
     aplicarNaPerna(original, { closingOdd: 1.9 });
     expect(original.closingOddNoVig).toBe(2.01);
   });
+
+  test("a liga da página entra na perna sem mexer no CLV", () => {
+    const velha = perna({ closingOdd: 1.85 });
+    const { depois, mexeu } = aplicarNaPerna(velha, { competition: "Liga Portugal Betclic" });
+    expect(mexeu).toBe(true);
+    expect(depois.competition).toBe("Liga Portugal Betclic");
+    expect(depois.closingOdd).toBe(1.85);
+  });
+
+  test("a mesma liga outra vez não conta como mexida", () => {
+    const { mexeu } = aplicarNaPerna(perna({ competition: "Liga Portugal Betclic" }), {
+      competition: "Liga Portugal Betclic",
+    });
+    expect(mexeu).toBe(false);
+  });
 });

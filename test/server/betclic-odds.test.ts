@@ -5,6 +5,7 @@ import {
   collectMarkets,
   collectSelectionOdds,
   devig,
+  findCompetition,
   findKickoffUtc,
   kickoffMs,
   leadMinutesFrom,
@@ -30,6 +31,7 @@ const estado = {
         matchId: "111",
         name: "Benfica - Porto",
         matchDateUtc: "2026-08-29T19:00:00.0000000Z",
+        competition: { name: "Liga Portugal Betclic" },
         markets: [
           { id: "m1", selections: [{ id: "s-100", odds: 1.85 }, { id: "s-101", odds: 4.2 }] },
         ],
@@ -95,6 +97,29 @@ describe("findKickoffUtc", () => {
     const ms = Date.parse(findKickoffUtc(estado, "111")!);
     expect(Number.isNaN(ms)).toBe(false);
     expect(new Date(ms).toISOString()).toBe("2026-08-29T19:00:00.000Z");
+  });
+});
+
+describe("findCompetition", () => {
+  test("devolve a liga DO jogo pedido, e null a um jogo sem ela", () => {
+    expect(findCompetition(estado, "111")).toBe("Liga Portugal Betclic");
+    expect(findCompetition(estado, "222")).toBeNull();
+    expect(findCompetition(estado, "999")).toBeNull();
+  });
+
+  test("a liga de um MERCADO com o mesmo matchId não conta", () => {
+    // Os nós de mercado também trazem matchId; só o do jogo tem matchDateUtc.
+    const comMercadoAntes = {
+      markets: [{ matchId: "111", competition: { name: "Outra coisa" } }],
+      ...estado,
+    };
+    expect(findCompetition(comMercadoAntes, "111")).toBe("Liga Portugal Betclic");
+  });
+
+  test("a leitura da página traz a liga junto com os preços", () => {
+    const page = readMatchPage(html(estado), "111");
+    expect(page.competition).toBe("Liga Portugal Betclic");
+    expect(readMatchPage("<html></html>", "111").competition).toBeNull();
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ownsClosingOdds, withStoredClosingOdds } from "../../routes/betsRoutes";
+import { ownsClosingOdds, withNormalizedSport, withStoredClosingOdds } from "../../routes/betsRoutes";
 
 // A extensão reimporta a aposta inteira sempre que o estado muda na casa - ou
 // seja, no momento exato em que a aposta se liquida. A casa não sabe o que é
@@ -223,5 +223,58 @@ describe("withStoredClosingOdds e a odd original", () => {
   test("sem nada gravado, a perna fica como veio", () => {
     const merged = withStoredClosingOdds(importPayload(), storedRow());
     expect(merged.selections[0].originalOdd).toBeUndefined();
+  });
+});
+
+// ------------------------------------------------------------
+// A liga também é do servidor: quem a escreve é a captura do CLV, e a aposta
+// da Betclic nunca a traz. A reimportação que liquida a aposta não a pode
+// levar, tal como não leva a odd de fecho.
+// ------------------------------------------------------------
+describe("withStoredClosingOdds - competição", () => {
+  const comLiga = () => {
+    const row = storedRow();
+    row.selections[0] = { ...row.selections[0], competition: "Liga Portugal Betclic" } as never;
+    return row;
+  };
+
+  test("a reimportação não apaga a liga", () => {
+    const merged = withStoredClosingOdds(importPayload(), comLiga());
+    expect(merged.selections[0].competition).toBe("Liga Portugal Betclic");
+    expect(merged.selections[0].closingOdd).toBe(1.85);
+  });
+
+  test("uma perna que traga a sua liga continua a mandar", () => {
+    const body = importPayload();
+    body.selections[0] = { ...body.selections[0], competition: "Taça de Portugal" } as never;
+    expect(withStoredClosingOdds(body, comLiga()).selections[0].competition).toBe("Taça de Portugal");
+  });
+});
+
+describe("withNormalizedSport", () => {
+  test("cada fonte com o seu futebol dá um só", () => {
+    const pernas = withNormalizedSport([
+      { event: "A - B", sport: "FUTEBOL" },
+      { event: "C - D", sport: "Football" },
+      { event: "E - F", sport: "FOOT" },
+    ]) as Array<{ sport?: string }>;
+    expect(pernas.map((p) => p.sport)).toEqual(["Futebol", "Futebol", "Futebol"]);
+  });
+
+  test("um desporto vazio sai da perna em vez de ficar como texto", () => {
+    const [perna] = withNormalizedSport([{ event: "A - B", sport: "undefined" }]) as Array<Record<string, unknown>>;
+    expect("sport" in perna).toBe(false);
+    expect(perna.event).toBe("A - B");
+  });
+
+  test("o resto da perna não se mexe", () => {
+    const [perna] = withNormalizedSport([
+      { event: "A - B", sport: "TÉNIS", closingOdd: 1.9, sourceRef: { matchId: "1" } },
+    ]) as Array<Record<string, unknown>>;
+    expect(perna).toEqual({ event: "A - B", sport: "Ténis", closingOdd: 1.9, sourceRef: { matchId: "1" } });
+  });
+
+  test("o que não é uma lista passa como veio", () => {
+    expect(withNormalizedSport("[]")).toBe("[]");
   });
 });

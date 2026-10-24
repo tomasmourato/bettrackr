@@ -12,6 +12,7 @@ import {
     type AccessRequest,
 } from "../middleware/accessMiddleware.js";
 import { semClv } from "../lib/clvVisibility.js";
+import { normalizeSport } from "../lib/sport.js";
 import { normalizeBetStatus } from "../src/lib/betStatus.js";
 
 // Mantém esta regra dentro do bundle backend. A rota é compilada pela Vercel
@@ -100,6 +101,9 @@ function asSelections(raw: unknown): any[] {
  * razão: é escrita à mão na app, a casa nunca a manda, e sem isto a primeira
  * reimportação do bot - que acontece sozinha assim que a aposta liquida -
  * apagava-a e o CLV voltava a ser medido pela odd turbinada.
+ *
+ * A competição também: quem a escreve é a captura do CLV, a partir da página
+ * do jogo, e a casa nunca a manda na aposta.
  */
 export function withStoredClosingOdds(body: any, stored: any): any {
     const incoming = asSelections(body?.selections);
@@ -111,6 +115,7 @@ export function withStoredClosingOdds(body: any, stored: any): any {
     // CLV sem margem desaparecia no momento em que a aposta fechava.
     const byKey = new Map<string, Record<string, number>>();
     const originalByKey = new Map<string, number>();
+    const competitionByKey = new Map<string, string>();
     previous.forEach((selection, index) => {
         const key = legKey(selection, index);
         const odd = Number(selection?.closingOdd);
@@ -126,6 +131,10 @@ export function withStoredClosingOdds(body: any, stored: any): any {
         }
         const original = Number(selection?.originalOdd);
         if (Number.isFinite(original) && original > 1) originalByKey.set(key, original);
+        const competition = selection?.competition;
+        if (typeof competition === "string" && competition.trim() !== "") {
+            competitionByKey.set(key, competition);
+        }
     });
 
     const selections = incoming.map((selection, index) => {
@@ -140,6 +149,11 @@ export function withStoredClosingOdds(body: any, stored: any): any {
         if (merged?.originalOdd === undefined || merged?.originalOdd === null) {
             const original = originalByKey.get(key);
             if (original !== undefined) merged = { ...merged, originalOdd: original };
+        }
+
+        if (!merged?.competition) {
+            const competition = competitionByKey.get(key);
+            if (competition !== undefined) merged = { ...merged, competition };
         }
 
         return merged;
@@ -223,6 +237,21 @@ function trimOrNull(value: any): string | null {
     if (value === undefined || value === null) return null;
     const str = String(value).trim();
     return str === "" ? null : str;
+}
+
+/**
+ * As pernas com o desporto normalizado. É aqui porque é por aqui que passam
+ * todos os escritores - extensão, bot, CSV, formulário e edição em bloco - e
+ * cada um escrevia o desporto à sua maneira (ver lib/sport.ts).
+ */
+export function withNormalizedSport(selections: unknown): unknown {
+    if (!Array.isArray(selections)) return selections;
+    return selections.map((selection) => {
+        if (!selection || typeof selection !== "object") return selection;
+        const { sport, ...resto } = selection as Record<string, unknown>;
+        const normalized = normalizeSport(sport);
+        return normalized === undefined ? resto : { ...resto, sport: normalized };
+    });
 }
 
 function parseBetPayload(body: any): ParsedPayload {
@@ -331,7 +360,7 @@ function parseBetPayload(body: any): ParsedPayload {
     const selections =
         b.selections === undefined || b.selections === null
             ? null
-            : JSON.stringify(b.selections);
+            : JSON.stringify(withNormalizedSport(b.selections));
     const metadata =
         b.metadata === undefined || b.metadata === null
             ? null

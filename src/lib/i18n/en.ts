@@ -63,6 +63,7 @@ export const EN: Record<TKey, Entry> = {
   "filters.allAccounts": "All accounts",
   "filters.allSports": "All sports",
   "filters.noAccount": "No account",
+  "filters.noSport": "No sport",
   "filters.anyType": "Any type",
   "filters.allStatuses": "All statuses",
   "filters.status": "Status",

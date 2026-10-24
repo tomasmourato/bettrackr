@@ -207,6 +207,8 @@ async function lerJogo(t: Trabalho) {
             odds,
             markets,
             kickoffUtc: page.kickoffUtc,
+            // A liga, que a aposta não traz. Um servidor antigo ignora-a.
+            competition: page.competition,
         },
     };
 }

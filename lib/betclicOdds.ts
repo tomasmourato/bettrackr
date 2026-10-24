@@ -71,8 +71,25 @@ export function collectSelectionOdds(state: unknown): Map<string, number> {
  * depois do apito. A funcionalidade morria em silêncio.
  */
 export function findKickoffUtc(state: unknown, matchId: string): string | null {
+    return findMatchNode(state, matchId)?.matchDateUtc ?? null;
+}
+
+/**
+ * A competição do jogo, como a Betclic a escreve ("Liga Portugal Betclic").
+ * A aposta não a traz - só o matchId - e é daqui que a app a fica a saber.
+ */
+export function findCompetition(state: unknown, matchId: string): string | null {
+    const nome = findMatchNode(state, matchId)?.competition?.name;
+    return typeof nome === "string" && nome.trim() !== "" ? nome.trim() : null;
+}
+
+/**
+ * O nó do JOGO, e não o de um mercado seu: os dois carregam matchId, mas só o
+ * jogo tem `matchDateUtc` (ver readMatchSnapshot).
+ */
+function findMatchNode(state: unknown, matchId: string): any | null {
     const alvo = String(matchId);
-    let found: string | null = null;
+    let found: any = null;
 
     const visita = (node: any, depth: number) => {
         if (found !== null) return;
@@ -82,7 +99,7 @@ export function findKickoffUtc(state: unknown, matchId: string): string | null {
             return;
         }
         if (String(node.matchId) === alvo && typeof node.matchDateUtc === "string") {
-            found = node.matchDateUtc;
+            found = node;
             return;
         }
         for (const key of Object.keys(node)) visita(node[key], depth + 1);
@@ -494,18 +511,21 @@ export interface MatchPage {
     markets: Map<string, Market>;
     /** Apito em ISO-8601 UTC, quando a página o anuncia. */
     kickoffUtc: string | null;
+    /** A liga do jogo, quando a página a anuncia. */
+    competition: string | null;
 }
 
-/** Uma leitura da página: preços, mercados e apito, de uma assentada. */
+/** Uma leitura da página: preços, mercados, apito e liga, de uma assentada. */
 export function readMatchPage(html: string, matchId: string): MatchPage {
     const state = parseNgState(html);
     if (state === null) {
-        return { odds: new Map(), markets: new Map(), kickoffUtc: null };
+        return { odds: new Map(), markets: new Map(), kickoffUtc: null, competition: null };
     }
     return {
         odds: collectSelectionOdds(state),
         markets: collectMarkets(state),
         kickoffUtc: findKickoffUtc(state, matchId),
+        competition: findCompetition(state, matchId),
     };
 }
 

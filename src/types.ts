@@ -58,7 +58,14 @@ export interface Selection {
     marketId?: string;
     selectionId?: string;
   };
+  // Um nome por desporto ("Futebol", nunca "FUTEBOL" nem "Football"), ver
+  // lib/sport.ts.
   sport?: string;
+  // A liga ou competição do jogo, como a Betclic a escreve na página dele
+  // ("Liga Portugal Betclic"). A casa não a manda na aposta: é preenchida pelo
+  // servidor a partir do sourceRef.matchId - na captura do CLV e pelas odds do
+  // dia. Ausente nas apostas sem matchId.
+  competition?: string;
   betType?: string;
   result?: SelectionResult;
 }
